@@ -37,6 +37,34 @@ if args_file.exists():
             extra_args[k] = v.strip()
 
 effects = sorted(p.stem for p in gif_dir.glob("*.gif"))
+helps.setdefault(
+    "airstrike",
+    "ASCII planes dive into the text, scattering it through fire and debris before it reassembles",
+)
+helps.setdefault(
+    "automata",
+    "An elementary cellular automaton grows a fractal lattice whose cells stream into the text",
+)
+helps.setdefault(
+    "malfunction",
+    "A printer types nonsense, recovers happily, and prints readable text",
+)
+helps.setdefault(
+    "reverselife",
+    "Conway's Game of Life runs backward from chaos and resolves into readable text",
+)
+helps.setdefault(
+    "roses",
+    "Curling vines grow pink roses, scatter petals, and flower into the text",
+)
+helps.setdefault(
+    "sunshower",
+    "Rain falls as the sun rises and paints a rainbow across the text",
+)
+helps.setdefault(
+    "voronoi",
+    "Living crystal grows from the text, breathes as a faceted Voronoi mosaic, then returns as readable lettering",
+)
 
 cards = []
 for name in effects:
@@ -54,7 +82,7 @@ for name in effects:
 
 total_kb = sum((gif_dir / f"{n}.gif").stat().st_size for n in effects) // 1024
 
-html = f"""<title>ttfx — all 37 effects</title>
+html = f"""<title>ttfx — all {len(effects)} effects</title>
 <style>
   /* Committed to a single dark world: every asset here is a terminal screen,
      so a light ground would frame dark rectangles against white. All colors
@@ -258,13 +286,13 @@ html = f"""<title>ttfx — all 37 effects</title>
 <div class="wrap">
   <header>
     <p class="eyebrow">ttfx · rust port of terminaltexteffects</p>
-    <h1>All 37 effects<span class="caret">_</span></h1>
+    <h1>All {len(effects)} effects<span class="caret">_</span></h1>
     <p class="lede">Every effect in the library, animating the <strong>Omarchy</strong> logo straight
       from <code class="inline">/usr/share/omarchy/logo.txt</code>. These frames come out of the Rust
       binary — and each one is <strong>byte-identical</strong> to what the original Python produces
       from the same input and seed.</p>
     <div class="stats">
-      <div class="stat"><b>37</b><span>effects</span></div>
+      <div class="stat"><b>{len(effects)}</b><span>effects</span></div>
       <div class="stat"><b>354</b><span>parity cases</span></div>
       <div class="stat"><b>3.3 MB</b><span>static binary</span></div>
       <div class="stat"><b>2 ms</b><span>startup</span></div>

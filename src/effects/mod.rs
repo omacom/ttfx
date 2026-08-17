@@ -1,7 +1,8 @@
 //! Static effect registry (replaces upstream pkgutil discovery).
 //! GENERATED structure — keep alphabetical by variant when adding effects.
 
-pub mod common;
+pub mod airstrike;
+pub mod automata;
 pub mod beams;
 pub mod binarypath;
 pub mod blackhole;
@@ -9,6 +10,7 @@ pub mod bouncyballs;
 pub mod bubbles;
 pub mod burn;
 pub mod colorshift;
+pub mod common;
 pub mod crumble;
 pub mod decrypt;
 pub mod errorcorrect;
@@ -16,6 +18,7 @@ pub mod expand;
 pub mod fireworks;
 pub mod highlight;
 pub mod laseretch;
+pub mod malfunction;
 pub mod matrix;
 pub mod middleout;
 pub mod orbittingvolley;
@@ -24,19 +27,23 @@ pub mod pour;
 pub mod print_effect;
 pub mod rain;
 pub mod random_sequence;
+pub mod reverse_life;
 pub mod rings;
+pub mod roses;
 pub mod scattered;
 pub mod slice;
 pub mod slide;
 pub mod smoke;
 pub mod spotlights;
 pub mod spray;
+pub mod sunshower;
 pub mod swarm;
 pub mod sweep;
 pub mod synthgrid;
 pub mod thunderstorm;
 pub mod unstable;
 pub mod vhstape;
+pub mod voronoi;
 pub mod waves;
 pub mod wipe;
 
@@ -46,6 +53,10 @@ use crate::engine::effect::Effect;
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum EffectCommand {
+    /// ASCII planes dive into the text, scattering it through fire and debris before it reassembles.
+    Airstrike(airstrike::AirstrikeConfig),
+    /// An elementary cellular automaton grows a fractal lattice whose cells stream into the text.
+    Automata(automata::AutomataConfig),
     /// Create beams which travel over the canvas illuminating the characters behind them.
     Beams(beams::BeamsConfig),
     /// Binary representations of each character move towards the home coordinate of the character.
@@ -74,6 +85,8 @@ pub enum EffectCommand {
     Highlight(highlight::HighlightConfig),
     /// A laser etches characters onto the terminal.
     Laseretch(laseretch::LaserEtchConfig),
+    /// A printer types nonsense, recovers happily, and prints readable text.
+    Malfunction(malfunction::MalfunctionConfig),
     /// Matrix digital rain effect.
     Matrix(matrix::MatrixConfig),
     /// Text expands in a single row or column in the middle of the canvas then out.
@@ -90,8 +103,12 @@ pub enum EffectCommand {
     Rain(rain::RainConfig),
     /// Prints the input data in a random sequence.
     Randomsequence(random_sequence::RandomSequenceConfig),
+    /// Conway's Game of Life runs backward from chaos and resolves into readable text.
+    Reverselife(reverse_life::ReverseLifeConfig),
     /// Characters are dispersed and form into spinning rings.
     Rings(rings::RingsConfig),
+    /// Curling vines grow pink roses, scatter petals, and flower into the text.
+    Roses(roses::RosesConfig),
     /// Text is scattered across the canvas and moves into position.
     Scattered(scattered::ScatteredConfig),
     /// Slices the input in half and slides it into place from opposite directions.
@@ -110,12 +127,16 @@ pub enum EffectCommand {
     Sweep(sweep::SweepConfig),
     /// Create a grid which fills with characters dissolving into the final text.
     Synthgrid(synthgrid::SynthGridConfig),
+    /// Rain falls as the sun rises and paints a rainbow across the text.
+    Sunshower(sunshower::SunshowerConfig),
     /// Create a thunderstorm in the terminal.
     Thunderstorm(thunderstorm::ThunderstormConfig),
     /// Spawn characters jumbled, explode them to the edge of the canvas, then reassemble them in the correct layout.
     Unstable(unstable::UnstableConfig),
     /// Lines of characters glitch left and right and lose detail like an old VHS tape.
     Vhstape(vhstape::VhsTapeConfig),
+    /// Living stained glass grows, breathes, and collapses into readable text.
+    Voronoi(voronoi::VoronoiConfig),
     /// Waves travel across the terminal leaving behind the characters.
     Waves(waves::WavesConfig),
     /// Wipes the text across the terminal to reveal characters.
@@ -125,6 +146,8 @@ pub enum EffectCommand {
 impl EffectCommand {
     pub fn build_effect(&self) -> Box<dyn Effect> {
         match self {
+            EffectCommand::Airstrike(config) => Box::new(airstrike::Airstrike::new(config.clone())),
+            EffectCommand::Automata(config) => Box::new(automata::Automata::new(config.clone())),
             EffectCommand::Beams(config) => Box::new(beams::Beams::new(config.clone())),
             EffectCommand::Binarypath(config) => Box::new(binarypath::BinaryPath::new(config.clone())),
             EffectCommand::Blackhole(config) => Box::new(blackhole::Blackhole::new(config.clone())),
@@ -139,6 +162,7 @@ impl EffectCommand {
             EffectCommand::Fireworks(config) => Box::new(fireworks::Fireworks::new(config.clone())),
             EffectCommand::Highlight(config) => Box::new(highlight::Highlight::new(config.clone())),
             EffectCommand::Laseretch(config) => Box::new(laseretch::LaserEtch::new(config.clone())),
+            EffectCommand::Malfunction(config) => Box::new(malfunction::Malfunction::new(config.clone())),
             EffectCommand::Matrix(config) => Box::new(matrix::Matrix::new(config.clone())),
             EffectCommand::Middleout(config) => Box::new(middleout::Middleout::new(config.clone())),
             EffectCommand::Orbittingvolley(config) => Box::new(orbittingvolley::OrbittingVolley::new(config.clone())),
@@ -147,7 +171,9 @@ impl EffectCommand {
             EffectCommand::Print(config) => Box::new(print_effect::Print::new(config.clone())),
             EffectCommand::Rain(config) => Box::new(rain::Rain::new(config.clone())),
             EffectCommand::Randomsequence(config) => Box::new(random_sequence::RandomSequence::new(config.clone())),
+            EffectCommand::Reverselife(config) => Box::new(reverse_life::ReverseLife::new(config.clone())),
             EffectCommand::Rings(config) => Box::new(rings::Rings::new(config.clone())),
+            EffectCommand::Roses(config) => Box::new(roses::Roses::new(config.clone())),
             EffectCommand::Scattered(config) => Box::new(scattered::Scattered::new(config.clone())),
             EffectCommand::Slice(config) => Box::new(slice::Slice::new(config.clone())),
             EffectCommand::Slide(config) => Box::new(slide::Slide::new(config.clone())),
@@ -157,9 +183,11 @@ impl EffectCommand {
             EffectCommand::Swarm(config) => Box::new(swarm::Swarm::new(config.clone())),
             EffectCommand::Sweep(config) => Box::new(sweep::Sweep::new(config.clone())),
             EffectCommand::Synthgrid(config) => Box::new(synthgrid::SynthGrid::new(config.clone())),
+            EffectCommand::Sunshower(config) => Box::new(sunshower::Sunshower::new(config.clone())),
             EffectCommand::Thunderstorm(config) => Box::new(thunderstorm::Thunderstorm::new(config.clone())),
             EffectCommand::Unstable(config) => Box::new(unstable::Unstable::new(config.clone())),
             EffectCommand::Vhstape(config) => Box::new(vhstape::VhsTape::new(config.clone())),
+            EffectCommand::Voronoi(config) => Box::new(voronoi::Voronoi::new(config.clone())),
             EffectCommand::Waves(config) => Box::new(waves::Waves::new(config.clone())),
             EffectCommand::Wipe(config) => Box::new(wipe::Wipe::new(config.clone())),
         }
@@ -167,6 +195,8 @@ impl EffectCommand {
 
     pub fn name(&self) -> &'static str {
         match self {
+            EffectCommand::Airstrike(_) => "airstrike",
+            EffectCommand::Automata(_) => "automata",
             EffectCommand::Beams(_) => "beams",
             EffectCommand::Binarypath(_) => "binarypath",
             EffectCommand::Blackhole(_) => "blackhole",
@@ -181,6 +211,7 @@ impl EffectCommand {
             EffectCommand::Fireworks(_) => "fireworks",
             EffectCommand::Highlight(_) => "highlight",
             EffectCommand::Laseretch(_) => "laseretch",
+            EffectCommand::Malfunction(_) => "malfunction",
             EffectCommand::Matrix(_) => "matrix",
             EffectCommand::Middleout(_) => "middleout",
             EffectCommand::Orbittingvolley(_) => "orbittingvolley",
@@ -189,7 +220,9 @@ impl EffectCommand {
             EffectCommand::Print(_) => "print",
             EffectCommand::Rain(_) => "rain",
             EffectCommand::Randomsequence(_) => "randomsequence",
+            EffectCommand::Reverselife(_) => "reverselife",
             EffectCommand::Rings(_) => "rings",
+            EffectCommand::Roses(_) => "roses",
             EffectCommand::Scattered(_) => "scattered",
             EffectCommand::Slice(_) => "slice",
             EffectCommand::Slide(_) => "slide",
@@ -199,9 +232,11 @@ impl EffectCommand {
             EffectCommand::Swarm(_) => "swarm",
             EffectCommand::Sweep(_) => "sweep",
             EffectCommand::Synthgrid(_) => "synthgrid",
+            EffectCommand::Sunshower(_) => "sunshower",
             EffectCommand::Thunderstorm(_) => "thunderstorm",
             EffectCommand::Unstable(_) => "unstable",
             EffectCommand::Vhstape(_) => "vhstape",
+            EffectCommand::Voronoi(_) => "voronoi",
             EffectCommand::Waves(_) => "waves",
             EffectCommand::Wipe(_) => "wipe",
         }
