@@ -14,7 +14,7 @@ use crate::engine::error::EngineError;
 use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair};
+use crate::utils::graphics::{shift_color_towards, Color, ColorPair};
 
 #[derive(Args, Debug, Clone)]
 pub struct SunshowerConfig {
@@ -205,7 +205,9 @@ impl Sunshower {
             (ctx.terminal.canvas.right - 8).max(ctx.terminal.canvas.left + 4),
             (ctx.terminal.canvas.top - 5).max(ctx.terminal.canvas.bottom + 5),
         );
-        let start_row = (target.row - 10).max(ctx.terminal.canvas.bottom - 4);
+        // Begin with even the highest ray below the canvas so the complete
+        // sun visibly rises through the bottom edge rather than popping in.
+        let start_row = ctx.terminal.canvas.bottom - 7;
         let progress =
             ((self.frame - self.config.sun_start) as f64 / self.config.sunrise_duration as f64).clamp(0.0, 1.0);
         let eased = 1.0 - (1.0 - progress).powi(3);
@@ -339,6 +341,7 @@ impl Effect for Sunshower {
             let diagonal =
                 (((coord.column - left) as f64 / width as f64) + ((top - coord.row) as f64 / height as f64)) / 2.0;
             self.text_colors.insert(id, self.rainbow_color(diagonal));
+            ctx.terminal.arena[id.0 as usize].layer = 5;
             Self::set_visual(ctx, id, &symbol, dim, false);
             ctx.terminal.set_character_visibility(id, true);
         }
@@ -355,66 +358,95 @@ impl Effect for Sunshower {
             self.rain.push(Raindrop { id, column, row, speed });
         }
 
-        let sun_sprite: [(&str, i64, i64); 24] = [
-            ("|", 0, 4),
-            ("/", -4, 3),
-            ("\\", 4, 3),
-            ("-", -6, 0),
-            ("-", 6, 0),
-            ("\\", -4, -3),
-            ("/", 4, -3),
-            ("|", 0, -4),
-            ("O", -1, 2),
-            ("O", 0, 2),
-            ("O", 1, 2),
-            ("O", -2, 1),
-            ("O", -1, 1),
-            ("O", 0, 1),
-            ("O", 1, 1),
-            ("O", 2, 1),
-            ("O", -2, 0),
-            ("O", -1, 0),
-            ("O", 0, 0),
-            ("O", 1, 0),
-            ("O", 2, 0),
-            ("^", -1, 1),
-            ("^", 1, 1),
-            ("u", 0, 0),
+        let sun_sprite = [
+            ("|", 0, 5),
+            ("/", -5, 4),
+            ("\\", 5, 4),
+            ("—", -7, 0),
+            ("—", 7, 0),
+            ("\\", -5, -4),
+            ("/", 5, -4),
+            ("|", 0, -5),
+            ("▄", -2, 2),
+            ("▄", -1, 2),
+            ("▄", 0, 2),
+            ("▄", 1, 2),
+            ("▄", 2, 2),
+            ("█", -3, 1),
+            ("█", -2, 1),
+            ("█", -1, 1),
+            ("█", 0, 1),
+            ("█", 1, 1),
+            ("█", 2, 1),
+            ("█", 3, 1),
+            ("█", -3, 0),
+            ("█", -2, 0),
+            ("█", -1, 0),
+            ("█", 0, 0),
+            ("█", 1, 0),
+            ("█", 2, 0),
+            ("█", 3, 0),
+            ("█", -3, -1),
+            ("█", -2, -1),
+            ("█", -1, -1),
+            ("█", 0, -1),
+            ("█", 1, -1),
+            ("█", 2, -1),
+            ("█", 3, -1),
+            ("▀", -2, -2),
+            ("▀", -1, -2),
+            ("▀", 0, -2),
+            ("▀", 1, -2),
+            ("▀", 2, -2),
         ];
         for (symbol, dx, dy) in sun_sprite {
             let id = ctx.terminal.add_character(symbol, Coord::new(0, 0));
-            ctx.terminal.arena[id.0 as usize].layer = 2;
+            ctx.terminal.arena[id.0 as usize].layer = 6;
             Self::set_visual(ctx, id, symbol, self.config.sun_color, true);
             self.sun.push((id, Coord::new(dx, dy)));
         }
 
-        let cloud_sprite: [(&str, i64, i64); 12] = [
-            ("(", -4, 0),
-            ("_", -3, 0),
-            ("_", -2, 0),
-            ("_", -1, 0),
-            ("_", 0, 0),
-            ("_", 1, 0),
-            ("_", 2, 0),
-            ("_", 3, 0),
-            (")", 4, 0),
-            ("(", -2, 1),
-            ("_", -1, 1),
-            (")", 0, 1),
+        let cloud_sprite = [
+            ("▄", -2, 2),
+            ("▄", -1, 2),
+            ("▄", 0, 2),
+            ("▄", 1, 2),
+            ("▒", -4, 1),
+            ("▓", -3, 1),
+            ("▓", -2, 1),
+            ("▓", -1, 1),
+            ("▓", 0, 1),
+            ("▓", 1, 1),
+            ("▓", 2, 1),
+            ("▓", 3, 1),
+            ("▒", 4, 1),
+            ("▀", -6, 0),
+            ("▀", -5, 0),
+            ("▀", -4, 0),
+            ("▀", -3, 0),
+            ("▀", -2, 0),
+            ("▀", -1, 0),
+            ("▀", 0, 0),
+            ("▀", 1, 0),
+            ("▀", 2, 0),
+            ("▀", 3, 0),
+            ("▀", 4, 0),
+            ("▀", 5, 0),
+            ("▀", 6, 0),
         ];
-        let cloud_color = Color::from_hex("71889a").unwrap();
+        let cloud_color = Color::from_hex("a9bdca").unwrap();
         for index in 0..3 {
             let mut parts = Vec::new();
             for (symbol, dx, dy) in cloud_sprite {
                 let id = ctx.terminal.add_character(symbol, Coord::new(0, 0));
-                ctx.terminal.arena[id.0 as usize].layer = 1;
-                Self::set_visual(ctx, id, symbol, cloud_color, false);
+                ctx.terminal.arena[id.0 as usize].layer = 4;
+                Self::set_visual(ctx, id, symbol, cloud_color, symbol == "▓");
                 parts.push((id, Coord::new(dx, dy)));
             }
             self.clouds.push(Cloud {
                 parts,
                 column: ctx.terminal.canvas.left as f64 - 8.0 + index as f64 * 31.0,
-                row: ctx.terminal.canvas.top - 2 - (index % 2) as i64 * 4,
+                row: ctx.terminal.canvas.top - 3 - (index % 2) as i64 * 4,
                 speed: 0.035 + index as f64 * 0.014,
             });
         }
@@ -431,19 +463,25 @@ impl Effect for Sunshower {
         let outer_x = (width / 2).max(4);
         let outer_y = (outer_x / 2).min((height - 2).max(3));
         let colors = self.config.rainbow_colors.clone();
+        let sky = Color::from_hex("12121a").unwrap();
         for (band, color) in colors.into_iter().enumerate() {
             let radius_x = (outer_x - band as i64 * 2).max(2);
             let radius_y = (outer_y - band as i64).max(1);
             for dx in -radius_x..=radius_x {
+                if (dx + band as i64 * 2).rem_euclid(4) == 0 {
+                    continue;
+                }
                 let normalized = dx as f64 / radius_x as f64;
                 let dy = ((1.0 - normalized * normalized).max(0.0).sqrt() * radius_y as f64).round() as i64;
                 let coord = Coord::new(center_col + dx, base_row + dy);
                 if coord.column < ctx.terminal.canvas.left || coord.column > ctx.terminal.canvas.right {
                     continue;
                 }
-                let id = ctx.terminal.add_character("●", coord);
-                ctx.terminal.arena[id.0 as usize].layer = 1;
-                Self::set_visual(ctx, id, "●", color, true);
+                let symbol = if (dx + band as i64).rem_euclid(2) == 0 { "░" } else { "·" };
+                let transparent = shift_color_towards(&color, &sky, 0.14).unwrap();
+                let id = ctx.terminal.add_character(symbol, coord);
+                ctx.terminal.arena[id.0 as usize].layer = -1;
+                Self::set_visual(ctx, id, symbol, transparent, false);
                 self.rainbow.push(RainbowCell { id, reveal: (dx + radius_x) as f64 / (radius_x * 2).max(1) as f64 });
             }
         }
@@ -454,7 +492,7 @@ impl Effect for Sunshower {
                 ctx.terminal.canvas.random_row(&mut ctx.rng, false),
             );
             let id = ctx.terminal.add_character(".", coord);
-            ctx.terminal.arena[id.0 as usize].layer = 5;
+            ctx.terminal.arena[id.0 as usize].layer = 7;
             ctx.terminal.set_character_visibility(id, false);
             self.sparkles.push(Sparkle { id, coord, phase: index * 11 });
         }
