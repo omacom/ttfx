@@ -25,7 +25,7 @@ RUST = ROOT / "target/release/ttfx"
 REF = ROOT / "reference/tte"
 REPEATS = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 CLOCK_BOUND = {"matrix", "thunderstorm"}
-RUST_ONLY = {"airstrike", "automata", "malfunction", "reverselife", "roses", "sunshower", "voronoi"}
+RUST_ONLY = {"airstrike", "automata", "bubblepop", "malfunction", "reverselife", "roses", "sunshower", "voronoi"}
 
 # Canvas geometry is overridable so the same harness covers a modest terminal and
 # a fullscreen one — the heavier effects only diverge once the canvas gets big.

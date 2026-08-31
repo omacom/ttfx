@@ -46,6 +46,10 @@ helps.setdefault(
     "An elementary cellular automaton grows a fractal lattice whose cells stream into the text",
 )
 helps.setdefault(
+    "bubblepop",
+    "Rainbow-shimmering bubbles float upward, pop, and reveal the text",
+)
+helps.setdefault(
     "malfunction",
     "A printer types nonsense, recovers happily, and prints readable text",
 )

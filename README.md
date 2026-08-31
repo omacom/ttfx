@@ -16,8 +16,9 @@ git log --oneline -10 | ttfx matrix
 **This is a port of [TerminalTextEffects](https://github.com/ChrisBuilds/terminaltexteffects)
 (TTE) by [ChrisBuilds](https://github.com/ChrisBuilds).** The animation engine, command-line
 interface, and 37 original effects are their design — this project translates that work to Rust.
-The additional `airstrike`, `automata`, `malfunction`, `reverselife`, `roses`, `sunshower`, and
-`voronoi` effects are native to ttfx. If you like what you see here, star the original.
+The additional `airstrike`, `automata`, `bubblepop`, `malfunction`, `reverselife`, `roses`,
+`sunshower`, and `voronoi` effects are native to ttfx. If you like what you see here, star the
+original.
 
 TTE is MIT licensed and so is this port; the original copyright is preserved in
 [LICENSE](LICENSE) and [NOTICE](NOTICE). Please file *effect* ideas upstream, where they belong.
@@ -52,10 +53,10 @@ command, best of five.
 
 ## The effects
 
-All 44, each animating the Omarchy logo. Every frame below came out of the Rust binary. The 37
+All 45, each animating the Omarchy logo. Every frame below came out of the Rust binary. The 37
 ported effects are byte-identical to what the Python original produces from the same input and seed;
-`airstrike`, `automata`, `malfunction`, `reverselife`, `roses`, `sunshower`, and `voronoi` are ttfx
-originals.
+`airstrike`, `automata`, `bubblepop`, `malfunction`, `reverselife`, `roses`, `sunshower`, and
+`voronoi` are ttfx originals.
 
 |     |     |
 |:---:|:---:|
@@ -81,6 +82,7 @@ originals.
 | <b>automata</b><br><img src="docs/effects/automata.gif?stock-logo=1" width="400" alt="automata"><br><sub>An elementary cellular automaton grows a fractal lattice whose cells stream into the text</sub> | <b>malfunction</b><br><img src="docs/effects/malfunction.gif?stock-logo=2" width="400" alt="malfunction"><br><sub>A printer types nonsense, recovers happily, and prints readable text</sub> |
 | <b>reverselife</b><br><img src="docs/effects/reverselife.gif?stock-logo=1" width="400" alt="reverselife"><br><sub>Conway's Game of Life runs backward from chaos and resolves into readable text</sub> | <b>roses</b><br><img src="docs/effects/roses.gif?stock-logo=1" width="400" alt="roses"><br><sub>Curling vines grow pink roses, scatter petals, and flower into the text</sub> |
 | <b>sunshower</b><br><img src="docs/effects/sunshower.gif?stock-logo=2" width="400" alt="sunshower"><br><sub>Rain falls as the sun rises and paints a rainbow across the text</sub> | <b>voronoi</b><br><img src="docs/effects/voronoi.gif?stock-logo=1" width="400" alt="voronoi"><br><sub>Living crystal grows from the text, breathes as a faceted Voronoi mosaic, then returns as readable lettering</sub> |
+| <b>bubblepop</b><br><img src="docs/effects/bubblepop.gif?stock-logo=1" width="400" alt="bubblepop"><br><sub>Rainbow-shimmering bubbles float upward, pop, and reveal the text</sub> |  |
 
 Every effect takes its own options — `ttfx <effect> --help`. A few of the GIFs above shorten a
 timed phase so the loop stays watchable (`matrix --rain-time 3`, `thunderstorm --storm-time 3`,

@@ -7,6 +7,7 @@ pub mod beams;
 pub mod binarypath;
 pub mod blackhole;
 pub mod bouncyballs;
+pub mod bubble_pop;
 pub mod bubbles;
 pub mod burn;
 pub mod colorshift;
@@ -65,6 +66,8 @@ pub enum EffectCommand {
     Blackhole(blackhole::BlackholeConfig),
     /// Characters are bouncy balls falling from the top of the canvas.
     Bouncyballs(bouncyballs::BouncyBallsConfig),
+    /// Rainbow-shimmering bubbles float upward, pop, and reveal the text.
+    Bubblepop(bubble_pop::BubblePopConfig),
     /// Characters are formed into bubbles that float down and pop.
     Bubbles(bubbles::BubblesConfig),
     /// Burns vertically in the canvas.
@@ -152,6 +155,7 @@ impl EffectCommand {
             EffectCommand::Binarypath(config) => Box::new(binarypath::BinaryPath::new(config.clone())),
             EffectCommand::Blackhole(config) => Box::new(blackhole::Blackhole::new(config.clone())),
             EffectCommand::Bouncyballs(config) => Box::new(bouncyballs::BouncyBalls::new(config.clone())),
+            EffectCommand::Bubblepop(config) => Box::new(bubble_pop::BubblePop::new(config.clone())),
             EffectCommand::Bubbles(config) => Box::new(bubbles::Bubbles::new(config.clone())),
             EffectCommand::Burn(config) => Box::new(burn::Burn::new(config.clone())),
             EffectCommand::Colorshift(config) => Box::new(colorshift::ColorShift::new(config.clone())),
@@ -201,6 +205,7 @@ impl EffectCommand {
             EffectCommand::Binarypath(_) => "binarypath",
             EffectCommand::Blackhole(_) => "blackhole",
             EffectCommand::Bouncyballs(_) => "bouncyballs",
+            EffectCommand::Bubblepop(_) => "bubblepop",
             EffectCommand::Bubbles(_) => "bubbles",
             EffectCommand::Burn(_) => "burn",
             EffectCommand::Colorshift(_) => "colorshift",
