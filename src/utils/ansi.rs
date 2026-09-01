@@ -1,6 +1,38 @@
 //! ANSI escape sequences, ported from utils/ansitools.py + utils/colorterm.py.
 
+use std::cell::Cell;
 use std::fmt::Write;
+
+// --- Audio-reactive color (omarchy-audio-background bridge) -------------------
+// A global color transform driven by the live audio level. The background driver
+// (run_ttfx) sets it once per frame from the audio volume (brightness) and bass
+// band (hue rotation). Applied in sgr_color so EVERY effect recolors to the music
+// without touching each effect. Identity (active=false) when the toggle is off or
+// the room is quiet, so it costs nothing then.
+thread_local! {
+    static AUDIO_COLOR: Cell<(bool, f32, [f32; 9])> =
+        Cell::new((false, 1.0, [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
+}
+
+/// Set this frame's audio color transform. `brightness` multiplies RGB; `m` is a 3x3
+/// hue-rotation matrix (row-major). Pass active=false to bypass (no per-char cost).
+pub fn set_audio_color(active: bool, brightness: f32, m: [f32; 9]) {
+    AUDIO_COLOR.with(|c| c.set((active, brightness, m)));
+}
+
+/// Apply the audio color transform to an RGB triple. Cheap: 9 mul + 6 add when active,
+/// a single bool check when not.
+#[inline]
+fn audio_recolor(r: f32, g: f32, b: f32) -> (u8, u8, u8) {
+    let (active, bright, m) = AUDIO_COLOR.with(|c| c.get());
+    if !active {
+        return (r as u8, g as u8, b as u8);
+    }
+    let rr = (m[0] * r + m[1] * g + m[2] * b) * bright;
+    let gg = (m[3] * r + m[4] * g + m[5] * b) * bright;
+    let bb = (m[6] * r + m[7] * g + m[8] * b) * bright;
+    (rr.clamp(0.0, 255.0) as u8, gg.clamp(0.0, 255.0) as u8, bb.clamp(0.0, 255.0) as u8)
+}
 
 pub const DEC_SAVE_CURSOR: &str = "\x1b7";
 pub const DEC_RESTORE_CURSOR: &str = "\x1b8";
@@ -57,6 +89,8 @@ fn sgr_color(code: &ColorCode, location: u8, out: &mut String) {
             let r = u8::from_str_radix(&s[0..2], 16).unwrap();
             let g = u8::from_str_radix(&s[2..4], 16).unwrap();
             let b = u8::from_str_radix(&s[4..6], 16).unwrap();
+            // Audio-reactive recolor (no-op when the toggle is off / room is quiet).
+            let (r, g, b) = audio_recolor(r as f32, g as f32, b as f32);
             out.push_str(";2;");
             push_decimal(out, r);
             out.push(';');
