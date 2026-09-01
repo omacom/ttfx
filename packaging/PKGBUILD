@@ -1,15 +1,15 @@
 # Maintainer: David Heinemeier Hansson <david@hey.com>
 pkgname=ttfx
-pkgver=0.1.0
+pkgver=0.3.2
 pkgrel=1
 pkgdesc="Terminal text effects — single-binary Rust port of terminaltexteffects"
 arch=('x86_64')
-url="https://github.com/basecamp/ttfx"
+url="https://github.com/omacom/ttfx"
 license=('MIT')
 depends=('gcc-libs')
 makedepends=('rust')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('d0c0df4867e7f03142fb7f77c66670d0e8da15534239c1a7abfd89f19dfc00f6')
 
 build() {
   cd "$pkgname-$pkgver"
