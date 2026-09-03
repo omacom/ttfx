@@ -11,6 +11,9 @@ use crate::engine::error::EngineError;
 pub trait Effect: EffectHooks {
     fn build(&mut self, ctx: &mut EngineCtx) -> Result<(), EngineError>;
     fn next_frame(&mut self, ctx: &mut EngineCtx) -> Option<String>;
+    /// Audio-reactive hook: called each frame before next_frame when audio is enabled.
+    /// Default is a no-op — effects opt in. `volume` 0..1, `bass` 0..1, `beat` true on detected beat.
+    fn on_audio(&mut self, _ctx: &mut EngineCtx, _volume: f32, _bass: f32, _beat: bool) {}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
