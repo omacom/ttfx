@@ -943,9 +943,8 @@ impl Effect for Thunderstorm {
                 if ctx.clock.now_monotonic() - self.storm_start_time >= self.config.storm_time as f64
                     && !self.strike_in_progress
                 {
-                    // Loop continuously for the full rotate_secs (Service controls rotation),
-                    // instead of fading out and ending. No visible "para".
-                    self.storm_start_time = ctx.clock.now_monotonic();
+                    self.post_storm_text_fade_in(ctx);
+                    self.phase = Phase::Complete;
                 }
             }
             Phase::Waiting | Phase::Complete => {}
