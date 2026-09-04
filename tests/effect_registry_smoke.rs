@@ -42,7 +42,7 @@ fn every_registered_effect_builds_and_emits_a_frame() {
 }
 
 #[test]
-fn thunderstorm_high_volume_audio_path_completes_without_stalling() {
+fn thunderstorm_handles_500_high_volume_audio_frames_without_stalling() {
     let cli = ttfx::cli::Cli::try_parse_from(["ttfx", "thunderstorm", "--storm-time", "1"]).unwrap();
     let mut effect = match cli.effect {
         Some(command) => command.build_effect(),
@@ -68,5 +68,5 @@ fn thunderstorm_high_volume_audio_path_completes_without_stalling() {
         }
         frames += 1;
     }
-    assert!(frames > 60, "thunderstorm ended before entering its storm phase");
+    assert_eq!(frames, 500, "thunderstorm ended during sustained audio load");
 }
