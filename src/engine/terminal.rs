@@ -566,7 +566,10 @@ impl Terminal {
                 if cell == EMPTY_RENDER_CELL {
                     row.push(' ');
                 } else {
-                    row.push_str(arena[cell as usize].animation.current_character_visual.formatted_symbol.as_str());
+                    arena[cell as usize]
+                        .animation
+                        .current_character_visual
+                        .push_rendered_to(row);
                 }
             }
         }
@@ -593,7 +596,10 @@ impl Terminal {
                 if cell == EMPTY_RENDER_CELL {
                     out.push(b' ');
                 } else {
-                    arena[cell as usize].animation.current_character_visual.formatted_symbol.append_to(&mut out);
+                    arena[cell as usize]
+                        .animation
+                        .current_character_visual
+                        .append_rendered_to(&mut out);
                 }
             }
         }

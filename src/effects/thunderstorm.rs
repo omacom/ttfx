@@ -9,6 +9,8 @@
 //! No observable set iteration beyond the engine-canonical active_characters
 //! (docs/ordering-inventory.md).
 
+use std::collections::VecDeque;
+
 use clap::Args;
 
 use crate::cli::parse_color;
@@ -110,7 +112,7 @@ pub struct Thunderstorm {
     delay: i64,
     strike_progression_delay: i64,
     rain_pool: ParticlePool,
-    pending_strike_chars: Vec<CharId>,
+    pending_strike_chars: VecDeque<CharId>,
     available_strike_chars: Vec<CharId>,
     active_strike_chars: Vec<CharId>,
     spark_pool: ParticlePool,
@@ -303,7 +305,7 @@ impl Thunderstorm {
             delay: 0,
             strike_progression_delay: 0,
             rain_pool,
-            pending_strike_chars: Vec::new(),
+            pending_strike_chars: VecDeque::new(),
             available_strike_chars: Vec::new(),
             active_strike_chars: Vec::new(),
             spark_pool,
@@ -339,10 +341,72 @@ impl Thunderstorm {
     }
 
     /// ThunderstormIterator.setup_lightning_strike (recursive branching).
-    /// `max_branches` caps total branch recursions for this top-level strike
-    /// (user wants many thin rays but at most 5 subdivisions/branches per ray).
     fn setup_lightning_strike(&mut self, ctx: &mut EngineCtx, branch_neighbor: Option<CharId>) {
-        self.setup_lightning_strike_capped(ctx, branch_neighbor, 5);
+        let mut branch_neighbor = branch_neighbor;
+        let (mut column, mut row);
+        if let Some(neighbor) = branch_neighbor {
+            let coord = ctx.terminal.arena[neighbor.0 as usize].motion.current_coord;
+            column = coord.column;
+            row = coord.row;
+        } else {
+            column = ctx.rng.randint(1, ctx.terminal.canvas.right);
+            row = ctx.terminal.canvas.top;
+        }
+
+        while row >= ctx.terminal.canvas.bottom {
+            if self.available_strike_chars.is_empty() {
+                self.build_strike_characters(ctx, 20);
+            }
+            let symbol: &str;
+            if let Some(neighbor) = branch_neighbor {
+                // Strike characters are all created with input_symbol "|", so
+                // the "/" and "\\" arms are unreachable upstream too —
+                // transcribed faithfully anyway.
+                let neighbor_symbol = ctx.terminal.arena[neighbor.0 as usize].input_symbol.clone();
+                if neighbor_symbol == "/" {
+                    column += 1;
+                    symbol = *ctx.rng.choice(&["|", "\\"]);
+                } else if neighbor_symbol == "\\" {
+                    column -= 1;
+                    symbol = *ctx.rng.choice(&["|", "/"]);
+                } else {
+                    let delta = *ctx.rng.choice(&[-1i64, 1]);
+                    column += delta;
+                    symbol = if delta == 1 { "\\" } else { "/" };
+                }
+            } else {
+                symbol = *ctx.rng.choice(&["\\", "/", "|"]);
+            }
+
+            let strike_char = self.get_next_strike_char(ctx);
+            {
+                let ch = &mut ctx.terminal.arena[strike_char.0 as usize];
+                ch.motion.set_coordinate(Coord::new(column, row));
+                let input_symbol = ch.input_symbol.clone();
+                let uses_pre = ch.uses_input_preexisting_colors;
+                ch.animation.set_appearance(
+                    &input_symbol,
+                    uses_pre,
+                    Some(symbol),
+                    Some(ColorPair::new(Some(self.config.lightning_color.clone()), None)),
+                );
+            }
+            row -= 1;
+            if symbol == "\\" {
+                column += 1;
+            } else if symbol == "/" {
+                column -= 1;
+            }
+
+            self.pending_strike_chars.push_back(strike_char);
+            // random.random() is always drawn (left operand of `and`).
+            if ctx.rng.random() < self.strike_branch_chance && branch_neighbor.is_none() {
+                self.strike_branch_chance -= 0.01;
+                self.setup_lightning_strike(ctx, Some(strike_char));
+            }
+            branch_neighbor = None;
+        }
+        self.strike_branch_chance = 0.05;
     }
 
     fn setup_lightning_strike_capped(
@@ -416,7 +480,7 @@ impl Thunderstorm {
                 column -= 1;
             }
 
-            self.pending_strike_chars.push(strike_char);
+            self.pending_strike_chars.push_back(strike_char);
             // Cap branches to max_branches (thin rays: e.g. 0 for multi-strike).
             if *branches_used < max_branches
                 && ctx.rng.random() < self.strike_branch_chance
@@ -436,6 +500,12 @@ impl Thunderstorm {
     /// ThunderstormIterator.lightning_strike.
     fn lightning_strike(&mut self, ctx: &mut EngineCtx) {
         self.setup_lightning_strike(ctx, None);
+        self.finish_lightning_strike(ctx);
+    }
+
+    /// Build flash/fade scenes and callbacks for characters already queued by a
+    /// normal or audio-triggered strike.
+    fn finish_lightning_strike(&mut self, ctx: &mut EngineCtx) {
         let strike_base_color = self.config.lightning_color.clone();
         let strike_flash_color = Animation::adjust_color_brightness(&strike_base_color, 1.7);
         let strike_gradient = Gradient::with_steps(&[strike_base_color.clone(), strike_flash_color], 7, true)
@@ -543,7 +613,7 @@ impl Thunderstorm {
                 if self.pending_strike_chars.is_empty() {
                     break;
                 }
-                let next_strike_char = self.pending_strike_chars.remove(0);
+                let next_strike_char = self.pending_strike_chars.pop_front().unwrap();
                 self.active_strike_chars.push(next_strike_char);
                 ctx.terminal.set_character_visibility(next_strike_char, true);
                 self.strike_progression_delay = delay;
@@ -956,103 +1026,43 @@ impl Effect for Thunderstorm {
     fn on_audio(&mut self, ctx: &mut EngineCtx, volume: f32, _bass: f32, beat: bool) {
         self.audio_volume = volume.clamp(0.0, 1.0);
         self.audio_beat = beat;
-        // Only during the storm, when no strike is already progressing.
-        // Loud passages / beats trigger lightning; quiet stays random (0.8% in next_frame).
         if self.phase != Phase::Storm || self.strike_in_progress {
             return;
         }
-        let vol = self.audio_volume;
-        // Beat lowers the threshold so the drop hits exactly on the beat.
+        let volume = self.audio_volume;
         let threshold = if beat { 0.22 } else { 0.42 };
-        if vol < threshold {
+        if volume < threshold {
             return;
         }
-        // Chance scales with volume so louder = more likely to strike this frame.
-        let chance = if beat { (vol * 0.65) as f64 } else { (vol * 0.28) as f64 };
-        if ctx.rng.random() < chance {
-            self.strike_in_progress = true;
-            // Multi-strike: louder = more distinct horizontal positions (up to 10 thin rays).
-            // Subdivisions (branches) per ray scale with intensity: quiet=0-1, loud=3-5.
-            let count = if vol > 0.85 { 10 } else if vol > 0.78 { 8 } else if vol > 0.70 { 6 } else if vol > 0.60 { 5 } else if vol > 0.48 { 3 } else if vol > 0.36 { 2 } else { 1 };
-            let branches_per_ray = ((vol * 5.0).floor() as usize).clamp(0, 5);
-            if count == 1 {
-                // Single ray: allow branches based on intensity (vol low = thin straight, loud = jagged)
-                self.setup_lightning_strike_capped(ctx, None, branches_per_ray);
-                // Need to run the gradient/event setup that lightning_strike normally does,
-                // but we already built the pending via capped, so do the second half here:
-                let strike_base_color = self.config.lightning_color.clone();
-                let strike_flash_color = crate::engine::animation::Animation::adjust_color_brightness(&strike_base_color, 1.7);
-                let strike_gradient = crate::utils::graphics::Gradient::with_steps(&[strike_base_color.clone(), strike_flash_color], 7, true).expect("strike gradient failed");
-                let fade_gradient = crate::utils::graphics::Gradient::with_steps(&[strike_base_color, ctx.terminal.config.terminal_background_color.clone()], 6, false).expect("strike fade gradient failed");
-                let layer = 1;
-                let flash_ease = crate::utils::easing::Easing::CubicBezier(0.0, 1.6, 1.0, ctx.rng.uniform(-0.6, 0.4));
-                for &strike_char in &self.pending_strike_chars {
-                    let symbol = ctx.terminal.arena[strike_char.0 as usize].animation.current_character_visual.symbol.clone();
-                    {
-                        let ch = &mut ctx.terminal.arena[strike_char.0 as usize];
-                        let uses_pre = ch.uses_input_preexisting_colors;
-                        let flash_scn = ch.animation.new_scene(false, None, Some(flash_ease), "flash", uses_pre);
-                        let scene = ch.animation.scenes.get_mut(&flash_scn).unwrap();
-                        for color in &strike_gradient.spectrum {
-                            scene.add_frame(&symbol, 6, crate::engine::animation::VisualParams { colors: Some(crate::utils::graphics::ColorPair::new(Some(color.clone()), None)), ..Default::default() }).expect("flash frame failed");
-                        }
-                        let fade_scn = ch.animation.new_scene(false, None, None, "fade", uses_pre);
-                        let scene = ch.animation.scenes.get_mut(&fade_scn).unwrap();
-                        for color in &fade_gradient.spectrum {
-                            scene.add_frame(&symbol, 2, crate::engine::animation::VisualParams { colors: Some(crate::utils::graphics::ColorPair::new(Some(color.clone()), None)), ..Default::default() }).expect("fade frame failed");
-                        }
-                        ch.layer = layer;
-                    }
-                    ctx.register_event(strike_char, crate::engine::events::Event::SceneComplete, crate::engine::events::CallerKey::Scene("flash".to_string()), crate::engine::events::EventAction::ActivateScene("fade".to_string())).expect("flash->fade registration failed");
-                    ctx.register_event(strike_char, crate::engine::events::Event::SceneComplete, crate::engine::events::CallerKey::Scene("fade".to_string()), crate::engine::events::EventAction::Callback(crate::engine::events::EffectCallback { id: 1, args: Vec::new() })).expect("hide registration failed");
-                    ctx.register_event(strike_char, crate::engine::events::Event::SceneComplete, crate::engine::events::CallerKey::Scene("fade".to_string()), crate::engine::events::EventAction::Callback(crate::engine::events::EffectCallback { id: 2, args: Vec::new() })).expect("glow registration failed");
-                    ctx.register_event(strike_char, crate::engine::events::Event::SceneComplete, crate::engine::events::CallerKey::Scene("fade".to_string()), crate::engine::events::EventAction::Callback(crate::engine::events::EffectCallback { id: 3, args: Vec::new() })).expect("return registration failed");
-                }
-                let text_chars = { let filter = crate::engine::terminal::CharacterFilter::default(); ctx.terminal.get_characters(&mut ctx.rng, filter, crate::engine::terminal::CharacterSort::TopToBottomLeftToRight) };
-                for id in text_chars {
-                    ctx.terminal.arena[id.0 as usize].animation.scenes.get_mut("flash").expect("text flash scene missing").ease = Some(flash_ease);
-                }
-            } else {
-                // Many thin rays: branches per ray scale with intensity (quiet=thin, loud=jagged)
-                for _ in 0..count {
-                    self.setup_lightning_strike_capped(ctx, None, branches_per_ray);
-                }
-                // Reuse lightning_strike's gradient/event setup for the combined pending.
-                // Inline the second half of lightning_strike to avoid double-registering.
-                let strike_base_color = self.config.lightning_color.clone();
-                let strike_flash_color = crate::engine::animation::Animation::adjust_color_brightness(&strike_base_color, 1.7);
-                let strike_gradient = crate::utils::graphics::Gradient::with_steps(&[strike_base_color.clone(), strike_flash_color], 7, true).expect("strike gradient failed");
-                let fade_gradient = crate::utils::graphics::Gradient::with_steps(&[strike_base_color, ctx.terminal.config.terminal_background_color.clone()], 6, false).expect("strike fade gradient failed");
-                let layer = 1;
-                let flash_ease = crate::utils::easing::Easing::CubicBezier(0.0, 1.6, 1.0, ctx.rng.uniform(-0.6, 0.4));
-                for &strike_char in &self.pending_strike_chars {
-                    let symbol = ctx.terminal.arena[strike_char.0 as usize].animation.current_character_visual.symbol.clone();
-                    {
-                        let ch = &mut ctx.terminal.arena[strike_char.0 as usize];
-                        let uses_pre = ch.uses_input_preexisting_colors;
-                        let flash_scn = ch.animation.new_scene(false, None, Some(flash_ease), "flash", uses_pre);
-                        let scene = ch.animation.scenes.get_mut(&flash_scn).unwrap();
-                        for color in &strike_gradient.spectrum {
-                            scene.add_frame(&symbol, 6, crate::engine::animation::VisualParams { colors: Some(crate::utils::graphics::ColorPair::new(Some(color.clone()), None)), ..Default::default() }).expect("flash frame failed");
-                        }
-                        let fade_scn = ch.animation.new_scene(false, None, None, "fade", uses_pre);
-                        let scene = ch.animation.scenes.get_mut(&fade_scn).unwrap();
-                        for color in &fade_gradient.spectrum {
-                            scene.add_frame(&symbol, 2, crate::engine::animation::VisualParams { colors: Some(crate::utils::graphics::ColorPair::new(Some(color.clone()), None)), ..Default::default() }).expect("fade frame failed");
-                        }
-                        ch.layer = layer;
-                    }
-                    ctx.register_event(strike_char, crate::engine::events::Event::SceneComplete, crate::engine::events::CallerKey::Scene("flash".to_string()), crate::engine::events::EventAction::ActivateScene("fade".to_string())).expect("flash->fade registration failed");
-                    ctx.register_event(strike_char, crate::engine::events::Event::SceneComplete, crate::engine::events::CallerKey::Scene("fade".to_string()), crate::engine::events::EventAction::Callback(crate::engine::events::EffectCallback { id: 1, args: Vec::new() })).expect("hide registration failed");
-                    // CB_HIDE_CHARACTER=1, CB_MAKE_CHAR_GLOW=2, CB_RETURN_STRIKE_TO_POOL=3 are the correct ids — re-use constants via raw values to avoid private const issues.
-                    ctx.register_event(strike_char, crate::engine::events::Event::SceneComplete, crate::engine::events::CallerKey::Scene("fade".to_string()), crate::engine::events::EventAction::Callback(crate::engine::events::EffectCallback { id: 2, args: Vec::new() })).expect("glow registration failed");
-                    ctx.register_event(strike_char, crate::engine::events::Event::SceneComplete, crate::engine::events::CallerKey::Scene("fade".to_string()), crate::engine::events::EventAction::Callback(crate::engine::events::EffectCallback { id: 3, args: Vec::new() })).expect("return registration failed");
-                }
-                let text_chars = { let filter = crate::engine::terminal::CharacterFilter::default(); ctx.terminal.get_characters(&mut ctx.rng, filter, crate::engine::terminal::CharacterSort::TopToBottomLeftToRight) };
-                for id in text_chars {
-                    ctx.terminal.arena[id.0 as usize].animation.scenes.get_mut("flash").expect("text flash scene missing").ease = Some(flash_ease);
-                }
-            }
+        let chance = if beat {
+            (volume * 0.65) as f64
+        } else {
+            (volume * 0.28) as f64
+        };
+        if ctx.rng.random() >= chance {
+            return;
         }
+
+        self.strike_in_progress = true;
+        let ray_count = if volume > 0.85 {
+            10
+        } else if volume > 0.78 {
+            8
+        } else if volume > 0.70 {
+            6
+        } else if volume > 0.60 {
+            5
+        } else if volume > 0.48 {
+            3
+        } else if volume > 0.36 {
+            2
+        } else {
+            1
+        };
+        let branches_per_ray = ((volume * 5.0).floor() as usize).clamp(0, 5);
+        for _ in 0..ray_count {
+            self.setup_lightning_strike_capped(ctx, None, branches_per_ray);
+        }
+        self.finish_lightning_strike(ctx);
     }
 }
