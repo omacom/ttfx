@@ -5,16 +5,7 @@ on:
     branches: [main, master]
   pull_request:
 
-jobs:
-  build-nix:
-    name: Nix Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v26
-      - name: Building nix package
-        run: nix build
-        
+jobs:      
   test:
     name: Tests + parity suite
     # Parity CI is pinned to one platform/toolchain pair (plan.md §5.20):
@@ -60,3 +51,12 @@ jobs:
         with:
           name: ttfx-x86_64-unknown-linux-musl
           path: target/x86_64-unknown-linux-musl/release/ttfx
+
+  build-nix:
+    name: Nix Build (smoke test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v26
+      - name: Building nix package
+        run: nix build
