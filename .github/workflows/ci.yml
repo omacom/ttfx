@@ -6,6 +6,15 @@ on:
   pull_request:
 
 jobs:
+  build-nix:
+    name: Nix Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v26
+      - name: Building nix package
+        run: nix build
+        
   test:
     name: Tests + parity suite
     # Parity CI is pinned to one platform/toolchain pair (plan.md §5.20):
