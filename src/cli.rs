@@ -123,7 +123,7 @@ pub struct Cli {
     #[arg(long = "palette", value_name = "HEX[,HEX...]", action = clap::ArgAction::Append, value_parser = parse_palette_arg)]
     pub palette_args: Vec<Vec<Color>>,
 
-    /// Color the word in 5-2-4-3-5 field bands using --palette (crest, hover,
+    /// Color the word in 4-3-4-3-5 field bands using --palette (crest, hover,
     /// lit, mid, dim from the top). Requires --palette.
     #[arg(long = "bands", default_value_t = false)]
     pub bands: bool,

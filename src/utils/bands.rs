@@ -1,4 +1,4 @@
-//! Vertical field bands on the input word: 5, 2, 4, 3, 5 units crest to dim.
+//! Vertical field bands on the input word: 4, 3, 4, 3, 5 units crest to dim.
 //!
 //! The field is 19 units tall, one per wordmark bitmap row. `t` is 0 at the
 //! top of the word and 1 at the bottom. Palette color 0 is crest, then hover,
@@ -9,7 +9,7 @@ use crate::engine::terminal::Terminal;
 use crate::utils::palette::Palette;
 
 /// Crest, hover, lit, mid, dim — top to bottom.
-pub const FIELD_BAND_UNITS: &[u32] = &[5, 2, 4, 3, 5];
+pub const FIELD_BAND_UNITS: &[u32] = &[4, 3, 4, 3, 5];
 
 pub fn field_band_rows() -> u32 {
     FIELD_BAND_UNITS.iter().sum()
@@ -37,7 +37,7 @@ pub fn field_band_index_in(t: f64, units: &[u32]) -> usize {
 }
 
 /// How many of `n` discrete rows each band gets. Hamilton / largest remainder
-/// so a 1-unit hover is never dropped when `n` is not a multiple of 19.
+/// so no band is dropped when `n` is not a multiple of 19.
 pub fn field_band_counts(n: u32) -> Vec<u32> {
     let bands = FIELD_BAND_UNITS.len();
     if n == 0 {
@@ -103,9 +103,9 @@ pub fn field_band_index_n(i: u32, n: u32) -> usize {
 /// Color each input character from the palette by its row in the word.
 ///
 /// `input_coord.row` is 1-based and grows up, so the largest row is the top.
-/// 5-2-4-3-5 is a ratio: whatever number of lines the file has, those five
-/// bands are spread across them (19 lines stay 5-2-4-3-5; 10 lines become
-/// 3-1-2-1-3).
+/// 4-3-4-3-5 is a ratio: whatever number of lines the file has, those five
+/// bands are spread across them (19 lines stay 4-3-4-3-5; 10 lines become
+/// 2-2-2-1-3).
 pub fn apply_field_bands(terminal: &mut Terminal, palette: &Palette) {
     let mut min_row = i64::MAX;
     let mut max_row = i64::MIN;
@@ -143,16 +143,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn spec_units_are_five_two_four_three_five() {
-        assert_eq!(FIELD_BAND_UNITS, &[5, 2, 4, 3, 5]);
+    fn spec_units_are_four_three_four_three_five() {
+        assert_eq!(FIELD_BAND_UNITS, &[4, 3, 4, 3, 5]);
         assert_eq!(field_band_rows(), 19);
     }
 
     #[test]
     fn index_follows_crest_hover_lit_mid_dim() {
         assert_eq!(field_band_index(0.0), 0);
-        assert_eq!(field_band_index(5.0 / 19.0 - 1e-9), 0);
-        assert_eq!(field_band_index(5.0 / 19.0), 1);
+        assert_eq!(field_band_index(4.0 / 19.0 - 1e-9), 0);
+        assert_eq!(field_band_index(4.0 / 19.0), 1);
         assert_eq!(field_band_index(7.0 / 19.0), 2);
         assert_eq!(field_band_index(11.0 / 19.0), 3);
         assert_eq!(field_band_index(14.0 / 19.0), 4);
@@ -189,8 +189,8 @@ mod tests {
             .collect();
         by_row.sort_by_key(|(row, _)| std::cmp::Reverse(*row));
 
-        // 5-2-4-3-5 on 13 rows is 4-1-3-2-3.
-        let expected = [0, 0, 0, 0, 1, 2, 2, 2, 3, 3, 4, 4, 4];
+        // 4-3-4-3-5 on 13 rows is 3-2-3-2-3.
+        let expected = [0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4];
         assert_eq!(by_row.len(), 13);
         for (i, (row, color)) in by_row.iter().enumerate() {
             assert_eq!(*row, 13 - i as i64);
@@ -231,7 +231,7 @@ mod tests {
             .collect();
         by_row.sort_by_key(|(row, _)| std::cmp::Reverse(*row));
 
-        let expected = [0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4, 4];
+        let expected = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4, 4];
         assert_eq!(by_row.len(), 19);
         for (i, (row, idx)) in by_row.iter().enumerate() {
             assert_eq!(*row, 19 - i as i64);
@@ -241,9 +241,9 @@ mod tests {
 
     #[test]
     fn discrete_rows_never_drop_a_band() {
-        assert_eq!(field_band_counts(19), vec![5, 2, 4, 3, 5]);
-        assert_eq!(field_band_counts(13), vec![4, 1, 3, 2, 3]);
-        assert_eq!(field_band_counts(10), vec![3, 1, 2, 1, 3]);
+        assert_eq!(field_band_counts(19), vec![4, 3, 4, 3, 5]);
+        assert_eq!(field_band_counts(13), vec![3, 2, 3, 2, 3]);
+        assert_eq!(field_band_counts(10), vec![2, 2, 2, 1, 3]);
         assert_eq!(field_band_counts(8), vec![2, 1, 2, 1, 2]);
         for n in 5..=40 {
             let counts = field_band_counts(n);
@@ -263,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    fn ten_rows_scale_five_two_four_three_five() {
+    fn ten_rows_scale_four_three_four_three_five() {
         use crate::engine::terminal::{Terminal, TerminalConfig};
         use crate::utils::palette::Palette;
 
@@ -291,8 +291,8 @@ mod tests {
             .collect();
         by_row.sort_by_key(|(row, _)| std::cmp::Reverse(*row));
         let bands: Vec<usize> = by_row.into_iter().map(|(_, b)| b).collect();
-        // 5-2-4-3-5 on 10 rows is 3-1-2-1-3.
-        assert_eq!(bands, vec![0, 0, 0, 1, 2, 2, 3, 4, 4, 4]);
+        // 4-3-4-3-5 on 10 rows is 2-2-2-1-3.
+        assert_eq!(bands, vec![0, 0, 1, 1, 2, 2, 3, 4, 4, 4]);
     }
 
     #[test]
@@ -335,7 +335,7 @@ mod tests {
         let bands: Vec<usize> = by_row.into_iter().map(|(_, b)| b).collect();
         assert_eq!(
             bands,
-            vec![0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4, 4]
+            vec![0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4, 4]
         );
     }
 }

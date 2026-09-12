@@ -169,7 +169,7 @@ fn build_effect(name: &str, palette: Option<&Palette>) -> Result<Box<dyn Effect>
         .ok_or_else(|| JsError::new(&format!("unknown effect '{name}'")))
 }
 
-/// Which 5-2-4-3-5 band `t` (0 at the top, 1 at the bottom) falls in.
+/// Which 4-3-4-3-5 band `t` (0 at the top, 1 at the bottom) falls in.
 #[wasm_bindgen]
 pub fn field_band_index(t: f64) -> u32 {
     crate::utils::bands::field_band_index(t) as u32
