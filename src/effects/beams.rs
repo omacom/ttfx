@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_positive_int, parse_positive_int_range, parse_symbol,
 };
@@ -15,7 +14,7 @@ use crate::engine::effect::Effect;
 use crate::engine::error::EngineError;
 use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct BeamsConfig {
@@ -76,6 +75,26 @@ pub struct BeamsConfig {
     /// Speed of the final wipe as measured in diagonal groups activated per frame.
     #[arg(long = "final-wipe-speed", default_value_t = 3, value_parser = parse_positive_int)]
     pub final_wipe_speed: i64,
+}
+
+impl Default for BeamsConfig {
+    fn default() -> Self {
+        Self {
+            beam_row_symbols: ["▂", "▁", "_"].into_iter().map(|v| parse_symbol(v).expect("default beam_row_symbols")).collect(),
+            beam_column_symbols: ["▌", "▍", "▎", "▏"].into_iter().map(|v| parse_symbol(v).expect("default beam_column_symbols")).collect(),
+            beam_delay: 6,
+            beam_row_speed_range: parse_positive_int_range("15-60").expect("default beam_row_speed_range"),
+            beam_column_speed_range: parse_positive_int_range("9-15").expect("default beam_column_speed_range"),
+            beam_gradient_stops: ["ffffff", "00D1FF", "8A008A"].into_iter().map(|v| parse_color(v).expect("default beam_gradient_stops")).collect(),
+            beam_gradient_steps: ["2", "6"].into_iter().map(|v| parse_gradient_steps(v).expect("default beam_gradient_steps")).collect(),
+            beam_gradient_frames: 2,
+            final_gradient_stops: ["8A008A", "00D1FF", "ffffff"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_frames: 4,
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+            final_wipe_speed: 3,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

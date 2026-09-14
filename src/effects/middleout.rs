@@ -10,7 +10,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{parse_easing, parse_gradient_direction, parse_gradient_steps, parse_positive_float};
 use crate::engine::animation::{ExistingColorHandling, VisualParams};
 use crate::engine::character::CharId;
@@ -21,7 +20,7 @@ use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 /// typing.Literal["vertical", "horizontal"].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -77,6 +76,22 @@ pub struct MiddleoutConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for MiddleoutConfig {
+    fn default() -> Self {
+        Self {
+            starting_color: parse_color("ffffff").expect("default starting_color"),
+            expand_direction: parse_expand_direction("vertical").expect("default expand_direction"),
+            center_movement_speed: 0.6,
+            full_movement_speed: 0.6,
+            center_easing: parse_easing("in_out_sine").expect("default center_easing"),
+            full_easing: parse_easing("in_out_sine").expect("default full_easing"),
+            final_gradient_stops: ["8A008A", "00D1FF", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

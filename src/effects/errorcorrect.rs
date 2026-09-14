@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_positive_float, parse_positive_int,
 };
@@ -15,7 +14,7 @@ use crate::engine::effect::Effect;
 use crate::engine::error::EngineError;
 use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct ErrorCorrectConfig {
@@ -52,6 +51,21 @@ pub struct ErrorCorrectConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for ErrorCorrectConfig {
+    fn default() -> Self {
+        Self {
+            error_pairs: 0.1,
+            swap_delay: 6,
+            error_color: parse_color("e74c3c").expect("default error_color"),
+            correct_color: parse_color("45bf55").expect("default correct_color"),
+            movement_speed: 0.9,
+            final_gradient_stops: ["8A008A", "00D1FF", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 const BLOCK_WIPE_START: [&str; 8] = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];

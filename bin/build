@@ -8,7 +8,45 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit 1
 fi
 
-cd "$ROOT"
-cargo build --release "$@"
+effect=""
+i=1
+n=$#
+while [ "$i" -le "$n" ]; do
+  arg=$1
+  shift
+  case "$arg" in
+  --effect)
+    if [ "$i" -eq "$n" ]; then
+      echo "--effect requires an effect name" >&2
+      exit 1
+    fi
+    effect=$1
+    shift
+    i=$((i + 1))
+    if [ -z "$effect" ]; then
+      echo "--effect requires an effect name" >&2
+      exit 1
+    fi
+    ;;
+  --effect=*)
+    effect=${arg#--effect=}
+    if [ -z "$effect" ]; then
+      echo "--effect requires an effect name" >&2
+      exit 1
+    fi
+    ;;
+  *)
+    set -- "$@" "$arg"
+    ;;
+  esac
+  i=$((i + 1))
+done
 
-echo "Built $ROOT/target/release/ttfx"
+cd "$ROOT"
+if [ -n "$effect" ]; then
+  cargo build --release --no-default-features --features "$effect" "$@"
+  echo "Built $ROOT/target/release/ttfx (effect: $effect)"
+else
+  cargo build --release "$@"
+  echo "Built $ROOT/target/release/ttfx"
+fi

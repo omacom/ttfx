@@ -34,6 +34,18 @@ impl RgbString {
             len: value.len() as u8,
         }
     }
+
+    fn from_rgb([r, g, b]: [u8; 3]) -> Self {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let mut bytes = [0; 7];
+        bytes[0] = HEX[(r >> 4) as usize];
+        bytes[1] = HEX[(r & 0x0f) as usize];
+        bytes[2] = HEX[(g >> 4) as usize];
+        bytes[3] = HEX[(g & 0x0f) as usize];
+        bytes[4] = HEX[(b >> 4) as usize];
+        bytes[5] = HEX[(b & 0x0f) as usize];
+        RgbString { bytes, len: 6 }
+    }
 }
 
 impl Deref for RgbString {
@@ -108,12 +120,12 @@ impl std::hash::Hash for Color {
 
 impl Color {
     pub fn from_xterm(code: u8) -> Self {
-        let rgb_color = RgbString::new(hexterm::xterm_to_hex(code));
+        let rgb = hexterm::xterm_rgb(code);
         Color {
             color_arg: ColorArg::Xterm(code),
             xterm_color: Some(code),
-            rgb: Self::parse_rgb(&rgb_color),
-            rgb_color,
+            rgb,
+            rgb_color: RgbString::from_rgb(rgb),
         }
     }
 
@@ -140,12 +152,35 @@ impl Color {
         (self.rgb[0], self.rgb[1], self.rgb[2])
     }
 
+    /// RGB constructor used by gradient generation. Same `color_arg` as a
+    /// lowercase hex string, without going through `format!` / `from_hex`.
+    pub fn from_rgb(r: u8, g: u8, b: u8) -> Self {
+        let rgb = [r, g, b];
+        let rgb_color = RgbString::from_rgb(rgb);
+        Color {
+            color_arg: ColorArg::Hex(rgb_color),
+            xterm_color: None,
+            rgb,
+            rgb_color,
+        }
+    }
+
     fn parse_rgb(s: &str) -> [u8; 3] {
         [
             u8::from_str_radix(&s[0..2], 16).unwrap(),
             u8::from_str_radix(&s[2..4], 16).unwrap(),
             u8::from_str_radix(&s[4..6], 16).unwrap(),
         ]
+    }
+}
+
+/// argutils.ColorArg: <=3 chars -> xterm int 0-255, else hex.
+pub fn parse_color(s: &str) -> Result<Color, String> {
+    if s.len() <= 3 {
+        let code: u8 = s.parse().map_err(|_| format!("invalid color value: '{s}'"))?;
+        Ok(Color::from_xterm(code))
+    } else {
+        Color::from_hex(s)
     }
 }
 
@@ -248,7 +283,7 @@ impl Gradient {
                 let red = (sr + red_delta * i).clamp(0, 255);
                 let green = (sg + green_delta * i).clamp(0, 255);
                 let blue = (sb + blue_delta * i).clamp(0, 255);
-                spectrum.push(Color::from_hex(&format!("{red:02x}{green:02x}{blue:02x}")).unwrap());
+                spectrum.push(Color::from_rgb(red as u8, green as u8, blue as u8));
             }
             spectrum.push(end.clone());
         }
@@ -343,7 +378,8 @@ impl Gradient {
 
 /// graphics.random_color.
 pub fn random_color(rng: &mut Rng) -> Color {
-    Color::from_hex(&format!("{:06x}", rng.randint(0, 0xFFFFFF))).unwrap()
+    let n = rng.randint(0, 0xFFFFFF) as u32;
+    Color::from_rgb(((n >> 16) & 0xff) as u8, ((n >> 8) & 0xff) as u8, (n & 0xff) as u8)
 }
 
 /// graphics.shift_color_towards: float lerp with int() TRUNCATION back to hex
@@ -378,7 +414,7 @@ pub fn shift_color_towards(color: &Color, target_color: &Color, factor: f64) -> 
 mod tests {
     use std::collections::HashMap;
 
-    use super::Color;
+    use super::{parse_color, Color};
 
     #[test]
     fn rgb_string_borrowed_lookup_matches_str_hash() {
@@ -395,5 +431,12 @@ mod tests {
             format!("{color:?}"),
             "Color { color_arg: Hex(\"12AbEf7\"), xterm_color: None, rgb_color: \"12AbEf7\" }"
         );
+    }
+
+    #[test]
+    fn parse_color_accepts_xterm_codes_and_hex() {
+        assert_eq!(parse_color("255").unwrap(), Color::from_xterm(255));
+        assert_eq!(parse_color("12AbEf").unwrap(), Color::from_hex("12AbEf").unwrap());
+        assert!(parse_color("not-a-color").is_err());
     }
 }

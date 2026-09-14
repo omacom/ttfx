@@ -5,10 +5,98 @@ edition = "2021"
 description = "Terminal text effects — a Rust port of terminaltexteffects (TTE)"
 license = "MIT"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["all-effects"]
+all-effects = [
+    "beams",
+    "binarypath",
+    "blackhole",
+    "bouncyballs",
+    "bubbles",
+    "burn",
+    "colorshift",
+    "crumble",
+    "decrypt",
+    "errorcorrect",
+    "expand",
+    "fireworks",
+    "highlight",
+    "laseretch",
+    "matrix",
+    "middleout",
+    "orbittingvolley",
+    "overflow",
+    "pour",
+    "print",
+    "rain",
+    "randomsequence",
+    "rings",
+    "scattered",
+    "slice",
+    "slide",
+    "smoke",
+    "spotlights",
+    "spray",
+    "swarm",
+    "sweep",
+    "synthgrid",
+    "thunderstorm",
+    "unstable",
+    "vhstape",
+    "waves",
+    "wipe",
+]
+beams = []
+binarypath = []
+blackhole = []
+bouncyballs = []
+bubbles = []
+burn = []
+colorshift = []
+crumble = []
+decrypt = []
+errorcorrect = []
+expand = []
+fireworks = []
+highlight = []
+laseretch = []
+matrix = []
+middleout = []
+orbittingvolley = []
+overflow = []
+pour = []
+print = []
+rain = []
+randomsequence = []
+rings = []
+scattered = []
+slice = []
+slide = []
+smoke = []
+spotlights = []
+spray = []
+swarm = []
+sweep = []
+synthgrid = []
+thunderstorm = []
+unstable = []
+vhstape = []
+waves = []
+wipe = []
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4.6.9"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 terminal_size = "0.4"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3"
+wasm-bindgen = "0.2.127"
 
 [profile.release]
 lto = true

@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_character_group, parse_gradient_direction, parse_gradient_steps, parse_positive_float, parse_positive_int,
 };
@@ -16,7 +15,7 @@ use crate::engine::error::EngineError;
 use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::easing::{Easing, SequenceEaser};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct HighlightConfig {
@@ -46,6 +45,19 @@ pub struct HighlightConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for HighlightConfig {
+    fn default() -> Self {
+        Self {
+            highlight_brightness: 1.75,
+            highlight_direction: parse_character_group("diagonal_bottom_left_to_top_right").expect("default highlight_direction"),
+            highlight_width: 8,
+            final_gradient_stops: ["8A008A", "00D1FF", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct Highlight {

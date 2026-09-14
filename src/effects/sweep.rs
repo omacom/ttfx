@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_character_group, parse_gradient_direction, parse_gradient_steps, parse_symbol,
 };
@@ -16,7 +15,7 @@ use crate::engine::error::EngineError;
 use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::easing::{Easing, SequenceEaser};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct SweepConfig {
@@ -48,6 +47,19 @@ pub struct SweepConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for SweepConfig {
+    fn default() -> Self {
+        Self {
+            sweep_symbols: ["█", "▓", "▒", "░"].into_iter().map(|v| parse_symbol(v).expect("default sweep_symbols")).collect(),
+            first_sweep_direction: parse_character_group("column_right_to_left").expect("default first_sweep_direction"),
+            second_sweep_direction: parse_character_group("column_left_to_right").expect("default second_sweep_direction"),
+            final_gradient_stops: ["8A008A", "00D1FF", "ffffff"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["8"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct Sweep {

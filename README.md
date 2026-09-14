@@ -119,7 +119,19 @@ ttfx --help                 # all 37 effects and the terminal options
 ttfx <effect> --help        # options for one effect
 ttfx --random-effect        # surprise me (--include-effects / --exclude-effects to filter)
 ttfx --print-completion bash|zsh
+ttfx --palette 7aa2f7,c0caf5,f7768e decrypt
+ttfx --palette aa0000,00aa00,0000aa,aaaa00,00aaaa --bands decrypt
 ```
+
+`--palette` takes hex colors (`#7aa2f7` or `7aa2f7`). Repeat the flag or separate
+colors with commas. Those colors replace each effect's default color arguments;
+color flags you pass on the effect still apply.
+
+`--bands` colors the input word in five vertical field bands: 4, 3, 4, 3, 5
+units from the top (crest, hover, lit, mid, dim). The field is 19 units tall,
+one per wordmark bitmap row. Requires `--palette` with five colors in that
+order. The wasm `Session` constructor takes the same palette, background, and
+`bands` arguments.
 
 Terminal options (canvas size and anchoring, color handling, frame rate, text wrapping) go
 before the effect name; effect options after it. Option names and defaults match `tte`, so
@@ -131,6 +143,16 @@ existing invocations work with the binary name swapped.
 cargo build --release
 cargo build --release --target x86_64-unknown-linux-musl   # static, ~3.3 MB
 ```
+
+The default build compiles all 37 effects. To ship one, pass its CLI name as a Cargo feature:
+
+```sh
+./bin/build --effect decrypt
+cargo build --release --no-default-features --features decrypt
+cargo build --release --target wasm32-unknown-unknown --lib --no-default-features --features decrypt
+```
+
+`--help`, shell completions, `--random-effect`, and the wasm `effect_catalog()` then list only the effects compiled in. Several can be selected the same way (`--features decrypt,matrix`).
 
 `./bin/test` runs every suite. It needs python3, and the parity half needs a copy of
 upstream, which it clones at the pinned commit on first run:

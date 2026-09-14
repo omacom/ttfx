@@ -4,7 +4,6 @@ use std::collections::{HashMap, HashSet};
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{parse_gradient_direction, parse_gradient_steps};
 use crate::engine::animation::{ExistingColorHandling, SyncMetric, VisualParams};
 use crate::engine::character::CharId;
@@ -15,7 +14,7 @@ use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::pycompat::{floor_div, round_half_even};
 
 #[derive(Args, Debug, Clone)]
@@ -42,6 +41,18 @@ pub struct BlackholeConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "diagonal", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for BlackholeConfig {
+    fn default() -> Self {
+        Self {
+            blackhole_color: parse_color("ffffff").expect("default blackhole_color"),
+            star_colors: ["ffcc0d", "ff7326", "ff194d", "bf2669", "702a8c", "049dbf"].into_iter().map(|v| parse_color(v).expect("default star_colors")).collect(),
+            final_gradient_stops: ["8A008A", "00D1FF", "ffffff"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["9"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("diagonal").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -694,11 +694,23 @@ impl EngineCtx {
 
     /// BaseEffectIterator.frame: enforce framerate (real clock only), then the
     /// formatted output string; advances the virtual clock by one frame.
+    ///
+    /// Wasm skips ANSI emission. The browser reads packed cells from
+    /// `pack_display_frame`, which paints once. Building the string here would
+    /// allocate and paint a second time for output JS never reads.
     pub fn frame(&mut self) -> String {
+        #[cfg(not(target_arch = "wasm32"))]
         if matches!(self.clock, Clock::Real { .. }) && self.terminal.config.frame_rate != 0 {
             self.terminal.enforce_framerate();
         }
         self.clock.advance_frame();
-        self.terminal.get_formatted_output_string()
+        #[cfg(target_arch = "wasm32")]
+        {
+            String::new()
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.terminal.get_formatted_output_string()
+        }
     }
 }

@@ -11,7 +11,6 @@
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{parse_gradient_direction, parse_gradient_steps, parse_positive_int, parse_symbol};
 use crate::engine::animation::{Animation, ExistingColorHandling, Scene, VisualParams};
 use crate::engine::character::CharId;
@@ -23,7 +22,7 @@ use crate::engine::particles::{ParticlePool, ParticleReset};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::pycompat::floor_div;
 
 /// fade_complete (effect_thunderstorm.py:388): phase -> storm, restart clock.
@@ -94,6 +93,25 @@ pub struct ThunderstormConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for ThunderstormConfig {
+    fn default() -> Self {
+        Self {
+            lightning_color: parse_color("68A3E8").expect("default lightning_color"),
+            glowing_text_color: parse_color("EF5411").expect("default glowing_text_color"),
+            text_glow_time: 6,
+            raindrop_symbols: ["\\", ".", ","].into_iter().map(|v| parse_symbol(v).expect("default raindrop_symbols")).collect(),
+            spark_symbols: ["*", ".", "'"].into_iter().map(|v| parse_symbol(v).expect("default spark_symbols")).collect(),
+            spark_glow_color: parse_color("ff4d00").expect("default spark_glow_color"),
+            spark_glow_time: 18,
+            storm_time: 12,
+            final_gradient_stops: ["8A008A", "00D1FF", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_frames: 3,
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 /// self.phase string states.

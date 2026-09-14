@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_character_group, parse_easing, parse_gradient_direction, parse_gradient_steps, parse_non_negative_int,
 };
@@ -16,7 +15,7 @@ use crate::engine::error::EngineError;
 use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::easing::{Easing, SequenceEaser};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct WipeConfig {
@@ -50,6 +49,20 @@ pub struct WipeConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for WipeConfig {
+    fn default() -> Self {
+        Self {
+            wipe_direction: parse_character_group("diagonal_top_left_to_bottom_right").expect("default wipe_direction"),
+            wipe_delay: 0,
+            wipe_ease: parse_easing("in_out_circ").expect("default wipe_ease"),
+            final_gradient_stops: ["833ab4", "fd1d1d", "fcb045"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_frames: 3,
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct Wipe {

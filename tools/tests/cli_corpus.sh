@@ -44,6 +44,8 @@ grep -qi "unsupported ansi" /tmp/claude-cli-err && pass=$((pass+1)) || { fail=$(
 check success 0 bash -c "printf 'hi' | $RUST --parity-dump --seed 1 --max-frames 5 wipe"
 check success-negative-canvas 0 bash -c "printf 'hi' | $RUST --canvas-width -1 --parity-dump --seed 1 --max-frames 2 wipe"
 check success-multi-stops 0 bash -c "printf 'hi' | $RUST --parity-dump --seed 1 --max-frames 2 wipe --final-gradient-stops ff0000 00ff00 0000ff"
+check success-palette 0 bash -c "printf 'hi' | $RUST --palette ff0000,00ff00 --parity-dump --seed 1 --max-frames 2 wipe"
+check bad-palette 2 bash -c "printf x | $RUST --palette not-a-color wipe"
 
 echo "cli corpus: $pass passed, $fail failed"
 if [ $fail -gt 0 ]; then printf 'FAILED: %s\n' "${failed[@]}"; exit 1; fi

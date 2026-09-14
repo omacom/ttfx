@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_easing, parse_gradient_direction, parse_gradient_steps, parse_non_negative_int, parse_positive_float_range,
     parse_positive_int,
@@ -18,7 +17,7 @@ use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 /// PourIterator.PourDirection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,6 +81,23 @@ pub struct PourConfig {
     /// Easing function to use for character movement.
     #[arg(long = "movement-easing", default_value = "in_quad", value_parser = parse_easing)]
     pub movement_easing: Easing,
+}
+
+impl Default for PourConfig {
+    fn default() -> Self {
+        Self {
+            pour_direction: parse_pour_direction("down").expect("default pour_direction"),
+            pour_speed: 2,
+            movement_speed_range: parse_positive_float_range("0.4-0.6").expect("default movement_speed_range"),
+            gap: 1,
+            starting_color: parse_color("ffffff").expect("default starting_color"),
+            final_gradient_stops: ["8A008A", "00D1FF", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_frames: 6,
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+            movement_easing: parse_easing("in_quad").expect("default movement_easing"),
+        }
+    }
 }
 
 pub struct Pour {

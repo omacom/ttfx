@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{parse_easing, parse_gradient_direction, parse_gradient_steps, parse_positive_float};
 use crate::engine::animation::ExistingColorHandling;
 use crate::engine::character::CharId;
@@ -15,7 +14,7 @@ use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct SliceConfig {
@@ -45,6 +44,19 @@ pub struct SliceConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "diagonal", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for SliceConfig {
+    fn default() -> Self {
+        Self {
+            slice_direction: "vertical".to_string(),
+            movement_speed: 0.25,
+            movement_easing: parse_easing("in_out_expo").expect("default movement_easing"),
+            final_gradient_stops: ["8A008A", "00D1FF", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("diagonal").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct Slice {

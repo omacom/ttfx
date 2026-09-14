@@ -8,7 +8,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_easing, parse_gradient_direction, parse_gradient_steps, parse_non_negative_int, parse_non_negative_ratio,
     parse_positive_float, parse_symbol,
@@ -22,7 +21,7 @@ use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, CoordColorMap, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, CoordColorMap, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct OrbittingVolleyConfig {
@@ -75,6 +74,25 @@ pub struct OrbittingVolleyConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "radial", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for OrbittingVolleyConfig {
+    fn default() -> Self {
+        Self {
+            top_launcher_symbol: parse_symbol("█").expect("default top_launcher_symbol"),
+            right_launcher_symbol: parse_symbol("█").expect("default right_launcher_symbol"),
+            bottom_launcher_symbol: parse_symbol("█").expect("default bottom_launcher_symbol"),
+            left_launcher_symbol: parse_symbol("█").expect("default left_launcher_symbol"),
+            launcher_movement_speed: 0.8,
+            character_movement_speed: 1.5,
+            volley_size: 0.03,
+            launch_delay: 30,
+            character_easing: parse_easing("out_sine").expect("default character_easing"),
+            final_gradient_stops: ["FFA15C", "44D492"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("radial").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 /// OrbittingVolleyIterator.Launcher.

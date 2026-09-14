@@ -75,7 +75,7 @@ impl Path {
         loop_: bool,
     ) -> Result<Self, String> {
         if speed <= 0.0 {
-            return Err(format!("Path speed must be greater than 0. Received: {speed}"));
+            return Err("Path speed must be greater than 0.".to_string());
         }
         Ok(Path {
             path_id: path_id.to_string(),

@@ -4,7 +4,6 @@ use std::collections::{BTreeMap, HashMap};
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_easing, parse_gradient_direction, parse_gradient_steps, parse_positive_float_range, parse_symbol,
 };
@@ -17,7 +16,7 @@ use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct RainConfig {
@@ -52,6 +51,20 @@ pub struct RainConfig {
     /// Easing function to use for character movement.
     #[arg(long = "movement-easing", default_value = "in_quart", value_parser = parse_easing)]
     pub movement_easing: Easing,
+}
+
+impl Default for RainConfig {
+    fn default() -> Self {
+        Self {
+            rain_colors: ["00315C", "004C8F", "0075DB", "3F91D9", "78B9F2", "9AC8F5", "B8D8F8", "E3EFFC"].into_iter().map(|v| parse_color(v).expect("default rain_colors")).collect(),
+            movement_speed: parse_positive_float_range("0.33-0.57").expect("default movement_speed"),
+            rain_symbols: ["o", ".", ",", "*", "|"].into_iter().map(|v| parse_symbol(v).expect("default rain_symbols")).collect(),
+            final_gradient_stops: ["488bff", "b2e7de", "57eaf7"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("diagonal").expect("default final_gradient_direction"),
+            movement_easing: parse_easing("in_quart").expect("default movement_easing"),
+        }
+    }
 }
 
 pub struct Rain {

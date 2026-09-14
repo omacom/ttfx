@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_easing, parse_gradient_direction, parse_gradient_steps, parse_positive_float, parse_positive_int,
 };
@@ -17,7 +16,7 @@ use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterGroup};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct PrintConfig {
@@ -46,6 +45,19 @@ pub struct PrintConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "diagonal", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for PrintConfig {
+    fn default() -> Self {
+        Self {
+            print_head_return_speed: 1.5,
+            print_speed: 2,
+            print_head_easing: parse_easing("in_out_quad").expect("default print_head_easing"),
+            final_gradient_stops: ["02b8bd", "c1f0e3", "00ffa0"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("diagonal").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 /// PrintIterator.Row (plain struct over CharIds; scene/coord setup happens in

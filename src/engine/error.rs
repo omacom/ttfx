@@ -11,10 +11,12 @@ pub enum EngineError {
 impl std::fmt::Display for EngineError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EngineError::UnsupportedAnsiSequence(seq) => {
-                write!(f, "Unsupported ANSI sequence in input data: {seq:?}")
+            // Debug of the sequence pulled unicode/printable into every wasm.
+            // The CLI still prints `{seq:?}` itself; Session only needs the tag.
+            EngineError::UnsupportedAnsiSequence(_) => {
+                f.write_str("Unsupported ANSI sequence in input data")
             }
-            EngineError::Other(msg) => write!(f, "{msg}"),
+            EngineError::Other(msg) => f.write_str(msg),
         }
     }
 }

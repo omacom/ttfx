@@ -12,7 +12,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{parse_gradient_direction, parse_gradient_steps, parse_symbol};
 use crate::engine::animation::{ExistingColorHandling, VisualParams};
 use crate::engine::character::CharId;
@@ -21,7 +20,7 @@ use crate::engine::effect::Effect;
 use crate::engine::error::EngineError;
 use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::spanning_tree::{BreadthFirst, PrimsWeighted};
 
 #[derive(Args, Debug, Clone)]
@@ -57,6 +56,20 @@ pub struct SmokeConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for SmokeConfig {
+    fn default() -> Self {
+        Self {
+            starting_color: parse_color("7A7A7A").expect("default starting_color"),
+            smoke_symbols: ["░", "▒", "▓", "▒", "░"].into_iter().map(|v| parse_symbol(v).expect("default smoke_symbols")).collect(),
+            smoke_gradient_stops: ["242424", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default smoke_gradient_stops")).collect(),
+            use_whole_canvas: false,
+            final_gradient_stops: ["8A008A", "00D1FF", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct Smoke {

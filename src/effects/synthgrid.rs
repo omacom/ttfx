@@ -12,7 +12,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_positive_ratio, parse_symbol,
 };
@@ -24,7 +23,7 @@ use crate::engine::error::EngineError;
 use crate::engine::events::{CallbackValue, CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, CoordColorMap, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, CoordColorMap, Gradient, GradientDirection};
 use crate::utils::pycompat::floor_div;
 
 /// Callback id: update_group_tracker(group_number) — decrements the tracker.
@@ -76,6 +75,23 @@ pub struct SynthGridConfig {
     /// Maximum percentage of blocks to have active at any given time. For example, if set to 0.1, 10 percent of the blocks will be active at any given time.
     #[arg(long = "max-active-blocks", default_value_t = 0.1, value_parser = parse_positive_ratio)]
     pub max_active_blocks: f64,
+}
+
+impl Default for SynthGridConfig {
+    fn default() -> Self {
+        Self {
+            grid_gradient_stops: ["CC00CC", "ffffff"].into_iter().map(|v| parse_color(v).expect("default grid_gradient_stops")).collect(),
+            grid_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default grid_gradient_steps")).collect(),
+            grid_gradient_direction: parse_gradient_direction("diagonal").expect("default grid_gradient_direction"),
+            text_gradient_stops: ["8A008A", "00D1FF", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default text_gradient_stops")).collect(),
+            text_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default text_gradient_steps")).collect(),
+            text_gradient_direction: parse_gradient_direction("vertical").expect("default text_gradient_direction"),
+            grid_row_symbol: parse_symbol("─").expect("default grid_row_symbol"),
+            grid_column_symbol: parse_symbol("│").expect("default grid_column_symbol"),
+            text_generation_symbols: ["░", "▒", "▓"].into_iter().map(|v| parse_symbol(v).expect("default text_generation_symbols")).collect(),
+            max_active_blocks: 0.1,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

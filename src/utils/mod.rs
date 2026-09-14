@@ -1,8 +1,10 @@
 pub mod easing;
 pub mod ansi;
+pub mod bands;
 pub mod geometry;
 pub mod graphics;
 pub mod hexterm;
+pub mod palette;
 pub mod pycompat;
 pub mod ordered_map;
 pub mod rng;

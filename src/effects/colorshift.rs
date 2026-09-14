@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{parse_gradient_direction, parse_gradient_steps, parse_positive_int};
 use crate::engine::animation::{ExistingColorHandling, VisualParams};
 use crate::engine::character::CharId;
@@ -14,7 +13,7 @@ use crate::engine::error::EngineError;
 use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::geometry;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct ColorShiftConfig {
@@ -69,6 +68,25 @@ pub struct ColorShiftConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for ColorShiftConfig {
+    fn default() -> Self {
+        Self {
+            gradient_stops: ["e81416", "ffa500", "faeb36", "79c314", "487de7", "4b369d", "70369d"].into_iter().map(|v| parse_color(v).expect("default gradient_stops")).collect(),
+            gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default gradient_steps")).collect(),
+            gradient_frames: 2,
+            no_travel: false,
+            travel_direction: parse_gradient_direction("radial").expect("default travel_direction"),
+            reverse_travel_direction: false,
+            no_loop: false,
+            cycles: 3,
+            skip_final_gradient: false,
+            final_gradient_stops: ["e81416", "ffa500", "faeb36", "79c314", "487de7", "4b369d", "70369d"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct ColorShift {

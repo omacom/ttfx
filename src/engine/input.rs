@@ -30,7 +30,11 @@ impl ColorFrequency {
 
 #[derive(Clone, Default)]
 struct ActiveState {
+    /// Captured SGR text for native replay. Wasm packed frames read Color RGB,
+    /// so these strings stay native-only.
+    #[cfg(not(target_arch = "wasm32"))]
     fg_sequence: String, // "" = none, like upstream's active_sequences
+    #[cfg(not(target_arch = "wasm32"))]
     bg_sequence: String,
     fg_color: Option<Color>,
     bg_color: Option<Color>,
@@ -147,19 +151,21 @@ impl<'a> Preprocessor<'a> {
         let mut ch = EffectCharacter::new(*self.next_character_id, symbol, 0, 0);
         *self.next_character_id += 1;
         // fg first, then bg — upstream dict iteration order over active_sequences
-        if !state.fg_sequence.is_empty() {
-            if let Some(color) = &state.fg_color {
+        if let Some(color) = &state.fg_color {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
                 ch.input_ansi_fg_sequence = Some(state.fg_sequence.clone());
-                self.input_colors_frequency.increment(color);
-                ch.animation.input_fg_color = Some(color.clone());
             }
+            self.input_colors_frequency.increment(color);
+            ch.animation.input_fg_color = Some(color.clone());
         }
-        if !state.bg_sequence.is_empty() {
-            if let Some(color) = &state.bg_color {
+        if let Some(color) = &state.bg_color {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
                 ch.input_ansi_bg_sequence = Some(state.bg_sequence.clone());
-                self.input_colors_frequency.increment(color);
-                ch.animation.input_bg_color = Some(color.clone());
             }
+            self.input_colors_frequency.increment(color);
+            ch.animation.input_bg_color = Some(color.clone());
         }
         ch.animation.input_bold = state.bold;
         ch.animation.no_color = self.config.no_color;
@@ -190,8 +196,11 @@ impl<'a> Preprocessor<'a> {
             let parameter = parameters[idx];
             match parameter {
                 0 => {
-                    state.fg_sequence.clear();
-                    state.bg_sequence.clear();
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        state.fg_sequence.clear();
+                        state.bg_sequence.clear();
+                    }
                     state.fg_color = None;
                     state.bg_color = None;
                     state.bold = false;
@@ -210,34 +219,48 @@ impl<'a> Preprocessor<'a> {
                     }
                 }
                 39 => {
+                    #[cfg(not(target_arch = "wasm32"))]
                     state.fg_sequence.clear();
                     state.fg_color = None;
                     state.standard_fg_parameter = None;
                 }
                 49 => {
+                    #[cfg(not(target_arch = "wasm32"))]
                     state.bg_sequence.clear();
                     state.bg_color = None;
                 }
                 30..=37 => {
                     let color = xterm_color(parameter - 30 + if state.bold { 8 } else { 0 })?;
-                    state.fg_sequence = format!("\x1b[{parameter}m");
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        state.fg_sequence = format!("\x1b[{parameter}m");
+                    }
                     state.fg_color = Some(color);
                     state.standard_fg_parameter = Some(parameter);
                 }
                 90..=97 => {
                     let color = xterm_color(parameter - 90 + 8)?;
-                    state.fg_sequence = format!("\x1b[{parameter}m");
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        state.fg_sequence = format!("\x1b[{parameter}m");
+                    }
                     state.fg_color = Some(color);
                     state.standard_fg_parameter = None;
                 }
                 40..=47 => {
                     let color = xterm_color(parameter - 40)?;
-                    state.bg_sequence = format!("\x1b[{parameter}m");
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        state.bg_sequence = format!("\x1b[{parameter}m");
+                    }
                     state.bg_color = Some(color);
                 }
                 100..=107 => {
                     let color = xterm_color(parameter - 100 + 8)?;
-                    state.bg_sequence = format!("\x1b[{parameter}m");
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        state.bg_sequence = format!("\x1b[{parameter}m");
+                    }
                     state.bg_color = Some(color);
                 }
                 38 | 48 => {
@@ -245,9 +268,8 @@ impl<'a> Preprocessor<'a> {
                         return Err(EngineError::UnsupportedAnsiSequence(sequence.to_string()));
                     }
                     let is_fg = parameter == 38;
-                    let selector = parameter;
                     let color_mode = parameters[idx + 1];
-                    let (normalized_sequence, color) = match color_mode {
+                    let color = match color_mode {
                         5 => {
                             if idx + 2 >= parameters.len() {
                                 return Err(EngineError::UnsupportedAnsiSequence(sequence.to_string()));
@@ -255,7 +277,16 @@ impl<'a> Preprocessor<'a> {
                             let code = parameters[idx + 2];
                             let color = xterm_color(code)?;
                             idx += 2;
-                            (format!("\x1b[{selector};5;{code}m"), color)
+                            #[cfg(not(target_arch = "wasm32"))]
+                            {
+                                let seq = format!("\x1b[{parameter};5;{code}m");
+                                if is_fg {
+                                    state.fg_sequence = seq;
+                                } else {
+                                    state.bg_sequence = seq;
+                                }
+                            }
+                            color
                         }
                         2 => {
                             if idx + 4 >= parameters.len() {
@@ -263,18 +294,25 @@ impl<'a> Preprocessor<'a> {
                             }
                             let hex: String = (2..5).map(|o| format!("{:02X}", parameters[idx + o])).collect();
                             let color = Color::from_hex(&hex).map_err(EngineError::Other)?;
-                            let (r, g, b) = color.rgb_ints();
                             idx += 4;
-                            (format!("\x1b[{selector};2;{r};{g};{b}m"), color)
+                            #[cfg(not(target_arch = "wasm32"))]
+                            {
+                                let (r, g, b) = color.rgb_ints();
+                                let seq = format!("\x1b[{parameter};2;{r};{g};{b}m");
+                                if is_fg {
+                                    state.fg_sequence = seq;
+                                } else {
+                                    state.bg_sequence = seq;
+                                }
+                            }
+                            color
                         }
                         _ => return Err(EngineError::UnsupportedAnsiSequence(sequence.to_string())),
                     };
                     if is_fg {
-                        state.fg_sequence = normalized_sequence;
                         state.fg_color = Some(color);
                         state.standard_fg_parameter = None;
                     } else {
-                        state.bg_sequence = normalized_sequence;
                         state.bg_color = Some(color);
                     }
                 }

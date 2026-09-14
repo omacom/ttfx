@@ -6,7 +6,8 @@ use clap::Parser;
 use crate::engine::animation::ExistingColorHandling;
 use crate::engine::canvas::Anchor;
 use crate::engine::terminal::TerminalConfig;
-use crate::utils::graphics::Color;
+use crate::utils::graphics::{parse_color, Color};
+use crate::utils::palette::{parse_palette_arg, Palette};
 
 fn parse_positive_int(s: &str) -> Result<i64, String> {
     let v: i64 = s.parse().map_err(|_| format!("invalid int value: '{s}'"))?;
@@ -35,16 +36,6 @@ fn parse_canvas_dimension(s: &str) -> Result<i64, String> {
     }
 }
 
-/// argutils.ColorArg: <=3 chars -> xterm int 0-255, else hex.
-pub fn parse_color(s: &str) -> Result<Color, String> {
-    if s.len() <= 3 {
-        let code: u8 = s.parse().map_err(|_| format!("invalid color value: '{s}'"))?;
-        Ok(Color::from_xterm(code))
-    } else {
-        Color::from_hex(s)
-    }
-}
-
 fn parse_anchor(s: &str) -> Result<Anchor, String> {
     Anchor::parse(s).ok_or_else(|| format!("invalid anchor: '{s}'"))
 }
@@ -54,7 +45,9 @@ fn parse_existing_color_handling(s: &str) -> Result<ExistingColorHandling, Strin
         "always" => Ok(ExistingColorHandling::Always),
         "dynamic" => Ok(ExistingColorHandling::Dynamic),
         "ignore" => Ok(ExistingColorHandling::Ignore),
-        _ => Err(format!("invalid choice: '{s}' (choose from 'always', 'dynamic', 'ignore')")),
+        _ => Err(format!(
+            "invalid choice: '{s}' (choose from 'always', 'dynamic', 'ignore')"
+        )),
     }
 }
 
@@ -124,6 +117,17 @@ pub struct Cli {
     #[arg(long = "seed")]
     pub seed: Option<u64>,
 
+    /// Hex colors that replace the effect's default colors. Repeat the flag
+    /// or separate colors with commas. Color flags given on the effect still
+    /// apply.
+    #[arg(long = "palette", value_name = "HEX[,HEX...]", action = clap::ArgAction::Append, value_parser = parse_palette_arg)]
+    pub palette_args: Vec<Vec<Color>>,
+
+    /// Color the word in 4-3-4-3-5 field bands using --palette (crest, hover,
+    /// lit, mid, dim from the top). Requires --palette.
+    #[arg(long = "bands", default_value_t = false)]
+    pub bands: bool,
+
     /// Print a shell completion script and exit
     #[arg(long = "print-completion", value_name = "SHELL", value_parser = ["bash", "zsh"])]
     pub print_completion: Option<String>,
@@ -181,6 +185,149 @@ impl Cli {
             reuse_canvas: self.reuse_canvas,
             no_eol: self.no_eol,
             no_restore_cursor: self.no_restore_cursor,
+            terminal_size: None,
         }
+    }
+
+    pub fn palette(&self) -> Option<Palette> {
+        let colors: Vec<Color> = self.palette_args.iter().flatten().copied().collect();
+        Palette::new(colors).ok()
+    }
+}
+
+#[cfg(all(test, feature = "decrypt"))]
+mod tests {
+    use clap::{CommandFactory, FromArgMatches, Parser};
+
+    use super::Cli;
+    use crate::effects::EffectCommand;
+    use crate::utils::graphics::parse_color;
+    use crate::utils::palette::{command_line_arg_ids, Palette};
+
+    fn color(hex: &str) -> crate::utils::graphics::Color {
+        parse_color(hex).expect("test hex")
+    }
+
+    fn decrypt_config(effect: EffectCommand) -> crate::effects::decrypt::DecryptConfig {
+        #[allow(unreachable_patterns)]
+        match effect {
+            EffectCommand::Decrypt(config) => config,
+            _ => panic!("expected decrypt"),
+        }
+    }
+
+    #[test]
+    fn bands_flag_defaults_off() {
+        let cli = Cli::try_parse_from(["ttfx", "--palette", "7aa2f7", "decrypt"]).unwrap();
+        assert!(!cli.bands);
+    }
+
+    #[test]
+    fn bands_flag_is_accepted_with_palette() {
+        let cli = Cli::try_parse_from([
+            "ttfx",
+            "--palette",
+            "aa0000,00aa00,0000aa,aaaa00,00aaaa",
+            "--bands",
+            "decrypt",
+        ])
+        .unwrap();
+        assert!(cli.bands);
+        assert_eq!(cli.palette().unwrap().colors().len(), 5);
+    }
+
+    #[test]
+    fn palette_flag_accepts_comma_separated_hex() {
+        let cli = Cli::try_parse_from(["ttfx", "--palette", "#7aa2f7,#f7768e", "decrypt"]).unwrap();
+        assert_eq!(
+            cli.palette().unwrap().colors(),
+            &[color("#7aa2f7"), color("#f7768e")]
+        );
+        assert!(matches!(cli.effect, Some(EffectCommand::Decrypt(_))));
+    }
+
+    #[test]
+    fn palette_flag_is_repeatable_and_splits_whitespace() {
+        let cli = Cli::try_parse_from([
+            "ttfx",
+            "--palette",
+            "7aa2f7",
+            "--palette",
+            "c0caf5 f7768e",
+            "decrypt",
+        ])
+        .unwrap();
+        assert_eq!(
+            cli.palette().unwrap().colors(),
+            &[color("7aa2f7"), color("c0caf5"), color("f7768e")]
+        );
+    }
+
+    #[test]
+    fn palette_does_not_eat_the_effect_name() {
+        let cli = Cli::try_parse_from(["ttfx", "--palette", "7aa2f7", "decrypt"]).unwrap();
+        assert!(matches!(cli.effect, Some(EffectCommand::Decrypt(_))));
+        assert_eq!(cli.palette().unwrap().colors().len(), 1);
+    }
+
+    #[test]
+    fn palette_rejects_an_empty_value() {
+        assert!(Cli::try_parse_from(["ttfx", "--palette", ",", "decrypt"]).is_err());
+    }
+
+    #[test]
+    fn palette_rejects_invalid_hex() {
+        assert!(Cli::try_parse_from(["ttfx", "--palette", "not-a-color", "decrypt"]).is_err());
+    }
+
+    #[test]
+    fn apply_palette_recolors_default_decrypt_colors() {
+        let matches = Cli::command().get_matches_from([
+            "ttfx",
+            "--palette",
+            "ff0000,00ff00,0000ff",
+            "decrypt",
+        ]);
+        let mut cli = Cli::from_arg_matches(&matches).unwrap();
+        let palette = cli.palette().unwrap();
+        let mut effect = cli.effect.take().unwrap();
+        effect.apply_palette(
+            &palette,
+            &command_line_arg_ids(matches.subcommand().unwrap().1),
+        );
+        let config = decrypt_config(effect);
+        assert_eq!(
+            config.ciphertext_colors,
+            vec![color("ff0000"), color("00ff00"), color("0000ff")]
+        );
+        assert_eq!(config.final_gradient_stops, vec![color("ff0000")]);
+    }
+
+    #[test]
+    fn apply_palette_leaves_explicit_color_flags_alone() {
+        let matches = Cli::command().get_matches_from([
+            "ttfx",
+            "--palette",
+            "ff0000,00ff00",
+            "decrypt",
+            "--final-gradient-stops",
+            "ffffff",
+        ]);
+        let mut cli = Cli::from_arg_matches(&matches).unwrap();
+        let palette = cli.palette().unwrap();
+        let skip = command_line_arg_ids(matches.subcommand().unwrap().1);
+        let mut effect = cli.effect.take().unwrap();
+        effect.apply_palette(&palette, &skip);
+        let config = decrypt_config(effect);
+        assert_eq!(config.final_gradient_stops, vec![color("ffffff")]);
+        assert_eq!(
+            config.ciphertext_colors,
+            vec![color("ff0000"), color("00ff00"), color("ff0000")]
+        );
+    }
+
+    #[test]
+    fn palette_new_rejects_empty() {
+        assert!(Palette::new(Vec::new()).is_err());
     }
 }

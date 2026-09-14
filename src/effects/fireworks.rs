@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_non_negative_int, parse_non_negative_ratio, parse_symbol,
 };
@@ -17,7 +16,7 @@ use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::{self, Coord};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::pycompat::{floor_div, round_half_even};
 
 #[derive(Args, Debug, Clone)]
@@ -60,6 +59,22 @@ pub struct FireworksConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "horizontal", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for FireworksConfig {
+    fn default() -> Self {
+        Self {
+            explode_anywhere: false,
+            firework_colors: ["88F7E2", "44D492", "F5EB67", "FFA15C", "FA233E"].into_iter().map(|v| parse_color(v).expect("default firework_colors")).collect(),
+            firework_symbol: parse_symbol("o").expect("default firework_symbol"),
+            firework_volume: 0.05,
+            launch_delay: 45,
+            explode_distance: 0.2,
+            final_gradient_stops: ["8A008A", "00D1FF", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("horizontal").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct Fireworks {

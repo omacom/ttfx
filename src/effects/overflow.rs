@@ -4,7 +4,6 @@ use std::collections::{HashMap, VecDeque};
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_positive_int, parse_positive_int_range,
 };
@@ -16,7 +15,7 @@ use crate::engine::error::EngineError;
 use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterGroup};
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::pycompat::floor_div;
 
 #[derive(Args, Debug, Clone)]
@@ -47,6 +46,19 @@ pub struct OverflowConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for OverflowConfig {
+    fn default() -> Self {
+        Self {
+            overflow_gradient_stops: ["f2ebc0", "8dbfb3", "f2ebc0"].into_iter().map(|v| parse_color(v).expect("default overflow_gradient_stops")).collect(),
+            overflow_cycles_range: parse_positive_int_range("2-4").expect("default overflow_cycles_range"),
+            overflow_speed: 3,
+            final_gradient_stops: ["8A008A", "00D1FF", "FFFFFF"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 /// OverflowIterator.Row.

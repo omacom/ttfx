@@ -15,7 +15,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_positive_float, parse_positive_int,
     parse_positive_int_range, parse_symbol,
@@ -28,7 +27,7 @@ use crate::engine::error::EngineError;
 use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::pycompat::floor_div;
 
 #[derive(Args, Debug, Clone)]
@@ -93,6 +92,31 @@ pub struct MatrixConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "radial", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for MatrixConfig {
+    fn default() -> Self {
+        Self {
+            highlight_color: parse_color("dbffdb").expect("default highlight_color"),
+            rain_color_gradient: ["92be92", "185318"].into_iter().map(|v| parse_color(v).expect("default rain_color_gradient")).collect(),
+            rain_symbols: [
+              "2", "5", "9", "8", "Z", "*", ")", ":", ".", "\"", "=", "+", "-", "¦", "|", "_",
+              "ｦ", "ｱ", "ｳ", "ｴ", "ｵ", "ｶ", "ｷ", "ｹ", "ｺ", "ｻ", "ｼ", "ｽ", "ｾ", "ｿ", "ﾀ", "ﾂ",
+              "ﾃ", "ﾅ", "ﾆ", "ﾇ", "ﾈ", "ﾊ", "ﾋ", "ﾎ", "ﾏ", "ﾐ", "ﾑ", "ﾒ", "ﾓ", "ﾔ", "ﾕ", "ﾗ",
+              "ﾘ", "ﾜ",
+          ].into_iter().map(|v| parse_symbol(v).expect("default rain_symbols")).collect(),
+            rain_fall_delay_range: parse_positive_int_range("2-15").expect("default rain_fall_delay_range"),
+            rain_column_delay_range: parse_positive_int_range("3-9").expect("default rain_column_delay_range"),
+            rain_time: 15,
+            symbol_swap_chance: 0.005,
+            color_swap_chance: 0.001,
+            resolve_delay: 3,
+            final_gradient_stops: ["92be92", "336b33"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_frames: 3,
+            final_gradient_direction: parse_gradient_direction("radial").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 /// Animation.set_appearance shorthand (upstream character.animation.set_appearance).

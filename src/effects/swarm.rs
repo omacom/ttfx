@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_non_negative_ratio, parse_positive_int_range,
 };
@@ -17,7 +16,7 @@ use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::{self, Coord};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::pycompat::{floor_div, round_half_even};
 
 #[derive(Args, Debug, Clone)]
@@ -56,6 +55,21 @@ pub struct SwarmConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "horizontal", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for SwarmConfig {
+    fn default() -> Self {
+        Self {
+            base_color: ["31a0d4"].into_iter().map(|v| parse_color(v).expect("default base_color")).collect(),
+            flash_color: parse_color("f2ea79").expect("default flash_color"),
+            swarm_size: 0.1,
+            swarm_coordination: 0.80,
+            swarm_area_count_range: parse_positive_int_range("2-4").expect("default swarm_area_count_range"),
+            final_gradient_stops: ["31b900", "f0ff65"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("horizontal").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct Swarm {

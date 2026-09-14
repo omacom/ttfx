@@ -21,7 +21,6 @@ use std::collections::{HashMap, VecDeque};
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_non_negative_int, parse_positive_int,
 };
@@ -35,7 +34,7 @@ use crate::engine::particles::{ParticlePool, ParticleReset};
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::spanning_tree::RecursiveBacktracker;
 
 /// Callback id: sparks_pool.reclaim(spark, hide=True, deactivate=True).
@@ -106,6 +105,24 @@ pub struct LaserEtchConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for LaserEtchConfig {
+    fn default() -> Self {
+        Self {
+            etch_pattern: parse_etch_pattern("algorithm").expect("default etch_pattern"),
+            etch_speed: 1,
+            etch_delay: 1,
+            cool_gradient_stops: ["ffe680", "ff7b00"].into_iter().map(|v| parse_color(v).expect("default cool_gradient_stops")).collect(),
+            laser_gradient_stops: ["ffffff", "376cff"].into_iter().map(|v| parse_color(v).expect("default laser_gradient_stops")).collect(),
+            spark_gradient_stops: ["ffffff", "ffe680", "ff7b00", "1a0900"].into_iter().map(|v| parse_color(v).expect("default spark_gradient_stops")).collect(),
+            spark_cooling_frames: 7,
+            final_gradient_stops: ["8A008A", "00D1FF", "ffffff"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["8"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_frames: 4,
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 /// LaserEtchIterator.Laser state (methods live on LaserEtch for hooks access).

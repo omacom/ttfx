@@ -5,9 +5,12 @@
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use crate::utils::ansi::{self, ColorCode};
+use crate::utils::ansi::ColorCode;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::utils::ansi;
 use crate::utils::easing::Easing;
 use crate::utils::graphics::{Color, ColorPair, Gradient};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::utils::hexterm;
 use crate::utils::ordered_map::OrderedMap;
 
@@ -25,6 +28,7 @@ pub enum SyncMetric {
     Step,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 thread_local! {
     /// Reused assembly buffer for CharacterVisual::new's SGR string.
     static FORMAT_SCRATCH: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
@@ -32,6 +36,7 @@ thread_local! {
 
 /// Inline capacity for a formatted symbol. A 24-bit foreground and background
 /// pair plus a reset is 42 bytes, so all but pathological styling fits.
+#[cfg(not(target_arch = "wasm32"))]
 const INLINE_SYMBOL_CAPACITY: usize = 63;
 
 /// The precomputed ANSI string for one cell, stored inline when it fits.
@@ -40,12 +45,16 @@ const INLINE_SYMBOL_CAPACITY: usize = 63;
 /// over a run — and a `str` copy of a couple of dozen bytes is dominated by the
 /// memcpy call itself. An inline buffer of fixed size lets the writer copy the
 /// whole block unconditionally and then advance by the real length.
+///
+/// Wasm packed frames read symbol/color fields directly, so this stays native.
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone)]
 pub enum FormattedSymbol {
     Inline { bytes: [u8; INLINE_SYMBOL_CAPACITY], len: u8 },
     Heap(Box<str>),
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl FormattedSymbol {
     fn new(text: &str) -> Self {
         if text.len() <= INLINE_SYMBOL_CAPACITY {
@@ -93,6 +102,7 @@ impl FormattedSymbol {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl PartialEq for FormattedSymbol {
     fn eq(&self, other: &Self) -> bool {
         self.as_str() == other.as_str()
@@ -114,6 +124,7 @@ pub struct CharacterVisual {
     pub colors: Option<ColorPair>,
     pub fg_color_code: Option<ColorCode>,
     pub bg_color_code: Option<ColorCode>,
+    #[cfg(not(target_arch = "wasm32"))]
     pub formatted_symbol: FormattedSymbol,
 }
 
@@ -134,6 +145,7 @@ pub struct VisualParams {
 
 impl CharacterVisual {
     pub fn new(symbol: &str, p: VisualParams) -> Self {
+        #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
         let mut vis = CharacterVisual {
             symbol: symbol.to_string(),
             bold: p.bold,
@@ -147,10 +159,13 @@ impl CharacterVisual {
             colors: p.colors,
             fg_color_code: p.fg_color_code,
             bg_color_code: p.bg_color_code,
+            #[cfg(not(target_arch = "wasm32"))]
             formatted_symbol: FormattedSymbol::Inline { bytes: [0; INLINE_SYMBOL_CAPACITY], len: 0 },
         };
         // Effects rebuild visuals every frame, so the SGR string is assembled in
         // a reused scratch buffer rather than a fresh allocation per visual.
+        // Wasm packed frames never read it.
+        #[cfg(not(target_arch = "wasm32"))]
         FORMAT_SCRATCH.with(|scratch| {
             let mut scratch = scratch.borrow_mut();
             scratch.clear();
@@ -166,6 +181,7 @@ impl CharacterVisual {
 
     /// SGR emission in upstream's fixed order; `dim` intentionally omitted;
     /// bare symbol when nothing applies.
+    #[cfg(not(target_arch = "wasm32"))]
     fn format_symbol_into(&self, fmt: &mut String) {
         if self.bold {
             fmt.push_str(ansi::BOLD);
@@ -219,6 +235,7 @@ pub struct Scene {
     pub sync: Option<SyncMetric>,
     pub ease: Option<Easing>,
     pub no_color: bool,
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub use_xterm_colors: bool,
     /// Stable frame storage; never reordered.
     pub all_frames: Vec<Frame>,
@@ -263,11 +280,16 @@ impl Scene {
 
     /// Scene._get_color_code. Upstream memoizes into a process-global ClassVar
     /// dict; the memo is value-transparent so we just recompute.
+    ///
+    /// Wasm packed frames read `Color` RGB, so this SGR code stays native.
+    #[cfg(not(target_arch = "wasm32"))]
     fn get_color_code(&self, color: Option<&Color>) -> Option<ColorCode> {
         let color = color?;
         if self.no_color {
             return None;
         }
+        // Wasm Session never sets xterm_colors; packed frames want 24-bit RGB.
+        #[cfg(not(target_arch = "wasm32"))]
         if self.use_xterm_colors {
             if let Some(code) = color.xterm_color {
                 return Some(ColorCode::Xterm(code));
@@ -285,6 +307,7 @@ impl Scene {
         if self.preexisting_bold {
             params.bold = true;
         }
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(colors) = &params.colors {
             params.fg_color_code = self.get_color_code(colors.fg_color.as_ref());
             params.bg_color_code = self.get_color_code(colors.bg_color.as_ref());
@@ -436,6 +459,7 @@ impl Scene {
 pub struct Animation {
     pub scenes: OrderedMap<Scene>,
     pub active_scene: Option<Rc<str>>,
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub use_xterm_colors: bool,
     pub no_color: bool,
     pub existing_color_handling: ExistingColorHandling,
@@ -464,11 +488,13 @@ impl Animation {
 
     /// Animation._get_color_code (identical logic to Scene's; the upstream
     /// per-instance memo is value-transparent and omitted).
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn get_color_code(&mut self, color: Option<&Color>) -> Option<ColorCode> {
         let color = color?;
         if self.no_color {
             return None;
         }
+        #[cfg(not(target_arch = "wasm32"))]
         if self.use_xterm_colors {
             if let Some(code) = color.xterm_color {
                 return Some(ColorCode::Xterm(code));
@@ -542,15 +568,15 @@ impl Animation {
             colors = ColorPair::new(self.input_fg_color.clone(), self.input_bg_color.clone());
             bold = self.input_bold;
         }
-        let fg_code = self.get_color_code(colors.fg_color.as_ref());
-        let bg_code = self.get_color_code(colors.bg_color.as_ref());
         self.current_character_visual = Rc::new(CharacterVisual::new(
             symbol,
             VisualParams {
                 bold,
                 colors: Some(colors),
-                fg_color_code: fg_code,
-                bg_color_code: bg_code,
+                #[cfg(not(target_arch = "wasm32"))]
+                fg_color_code: self.get_color_code(colors.fg_color.as_ref()),
+                #[cfg(not(target_arch = "wasm32"))]
+                bg_color_code: self.get_color_code(colors.bg_color.as_ref()),
                 ..Default::default()
             },
         ));
@@ -628,12 +654,10 @@ impl Animation {
             )
         };
 
-        let adjusted = format!(
-            "{:02x}{:02x}{:02x}",
-            round_half_even(red * 255.0),
-            round_half_even(green * 255.0),
-            round_half_even(blue * 255.0)
-        );
-        Color::from_hex(&adjusted).unwrap()
+        Color::from_rgb(
+            round_half_even(red * 255.0) as u8,
+            round_half_even(green * 255.0) as u8,
+            round_half_even(blue * 255.0) as u8,
+        )
     }
 }

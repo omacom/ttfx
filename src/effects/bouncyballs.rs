@@ -4,7 +4,6 @@ use std::collections::{BTreeMap, HashMap};
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_easing, parse_gradient_direction, parse_gradient_steps, parse_non_negative_int, parse_positive_float,
     parse_symbol,
@@ -18,7 +17,7 @@ use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct BouncyBallsConfig {
@@ -57,6 +56,21 @@ pub struct BouncyBallsConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "diagonal", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for BouncyBallsConfig {
+    fn default() -> Self {
+        Self {
+            ball_colors: ["d1f4a5", "96e2a4", "5acda9"].into_iter().map(|v| parse_color(v).expect("default ball_colors")).collect(),
+            ball_symbols: ["*", "o", "O", "0", "."].into_iter().map(|v| parse_symbol(v).expect("default ball_symbols")).collect(),
+            ball_delay: 4,
+            movement_speed: 0.45,
+            movement_easing: parse_easing("out_bounce").expect("default movement_easing"),
+            final_gradient_stops: ["f8ffae", "43c6ac"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("diagonal").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct BouncyBalls {

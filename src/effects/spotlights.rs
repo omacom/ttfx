@@ -4,7 +4,6 @@ use std::collections::{BTreeSet, HashMap};
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_non_negative_float, parse_positive_float,
     parse_positive_float_range, parse_positive_int,
@@ -18,7 +17,7 @@ use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::{self, Coord};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::pycompat::floor_div;
 
 #[derive(Args, Debug, Clone)]
@@ -56,6 +55,21 @@ pub struct SpotlightsConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for SpotlightsConfig {
+    fn default() -> Self {
+        Self {
+            beam_width_ratio: 2.0,
+            beam_falloff: 0.3,
+            search_duration: 550,
+            search_speed_range: parse_positive_float_range("0.35-0.75").expect("default search_speed_range"),
+            spotlight_count: 3,
+            final_gradient_stops: ["ab48ff", "e7b2b2", "fffebd"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct Spotlights {

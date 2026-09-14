@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_easing, parse_gradient_direction, parse_gradient_steps, parse_positive_int, parse_symbol,
 };
@@ -16,7 +15,7 @@ use crate::engine::error::EngineError;
 use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::easing::Easing;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 /// waves --wave-direction choices (a subset of CharacterGroup, upstream grouping_map).
 fn parse_wave_direction(s: &str) -> Result<CharacterGroup, String> {
@@ -77,6 +76,23 @@ pub struct WavesConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "diagonal", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for WavesConfig {
+    fn default() -> Self {
+        Self {
+            wave_symbols: ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂", "▁"].into_iter().map(|v| parse_symbol(v).expect("default wave_symbols")).collect(),
+            wave_gradient_stops: ["f0ff65", "ffb102", "31a0d4", "ffb102", "f0ff65"].into_iter().map(|v| parse_color(v).expect("default wave_gradient_stops")).collect(),
+            wave_gradient_steps: ["6"].into_iter().map(|v| parse_gradient_steps(v).expect("default wave_gradient_steps")).collect(),
+            wave_count: 7,
+            wave_length: 2,
+            wave_direction: parse_wave_direction("column_left_to_right").expect("default wave_direction"),
+            wave_easing: parse_easing("in_out_sine").expect("default wave_easing"),
+            final_gradient_stops: ["ffb102", "31a0d4", "f0ff65"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("diagonal").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 pub struct Waves {

@@ -13,7 +13,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{parse_gradient_direction, parse_gradient_steps, parse_non_negative_ratio};
 use crate::engine::animation::{ExistingColorHandling, VisualParams};
 use crate::engine::character::CharId;
@@ -24,7 +23,7 @@ use crate::engine::events::{CallbackValue, CallerKey, EffectCallback, Event, Eve
 use crate::engine::particles::{ParticlePool, ParticleReset};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::spanning_tree::PrimsSimple;
 
 /// Callback id: EventHandler.Callback(lambda c: self._emit_smoke(c.input_coord, ...)).
@@ -60,6 +59,19 @@ pub struct BurnConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for BurnConfig {
+    fn default() -> Self {
+        Self {
+            starting_color: parse_color("837373").expect("default starting_color"),
+            burn_colors: ["ffffff", "fff75d", "fe650d", "8A003C", "510100"].into_iter().map(|v| parse_color(v).expect("default burn_colors")).collect(),
+            smoke_chance: 0.5,
+            final_gradient_stops: ["00c3ff", "ffff1c"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 const BURN_CHAR_ORDER: [&str; 9] = ["'", ".", "▖", "▙", "█", "▜", "▀", "▝", "."];

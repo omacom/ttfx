@@ -2,25 +2,41 @@
 
 use std::fmt::Write;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub const DEC_SAVE_CURSOR: &str = "\x1b7";
+#[cfg(not(target_arch = "wasm32"))]
 pub const DEC_RESTORE_CURSOR: &str = "\x1b8";
+#[cfg(not(target_arch = "wasm32"))]
 pub const HIDE_CURSOR: &str = "\x1b[?25l";
+#[cfg(not(target_arch = "wasm32"))]
 pub const SHOW_CURSOR: &str = "\x1b[?25h";
+#[cfg(not(target_arch = "wasm32"))]
 pub const RESET_ALL: &str = "\x1b[0m";
+#[cfg(not(target_arch = "wasm32"))]
 pub const CLEAR_TO_END_OF_SCREEN: &str = "\x1b[0J";
+#[cfg(not(target_arch = "wasm32"))]
 pub const BOLD: &str = "\x1b[1m";
+#[cfg(not(target_arch = "wasm32"))]
 pub const DIM: &str = "\x1b[2m";
+#[cfg(not(target_arch = "wasm32"))]
 pub const ITALIC: &str = "\x1b[3m";
+#[cfg(not(target_arch = "wasm32"))]
 pub const UNDERLINE: &str = "\x1b[4m";
+#[cfg(not(target_arch = "wasm32"))]
 pub const BLINK: &str = "\x1b[5m";
+#[cfg(not(target_arch = "wasm32"))]
 pub const REVERSE: &str = "\x1b[7m";
+#[cfg(not(target_arch = "wasm32"))]
 pub const HIDDEN: &str = "\x1b[8m";
+#[cfg(not(target_arch = "wasm32"))]
 pub const STRIKETHROUGH: &str = "\x1b[9m";
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn move_cursor_up(y: usize) -> String {
     format!("\x1b[{y}A")
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn move_cursor_to_column(x: usize) -> String {
     format!("\x1b[{x}G")
 }
@@ -33,9 +49,31 @@ pub enum ColorCode {
     Xterm(u8),
 }
 
+impl ColorCode {
+    /// Packed 0xAARRGGBB with opaque alpha.
+    pub fn rgb_u32(&self) -> u32 {
+        let (r, g, b) = match self {
+            ColorCode::Rgb(hex) => {
+                let s = hex.trim_matches('#');
+                (
+                    u8::from_str_radix(&s[0..2], 16).unwrap_or(0),
+                    u8::from_str_radix(&s[2..4], 16).unwrap_or(0),
+                    u8::from_str_radix(&s[4..6], 16).unwrap_or(0),
+                )
+            }
+            ColorCode::Xterm(n) => {
+                let [r, g, b] = crate::utils::hexterm::xterm_rgb(*n);
+                (r, g, b)
+            }
+        };
+        0xFF000000 | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
+    }
+}
+
 /// Decimal digits of a byte, without going through core::fmt. Every restyled
 /// character reassembles its SGR sequence, so the formatting machinery shows up
 /// in profiles.
+#[cfg(not(target_arch = "wasm32"))]
 #[inline]
 fn push_decimal(out: &mut String, value: u8) {
     if value >= 100 {
@@ -48,6 +86,7 @@ fn push_decimal(out: &mut String, value: u8) {
 }
 
 /// colorterm._color: fg selector 38, bg selector 48.
+#[cfg(not(target_arch = "wasm32"))]
 fn sgr_color(code: &ColorCode, location: u8, out: &mut String) {
     out.push_str("\x1b[");
     push_decimal(out, location);
@@ -72,10 +111,12 @@ fn sgr_color(code: &ColorCode, location: u8, out: &mut String) {
     out.push('m');
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn fg(code: &ColorCode, out: &mut String) {
     sgr_color(code, 38, out);
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn bg(code: &ColorCode, out: &mut String) {
     sgr_color(code, 48, out);
 }

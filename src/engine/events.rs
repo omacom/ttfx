@@ -172,11 +172,10 @@ impl EventHandler {
         });
         if let Some(entry) = existing {
             if entry.actions.contains(&action) {
-                return Err(format!(
-                    "duplicate event registration: {:?} {:?}",
-                    (entry.event, &entry.caller),
-                    action
-                ));
+                // Keep this message a static string. Debug-printing `action`
+                // pulls `CallbackValue::Float`'s formatter (and flt2dec) into
+                // every wasm artifact, including effects that never store a float.
+                return Err("duplicate event registration".to_string());
             }
             entry.actions.push(action);
         } else {

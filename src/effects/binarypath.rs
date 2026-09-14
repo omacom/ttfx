@@ -8,7 +8,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_non_negative_ratio, parse_positive_float,
 };
@@ -21,7 +20,7 @@ use crate::engine::events::EffectCallback;
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct BinaryPathConfig {
@@ -51,6 +50,19 @@ pub struct BinaryPathConfig {
     /// Maximum number of binary groups that are active at any given time as a percentage of the total number of binary groups. Lower this to improve performance.
     #[arg(long = "active-binary-groups", default_value_t = 0.08, value_parser = parse_non_negative_ratio)]
     pub active_binary_groups: f64,
+}
+
+impl Default for BinaryPathConfig {
+    fn default() -> Self {
+        Self {
+            final_gradient_stops: ["00d500", "007500"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("radial").expect("default final_gradient_direction"),
+            binary_colors: ["044E29", "157e38", "45bf55", "95ed87"].into_iter().map(|v| parse_color(v).expect("default binary_colors")).collect(),
+            movement_speed: 1.0,
+            active_binary_groups: 0.08,
+        }
+    }
 }
 
 /// BinaryPathIterator._BinaryRepresentation.

@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_easing, parse_gradient_direction, parse_gradient_steps, parse_positive_float, parse_positive_int,
 };
@@ -17,7 +16,7 @@ use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::{self, Coord};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 /// pop_condition choices.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,6 +79,23 @@ pub struct BubblesConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "diagonal", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for BubblesConfig {
+    fn default() -> Self {
+        Self {
+            rainbow: false,
+            bubble_colors: ["d33aff", "7395c4", "43c2a7", "02ff7f"].into_iter().map(|v| parse_color(v).expect("default bubble_colors")).collect(),
+            pop_color: parse_color("ffffff").expect("default pop_color"),
+            bubble_speed: 0.5,
+            bubble_delay: 20,
+            pop_condition: parse_pop_condition("row").expect("default pop_condition"),
+            movement_easing: parse_easing("in_out_sine").expect("default movement_easing"),
+            final_gradient_stops: ["d33aff", "02ff7f"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("diagonal").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 /// BubblesIterator.Bubble state (methods live on Bubbles for hooks access).

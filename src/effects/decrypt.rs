@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{parse_gradient_direction, parse_gradient_steps, parse_positive_int};
 use crate::engine::animation::{ExistingColorHandling, VisualParams};
 use crate::engine::character::CharId;
@@ -13,7 +12,7 @@ use crate::engine::effect::Effect;
 use crate::engine::error::EngineError;
 use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 
 #[derive(Args, Debug, Clone)]
 pub struct DecryptConfig {
@@ -39,6 +38,28 @@ pub struct DecryptConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for DecryptConfig {
+    fn default() -> Self {
+        Self {
+            typing_speed: 2,
+            ciphertext_colors: ["008000", "00cb00", "00ff00"]
+                .into_iter()
+                .map(|v| parse_color(v).expect("default ciphertext_colors"))
+                .collect(),
+            final_gradient_stops: ["eda000"]
+                .into_iter()
+                .map(|v| parse_color(v).expect("default final_gradient_stops"))
+                .collect(),
+            final_gradient_steps: ["12"]
+                .into_iter()
+                .map(|v| parse_gradient_steps(v).expect("default final_gradient_steps"))
+                .collect(),
+            final_gradient_direction: parse_gradient_direction("vertical")
+                .expect("default final_gradient_direction"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

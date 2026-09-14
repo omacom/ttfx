@@ -9,7 +9,6 @@ use std::collections::{HashMap, HashSet};
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_positive_float, parse_positive_float_range,
     parse_positive_int,
@@ -23,7 +22,7 @@ use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterSort};
 use crate::utils::easing::Easing;
 use crate::utils::geometry::{self, Coord};
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::pycompat::round_half_even;
 
 /// Callback id: terminal.set_character_visibility(character, False).
@@ -69,6 +68,22 @@ pub struct RingsConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for RingsConfig {
+    fn default() -> Self {
+        Self {
+            ring_colors: ["ab48ff", "e7b2b2", "fffebd"].into_iter().map(|v| parse_color(v).expect("default ring_colors")).collect(),
+            ring_gap: 0.1,
+            spin_duration: 200,
+            spin_speed: parse_positive_float_range("0.25-1.0").expect("default spin_speed"),
+            disperse_duration: 200,
+            spin_disperse_cycles: 3,
+            final_gradient_stops: ["ab48ff", "e7b2b2", "fffebd"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 /// RingsIterator.Ring.

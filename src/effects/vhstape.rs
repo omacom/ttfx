@@ -11,7 +11,6 @@ use std::collections::HashMap;
 
 use clap::Args;
 
-use crate::cli::parse_color;
 use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_non_negative_ratio, parse_positive_int,
 };
@@ -23,7 +22,7 @@ use crate::engine::error::EngineError;
 use crate::engine::events::{CallerKey, EffectCallback, Event, EventAction};
 use crate::engine::terminal::{CharacterFilter, CharacterGroup, CharacterSort};
 use crate::utils::geometry::Coord;
-use crate::utils::graphics::{Color, ColorPair, Gradient, GradientDirection};
+use crate::utils::graphics::{parse_color, Color, ColorPair, Gradient, GradientDirection};
 use crate::utils::pycompat::round_half_even;
 
 #[derive(Args, Debug, Clone)]
@@ -68,6 +67,22 @@ pub struct VhsTapeConfig {
     /// Direction of the final gradient.
     #[arg(long = "final-gradient-direction", default_value = "vertical", value_parser = parse_gradient_direction)]
     pub final_gradient_direction: GradientDirection,
+}
+
+impl Default for VhsTapeConfig {
+    fn default() -> Self {
+        Self {
+            glitch_line_colors: ["ffffff", "ff0000", "00ff00", "0000ff", "ffffff"].into_iter().map(|v| parse_color(v).expect("default glitch_line_colors")).collect(),
+            glitch_wave_colors: ["ffffff", "ff0000", "00ff00", "0000ff", "ffffff"].into_iter().map(|v| parse_color(v).expect("default glitch_wave_colors")).collect(),
+            noise_colors: ["1e1e1f", "3c3b3d", "6d6c70", "a2a1a6", "cbc9cf", "ffffff"].into_iter().map(|v| parse_color(v).expect("default noise_colors")).collect(),
+            glitch_line_chance: 0.05,
+            noise_chance: 0.004,
+            total_glitch_time: 600,
+            final_gradient_stops: ["ab48ff", "e7b2b2", "fffebd"].into_iter().map(|v| parse_color(v).expect("default final_gradient_stops")).collect(),
+            final_gradient_steps: ["12"].into_iter().map(|v| parse_gradient_steps(v).expect("default final_gradient_steps")).collect(),
+            final_gradient_direction: parse_gradient_direction("vertical").expect("default final_gradient_direction"),
+        }
+    }
 }
 
 /// VHSTapeIterator.Line state (methods live on VhsTape for hooks access).

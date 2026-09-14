@@ -15,6 +15,9 @@ done
 cd "$ROOT"
 
 cargo test --release
+# Rebuilds the lib with one effect; does not replace the full binary
+# that bin/build produces for the CLI corpus below.
+cargo test --release --no-default-features --features decrypt --lib
 "$ROOT/bin/build"
 ./tools/tests/cli_corpus.sh
 python3 tools/tests/sigterm_behavior.py

@@ -1,5 +1,6 @@
 //! Effect trait and run loop (base_effect.py equivalents).
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
 
 use crate::engine::ctx::{EffectHooks, EngineCtx};
@@ -13,6 +14,7 @@ pub trait Effect: EffectHooks {
     fn next_frame(&mut self, ctx: &mut EngineCtx) -> Option<String>;
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunOutcome {
     Complete,
@@ -31,6 +33,7 @@ pub enum RunOutcome {
 /// the top of the area so the caller can rebuild in place, and a terminal that
 /// goes away ends the run. A redirected stream gets neither: SIGWINCH there is
 /// not about our output, and a write that fails to a file is a real failure.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run_effect(
     effect: &mut dyn Effect,
     ctx: &mut EngineCtx,
@@ -85,11 +88,13 @@ pub fn run_effect(
 /// EIO is the pty slave outliving its master; EPIPE only surfaces here when
 /// SIGPIPE was ignored by whoever started us, since we restore its default.
 /// Both mean the same thing, and neither is a failure of this run.
+#[cfg(not(target_arch = "wasm32"))]
 fn output_closed(e: &std::io::Error) -> bool {
     const EIO: i32 = 5;
     e.kind() == std::io::ErrorKind::BrokenPipe || e.raw_os_error() == Some(EIO)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn requested_stop(ctx: &mut EngineCtx, stop_on_resize: bool) -> Option<RunOutcome> {
     if crate::interrupted() {
         Some(RunOutcome::Interrupted)
@@ -103,6 +108,7 @@ fn requested_stop(ctx: &mut EngineCtx, stop_on_resize: bool) -> Option<RunOutcom
 }
 
 /// Parity mode: write length-prefixed frames to stdout, no tty escapes.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn dump_effect(
     effect: &mut dyn Effect,
     ctx: &mut EngineCtx,
@@ -128,6 +134,7 @@ pub fn dump_effect(
     Ok(count)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn io_err(e: std::io::Error) -> EngineError {
     EngineError::Other(format!("io error: {e}"))
 }

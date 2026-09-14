@@ -3,7 +3,9 @@
 //! per run), this single Terminal owns both the simulation and the tty side.
 
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
 
 use crate::engine::animation::ExistingColorHandling;
@@ -11,6 +13,7 @@ use crate::engine::canvas::{Anchor, Canvas};
 use crate::engine::character::{CharId, EffectCharacter};
 use crate::engine::error::EngineError;
 use crate::engine::input::{ColorFrequency, Preprocessor};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::utils::ansi;
 use crate::utils::geometry::Coord;
 use crate::utils::graphics::Color;
@@ -36,6 +39,8 @@ pub struct TerminalConfig {
     pub reuse_canvas: bool,
     pub no_eol: bool,
     pub no_restore_cursor: bool,
+    /// When set, skip tty/`COLUMNS`/`LINES` probing and use this size.
+    pub terminal_size: Option<(i64, i64)>,
 }
 
 impl Default for TerminalConfig {
@@ -56,6 +61,7 @@ impl Default for TerminalConfig {
             reuse_canvas: false,
             no_eol: false,
             no_restore_cursor: false,
+            terminal_size: None,
         }
     }
 }
@@ -116,11 +122,15 @@ pub struct Terminal {
     pub arena: Vec<EffectCharacter>,
     next_character_id: u32,
     pub input_colors_frequency: ColorFrequency,
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     terminal_dimensions: (i64, i64),
+    #[cfg(not(target_arch = "wasm32"))]
     resize_seen_at: Option<Instant>,
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     layout: Layout,
     /// Pre-wrap input line lengths — all `compute_layout` needs from the input,
     /// so a resize can re-derive the geometry without re-preprocessing.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     input_line_lengths: Vec<i64>,
     pub canvas_column_offset: i64,
     pub canvas_row_offset: i64,
@@ -136,11 +146,16 @@ pub struct Terminal {
     visible_characters: Vec<CharId>,
     visible_positions: Vec<usize>,
     render_cells: Vec<u32>,
+    #[cfg(not(target_arch = "wasm32"))]
     pub terminal_state: Vec<String>,
+    #[cfg(not(target_arch = "wasm32"))]
     output_buffer: String,
+    #[cfg(not(target_arch = "wasm32"))]
     move_cursor_to_top: String,
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     frame_rate: i64,
-    last_time_printed: Instant,
+    #[cfg(not(target_arch = "wasm32"))]
+    last_time_printed: Option<Instant>,
 }
 
 fn ordered_buckets(
@@ -186,7 +201,7 @@ impl Terminal {
         .preprocess(input_data)?;
 
         let input_line_lengths: Vec<i64> = preprocessed_lines.iter().map(|l| l.len() as i64).collect();
-        let terminal_dimensions = get_terminal_dimensions();
+        let terminal_dimensions = get_terminal_dimensions(&config);
         let layout = compute_layout(&config, &input_line_lengths, terminal_dimensions.0, terminal_dimensions.1);
         let mut canvas = Canvas::new(layout.canvas_height, layout.canvas_width);
         let Layout {
@@ -214,6 +229,7 @@ impl Terminal {
 
         let frame_rate = config.frame_rate;
         let arena_len = arena.len();
+        #[cfg(not(target_arch = "wasm32"))]
         let move_cursor_to_top = format!(
             "{}{}{}",
             ansi::DEC_RESTORE_CURSOR,
@@ -227,6 +243,7 @@ impl Terminal {
             next_character_id,
             input_colors_frequency,
             terminal_dimensions,
+            #[cfg(not(target_arch = "wasm32"))]
             resize_seen_at: None,
             layout,
             input_line_lengths,
@@ -244,14 +261,19 @@ impl Terminal {
             visible_characters: Vec::new(),
             visible_positions: vec![NOT_VISIBLE; arena_len],
             render_cells: Vec::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             terminal_state: Vec::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             output_buffer: String::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             move_cursor_to_top,
             frame_rate,
-            last_time_printed: Instant::now(),
+            #[cfg(not(target_arch = "wasm32"))]
+            last_time_printed: Some(Instant::now()),
         };
         terminal.make_fill_characters();
         terminal.setup_character_neighbors();
+        #[cfg(not(target_arch = "wasm32"))]
         terminal.update_terminal_state();
         Ok(terminal)
     }
@@ -551,6 +573,7 @@ impl Terminal {
     /// Terminal._update_terminal_state: materialize the row-oriented state
     /// exposed by the upstream API. Frame output uses the cell buffer directly
     /// so the hot path does not copy every rendered byte through these rows.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn update_terminal_state(&mut self) {
         let (width, height) = self.update_render_cells();
 
@@ -573,6 +596,7 @@ impl Terminal {
     }
 
     /// get_formatted_output_string: refresh + emit top row first.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn get_formatted_output_string(&mut self) -> String {
         let (width, height) = self.update_render_cells();
         let minimum_capacity = width
@@ -601,6 +625,7 @@ impl Terminal {
         unsafe { String::from_utf8_unchecked(out) }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn recycle_output_string(&mut self, mut output: String) {
         output.clear();
         if output.capacity() > self.output_buffer.capacity() {
@@ -619,6 +644,7 @@ impl Terminal {
     /// canvas and no anchor offsets most resizes leave every rendered cell
     /// exactly where it was, and restarting for those is pure loss. Explicitly
     /// ignored dimensions are fixed by definition.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn resize_settled(&mut self) -> bool {
         const QUIET: std::time::Duration = std::time::Duration::from_millis(50);
 
@@ -632,7 +658,7 @@ impl Terminal {
         if self.config.ignore_terminal_dimensions {
             return false;
         }
-        let (width, height) = get_terminal_dimensions();
+        let (width, height) = get_terminal_dimensions(&self.config);
         if (width, height) == self.terminal_dimensions {
             return false;
         }
@@ -642,6 +668,7 @@ impl Terminal {
     /// After a resize: go back to the top of the area this run allocated, wipe
     /// it, and leave the cursor there so the rebuilt canvas takes the same rows
     /// instead of scrolling a second one into the terminal.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn reset_canvas_area(&self, out: &mut impl Write) -> std::io::Result<()> {
         out.write_all(ansi::DEC_RESTORE_CURSOR.as_bytes())?;
         if self.visible_top > 0 {
@@ -653,6 +680,7 @@ impl Terminal {
 
     // --- tty side (upstream's second Terminal instance) ---
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn prep_canvas(&mut self, out: &mut impl Write) -> std::io::Result<()> {
         out.write_all(ansi::HIDE_CURSOR.as_bytes())?;
         if self.config.reuse_canvas {
@@ -667,6 +695,7 @@ impl Terminal {
         Ok(())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn restore_cursor(&self, out: &mut impl Write, end_symbol: &str) -> std::io::Result<()> {
         let end_symbol = if self.config.no_eol { "" } else { end_symbol };
         if !self.config.no_restore_cursor {
@@ -676,48 +705,206 @@ impl Terminal {
         Ok(())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn print_frame(&mut self, out: &mut impl Write, output_string: &str) -> std::io::Result<()> {
         self.write_move_cursor_to_top(out)?;
         out.write_all(output_string.as_bytes())?;
         out.flush()
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn write_move_cursor_to_top(&self, out: &mut impl Write) -> std::io::Result<()> {
         out.write_all(self.move_cursor_to_top.as_bytes())
     }
 
     /// Terminal.enforce_framerate: sleep off the remainder; timestamp taken
     /// AFTER the sleep (drift accumulates, faithfully).
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn enforce_framerate(&mut self) {
         if self.frame_rate == 0 {
             return;
         }
         let frame_delay = 1.0 / self.frame_rate as f64;
-        let elapsed = self.last_time_printed.elapsed().as_secs_f64();
+        let elapsed = self
+            .last_time_printed
+            .map(|t| t.elapsed().as_secs_f64())
+            .unwrap_or(0.0);
         if elapsed < frame_delay {
             std::thread::sleep(std::time::Duration::from_secs_f64(frame_delay - elapsed));
         }
-        self.last_time_printed = Instant::now();
+        self.last_time_printed = Some(Instant::now());
+    }
+
+    /// Display-order cell buffer (top-left first) for non-ANSI frontends.
+    pub fn pack_display_frame(&mut self) -> PackedFrame {
+        let (width, height) = self.update_render_cells();
+        let cells = width.saturating_mul(height);
+        let mut symbols = Vec::with_capacity(cells);
+        let mut fg = Vec::with_capacity(cells);
+        let mut bg = Vec::with_capacity(cells);
+        let mut flags = Vec::with_capacity(cells);
+        let arena = &self.arena;
+        for row_index in (0..height).rev() {
+            for &cell in &self.render_cells[row_index * width..(row_index + 1) * width] {
+                if cell == EMPTY_RENDER_CELL {
+                    symbols.push(b' ' as u32);
+                    fg.push(0);
+                    bg.push(0);
+                    flags.push(0);
+                    continue;
+                }
+                let visual = &arena[cell as usize].animation.current_character_visual;
+                let ch = visual.symbol.chars().next().unwrap_or(' ');
+                symbols.push(if visual.hidden { b' ' as u32 } else { ch as u32 });
+                // Wasm Session never sets xterm_colors or no_color; packed cells
+                // already have 24-bit RGB on Color, so skip the ColorCode hex
+                // round-trip (to_string + parse) that native SGR still needs.
+                #[cfg(target_arch = "wasm32")]
+                let (mut cell_fg, mut cell_bg) = {
+                    let pair = visual.colors.as_ref();
+                    (
+                        packed_rgba(pair.and_then(|p| p.fg_color.as_ref())),
+                        packed_rgba(pair.and_then(|p| p.bg_color.as_ref())),
+                    )
+                };
+                #[cfg(not(target_arch = "wasm32"))]
+                let mut cell_fg = visual
+                    .fg_color_code
+                    .as_ref()
+                    .map(crate::utils::ansi::ColorCode::rgb_u32)
+                    .unwrap_or(0);
+                #[cfg(not(target_arch = "wasm32"))]
+                let mut cell_bg = visual
+                    .bg_color_code
+                    .as_ref()
+                    .map(crate::utils::ansi::ColorCode::rgb_u32)
+                    .unwrap_or(0);
+                if visual.reverse {
+                    if cell_fg == 0 {
+                        cell_fg = 0xFFC0C0C0;
+                    }
+                    if cell_bg == 0 {
+                        cell_bg = 0xFF000000;
+                    }
+                    std::mem::swap(&mut cell_fg, &mut cell_bg);
+                }
+                let mut cell_flags = 0u8;
+                if visual.bold {
+                    cell_flags |= PackedFrame::BOLD;
+                }
+                if visual.italic {
+                    cell_flags |= PackedFrame::ITALIC;
+                }
+                if visual.underline {
+                    cell_flags |= PackedFrame::UNDERLINE;
+                }
+                if visual.reverse {
+                    cell_flags |= PackedFrame::REVERSE;
+                }
+                if visual.blink {
+                    cell_flags |= PackedFrame::BLINK;
+                }
+                if visual.hidden {
+                    cell_flags |= PackedFrame::HIDDEN;
+                }
+                if visual.strike {
+                    cell_flags |= PackedFrame::STRIKE;
+                }
+                fg.push(cell_fg);
+                bg.push(cell_bg);
+                flags.push(cell_flags);
+            }
+        }
+        PackedFrame {
+            width,
+            height,
+            symbols,
+            fg,
+            bg,
+            flags,
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn packed_rgba(color: Option<&Color>) -> u32 {
+    let Some(color) = color else {
+        return 0;
+    };
+    let (r, g, b) = color.rgb_ints();
+    0xFF000000 | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
+}
+
+/// One rendered frame as parallel arrays, display-order, one Unicode scalar per cell.
+#[derive(Debug, Clone)]
+pub struct PackedFrame {
+    pub width: usize,
+    pub height: usize,
+    pub symbols: Vec<u32>,
+    pub fg: Vec<u32>,
+    pub bg: Vec<u32>,
+    pub flags: Vec<u8>,
+}
+
+impl PackedFrame {
+    pub const BOLD: u8 = 1;
+    pub const ITALIC: u8 = 2;
+    pub const UNDERLINE: u8 = 4;
+    pub const REVERSE: u8 = 8;
+    pub const BLINK: u8 = 16;
+    pub const HIDDEN: u8 = 32;
+    pub const STRIKE: u8 = 64;
+
+    pub fn cell_count(&self) -> usize {
+        self.width.saturating_mul(self.height)
+    }
+
+    /// Copy this frame into caller-owned buffers. Extra capacity is left untouched.
+    pub fn fill(
+        &self,
+        symbols: &mut [u32],
+        fg: &mut [u32],
+        bg: &mut [u32],
+        flags: &mut [u8],
+    ) -> Result<usize, &'static str> {
+        let n = self.cell_count();
+        if self.symbols.len() != n || self.fg.len() != n || self.bg.len() != n || self.flags.len() != n
+        {
+            return Err("packed frame is truncated");
+        }
+        if symbols.len() < n || fg.len() < n || bg.len() < n || flags.len() < n {
+            return Err("frame buffers are too small");
+        }
+        symbols[..n].copy_from_slice(&self.symbols);
+        fg[..n].copy_from_slice(&self.fg);
+        bg[..n].copy_from_slice(&self.bg);
+        flags[..n].copy_from_slice(&self.flags);
+        Ok(n)
     }
 }
 
 /// shutil.get_terminal_size semantics: COLUMNS/LINES env vars win; else query
-/// the tty; on failure (80, 24).
-fn get_terminal_dimensions() -> (i64, i64) {
-    let env_dim = |name: &str| -> Option<i64> {
-        std::env::var(name).ok()?.parse::<i64>().ok()
-    };
+/// the tty; on failure (80, 24). `TerminalConfig::terminal_size` wins over all.
+fn get_terminal_dimensions(config: &TerminalConfig) -> (i64, i64) {
+    if let Some(size) = config.terminal_size {
+        return size;
+    }
+    let env_dim = |name: &str| -> Option<i64> { std::env::var(name).ok()?.parse::<i64>().ok() };
     let columns = env_dim("COLUMNS");
     let lines = env_dim("LINES");
     if let (Some(c), Some(l)) = (columns, lines) {
         return (c, l);
     }
-    match terminal_size::terminal_size() {
-        Some((terminal_size::Width(w), terminal_size::Height(h))) => {
-            (columns.unwrap_or(w as i64), lines.unwrap_or(h as i64))
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        match terminal_size::terminal_size() {
+            Some((terminal_size::Width(w), terminal_size::Height(h))) => {
+                return (columns.unwrap_or(w as i64), lines.unwrap_or(h as i64));
+            }
+            None => {}
         }
-        None => (columns.unwrap_or(80), lines.unwrap_or(24)),
     }
+    (columns.unwrap_or(80), lines.unwrap_or(24))
 }
 
 /// Everything about the drawing area that is derived from the terminal size.
