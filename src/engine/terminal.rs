@@ -19,11 +19,36 @@ use crate::utils::rng::Rng;
 const EMPTY_RENDER_CELL: u32 = u32::MAX;
 const NOT_VISIBLE: usize = usize::MAX;
 
-/// Per-cell record of what the tty currently shows: one length byte followed
-/// by the cell's formatted symbol. Sized so every inline formatted symbol fits.
-const SHOWN_CELL_BLOCK: usize = 64;
-/// Length byte meaning "nothing known to be on the tty here": forces a redraw.
-const SHOWN_CELL_UNKNOWN: u8 = u8::MAX;
+/// What the tty currently shows in one cell: the exact bytes last written
+/// there. Sized so every inline formatted symbol fits in 64 bytes total.
+#[derive(Clone, Copy)]
+struct ShownCell {
+    /// Byte length of `bytes`, or `ShownCell::UNKNOWN`.
+    len: u8,
+    bytes: [u8; ShownCell::CAPACITY],
+}
+
+impl ShownCell {
+    const CAPACITY: usize = 63;
+    /// "Nothing known to be on the tty here": never matches, forces a redraw.
+    const UNKNOWN: u8 = u8::MAX;
+    const NOTHING: ShownCell = ShownCell { len: ShownCell::UNKNOWN, bytes: [0; ShownCell::CAPACITY] };
+
+    fn shows(&self, symbol: &[u8]) -> bool {
+        self.len as usize == symbol.len() && &self.bytes[..symbol.len()] == symbol
+    }
+
+    /// Remember `symbol` as what the tty now shows. A symbol too long to keep
+    /// is recorded as unknown, so that cell is simply redrawn every frame.
+    fn set(&mut self, symbol: &[u8]) {
+        if symbol.len() <= ShownCell::CAPACITY {
+            self.len = symbol.len() as u8;
+            self.bytes[..symbol.len()].copy_from_slice(symbol);
+        } else {
+            self.len = ShownCell::UNKNOWN;
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct TerminalConfig {
@@ -150,7 +175,7 @@ pub struct Terminal {
     /// What each cell of the visible area currently shows on the tty, as
     /// written by the last incremental frame (the second half of the double
     /// buffer; `render_cells` is the first).
-    shown_cells: Vec<u8>,
+    shown_cells: Vec<ShownCell>,
     incremental_active: bool,
     pub terminal_state: Vec<String>,
     output_buffer: String,
@@ -651,9 +676,9 @@ impl Terminal {
     pub fn get_incremental_output_string(&mut self) -> String {
         let (width, height) = self.update_render_cells();
         let cell_count = width * height;
-        if self.shown_cells.len() != cell_count * SHOWN_CELL_BLOCK {
+        if self.shown_cells.len() != cell_count {
             self.shown_cells.clear();
-            self.shown_cells.resize(cell_count * SHOWN_CELL_BLOCK, SHOWN_CELL_UNKNOWN);
+            self.shown_cells.resize(cell_count, ShownCell::NOTHING);
         }
         let mut out = std::mem::take(&mut self.output_buffer).into_bytes();
         out.clear();
@@ -674,19 +699,12 @@ impl Terminal {
                     EMPTY_RENDER_CELL => b" ",
                     id => arena[id as usize].animation.current_character_visual.formatted_symbol.as_str().as_bytes(),
                 };
-                let block = &mut shown[index * SHOWN_CELL_BLOCK..(index + 1) * SHOWN_CELL_BLOCK];
-                let fits = bytes.len() < SHOWN_CELL_BLOCK;
-                if fits && block[0] as usize == bytes.len() && &block[1..=bytes.len()] == bytes {
+                let cell = &mut shown[index];
+                if cell.shows(bytes) {
                     in_run = false;
                     continue;
                 }
-                if fits {
-                    block[0] = bytes.len() as u8;
-                    block[1..=bytes.len()].copy_from_slice(bytes);
-                } else {
-                    // Too long to remember: redrawn every frame, still correct.
-                    block[0] = SHOWN_CELL_UNKNOWN;
-                }
+                cell.set(bytes);
                 if !in_run {
                     if out_row != cursor_row {
                         push_cursor_down(&mut out, out_row - cursor_row);
@@ -1039,6 +1057,12 @@ mod incremental_output_tests {
             terminal.set_character_visibility(id, true);
         }
         terminal
+    }
+
+    #[test]
+    fn shown_cell_is_one_cache_line_with_no_padding() {
+        assert_eq!(std::mem::size_of::<ShownCell>(), 64);
+        assert_eq!(std::mem::align_of::<ShownCell>(), 1);
     }
 
     #[test]
