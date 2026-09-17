@@ -699,6 +699,10 @@ impl EngineCtx {
             self.terminal.enforce_framerate();
         }
         self.clock.advance_frame();
-        self.terminal.get_formatted_output_string()
+        if self.terminal.incremental_output() {
+            self.terminal.get_incremental_output_string()
+        } else {
+            self.terminal.get_formatted_output_string()
+        }
     }
 }

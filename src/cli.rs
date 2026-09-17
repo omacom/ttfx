@@ -120,6 +120,11 @@ pub struct Cli {
     #[arg(long = "no-restore-cursor", default_value_t = false)]
     pub no_restore_cursor: bool,
 
+    /// Repaint the whole canvas every frame instead of only the cells that
+    /// changed (the default when writing to a terminal)
+    #[arg(long = "full-frames", default_value_t = false)]
+    pub full_frames: bool,
+
     /// Seed for the random number generator (deterministic within ttfx)
     #[arg(long = "seed")]
     pub seed: Option<u64>,
@@ -181,6 +186,7 @@ impl Cli {
             reuse_canvas: self.reuse_canvas,
             no_eol: self.no_eol,
             no_restore_cursor: self.no_restore_cursor,
+            incremental_output: !self.full_frames,
         }
     }
 }
