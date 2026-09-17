@@ -4,21 +4,25 @@
 
 /// Python's built-in `round()`: banker's rounding (half-to-even), returning i64.
 /// Rust's `f64::round` is half-away-from-zero, which differs at exact .5 values.
+///
+/// Floor is taken by truncating and stepping down for negatives rather than
+/// via `f64::floor`: on baseline x86_64 (no SSE4.1) `floor` is a libm call on
+/// every coordinate interpolation, while the truncating form is a few inline
+/// instructions everywhere. Saturating `as i64` only differs from `floor` for
+/// values beyond the i64 range, which never reach here.
 pub fn round_half_even(x: f64) -> i64 {
-    let floor = x.floor();
-    let diff = x - floor;
+    let truncated = x as i64;
+    let floor = truncated - ((x < truncated as f64) as i64);
+    let diff = x - floor as f64;
     if diff > 0.5 {
-        floor as i64 + 1
+        floor + 1
     } else if diff < 0.5 {
-        floor as i64
-    } else {
+        floor
+    } else if floor % 2 == 0 {
         // exactly .5 — round to even
-        let f = floor as i64;
-        if f % 2 == 0 {
-            f
-        } else {
-            f + 1
-        }
+        floor
+    } else {
+        floor + 1
     }
 }
 
