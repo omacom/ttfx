@@ -593,8 +593,7 @@ impl EngineCtx {
                 // no active path: jump to final frame and force-complete
                 let last = *scene.frames.back().unwrap();
                 ch.animation.current_character_visual = scene.all_frames[last].character_visual.clone();
-                let drained: Vec<usize> = scene.frames.drain(..).collect();
-                scene.played_frames.extend(drained);
+                scene.played_frames.append(&mut scene.frames);
             }
             Some((current_step, max_steps, total_distance, last_distance_reached)) => {
                 let final_frame_index = scene.frames.len() as i64 - 1;
@@ -634,8 +633,7 @@ impl EngineCtx {
             if scene.is_looping {
                 scene.easing_current_step = 0;
             } else {
-                let drained: Vec<usize> = scene.frames.drain(..).collect();
-                scene.played_frames.extend(drained);
+                scene.played_frames.append(&mut scene.frames);
             }
         }
     }

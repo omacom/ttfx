@@ -98,9 +98,8 @@ pub struct MatrixConfig {
 /// Animation.set_appearance shorthand (upstream character.animation.set_appearance).
 fn set_appearance(ctx: &mut EngineCtx, id: CharId, symbol: &str, colors: ColorPair) {
     let ch = &mut ctx.terminal.arena[id.0 as usize];
-    let input_symbol = ch.input_symbol.clone();
     let uses_pre = ch.uses_input_preexisting_colors;
-    ch.animation.set_appearance(&input_symbol, uses_pre, Some(symbol), Some(colors));
+    ch.animation.set_appearance(&ch.input_symbol, uses_pre, Some(symbol), Some(colors));
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -5,6 +5,10 @@
 /// Python's built-in `round()`: banker's rounding (half-to-even), returning i64.
 /// Rust's `f64::round` is half-away-from-zero, which differs at exact .5 values.
 pub fn round_half_even(x: f64) -> i64 {
+    if x.is_finite() {
+        return x.round_ties_even() as i64;
+    }
+    // Preserve the existing non-finite conversion and overflow behavior.
     let floor = x.floor();
     let diff = x - floor;
     if diff > 0.5 {
@@ -66,6 +70,36 @@ mod tests {
         // Values that aren't exactly representable don't hit the .5 branch:
         // round(2.675) == 3 in Python (2.675 is actually 2.67499999...)
         assert_eq!(round_half_even(2.675), 3);
+    }
+
+    #[test]
+    fn rounding_matches_previous_arithmetic_at_boundaries_and_across_exponents() {
+        fn previous(x: f64) -> i64 {
+            let floor = x.floor();
+            let difference = x - floor;
+            let integer = floor as i64;
+            if difference > 0.5 || (difference == 0.5 && integer % 2 != 0) {
+                integer + 1
+            } else {
+                integer
+            }
+        }
+        for integer in -10_000..=10_000 {
+            let halfway = integer as f64 + 0.5;
+            for value in [halfway.next_down(), halfway, halfway.next_up()] {
+                assert_eq!(round_half_even(value), previous(value), "{value}");
+            }
+        }
+        let mut bits = 0x1234_5678_9abc_def0_u64;
+        for _ in 0..1_000_000 {
+            bits = bits.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            let value = f64::from_bits(bits);
+            if value.is_finite() {
+                assert_eq!(round_half_even(value), previous(value), "{value}");
+            }
+        }
+        assert_eq!(round_half_even(f64::NAN), 0);
+        assert_eq!(round_half_even(f64::NEG_INFINITY), i64::MIN);
     }
 
     #[test]

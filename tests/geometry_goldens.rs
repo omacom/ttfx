@@ -3,6 +3,16 @@
 
 use ttfx::utils::geometry::{self, Coord};
 
+#[test]
+fn nonpositive_circle_diameters_are_empty() {
+    for center in [Coord::new(0, 0), Coord::new(-10, 20), Coord::new(i64::MAX, i64::MIN)] {
+        assert!(geometry::find_coords_in_circle(center, 0).is_empty());
+    }
+    for diameter in [-1, -5] {
+        assert!(geometry::find_coords_in_circle(Coord::new(3, -2), diameter).is_empty());
+    }
+}
+
 fn fbits(x: f64) -> String {
     x.to_le_bytes().iter().map(|b| format!("{b:02x}")).collect()
 }

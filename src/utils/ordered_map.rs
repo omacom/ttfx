@@ -140,6 +140,7 @@ impl<V> OrderedMap<V> {
         }
     }
 
+    #[inline]
     fn position(&self, key: &str) -> Option<usize> {
         let cached = self.last_lookup.get();
         if cached < self.entries.len() {
@@ -148,6 +149,13 @@ impl<V> OrderedMap<V> {
                 return Some(cached);
             }
         }
+        self.find_position(key)
+    }
+
+    // Keep the indexed/linear search out of the cached path, which animation
+    // and motion ticks can inline without duplicating the full lookup routine.
+    #[inline(never)]
+    fn find_position(&self, key: &str) -> Option<usize> {
         let position = match &self.index {
             Some(index) => index.get(key).copied(),
             None => self
