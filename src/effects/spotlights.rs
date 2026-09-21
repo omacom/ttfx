@@ -1,6 +1,6 @@
 //! spotlights, ported from effects/effect_spotlights.py.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
 use clap::Args;
 
@@ -9,6 +9,7 @@ use crate::effects::common::{
     parse_gradient_direction, parse_gradient_steps, parse_non_negative_float, parse_positive_float,
     parse_positive_float_range, parse_positive_int,
 };
+use crate::engine::active_characters::ActiveCharacters;
 use crate::engine::animation::{Animation, ExistingColorHandling};
 use crate::engine::character::CharId;
 use crate::engine::ctx::{EffectHooks, EngineCtx};
@@ -60,7 +61,8 @@ pub struct SpotlightsConfig {
 
 pub struct Spotlights {
     config: SpotlightsConfig,
-    illuminated_chars: BTreeSet<CharId>,
+    illuminated_chars: ActiveCharacters,
+    illuminated_scratch: ActiveCharacters,
     character_color_map: HashMap<CharId, (ColorPair, ColorPair)>,
     spotlights: Vec<CharId>,
     illuminate_range: i64,
@@ -74,7 +76,8 @@ impl Spotlights {
     pub fn new(config: SpotlightsConfig) -> Self {
         Spotlights {
             config,
-            illuminated_chars: BTreeSet::new(),
+            illuminated_chars: ActiveCharacters::new(),
+            illuminated_scratch: ActiveCharacters::new(),
             character_color_map: HashMap::new(),
             spotlights: Vec::new(),
             illuminate_range: 1,
@@ -190,34 +193,30 @@ impl Spotlights {
 
     /// SpotlightsIterator.illuminate_chars.
     fn illuminate_chars(&mut self, ctx: &mut EngineCtx, range_: i64) {
-        let mut coords_in_range: Vec<Coord> = Vec::new();
+        let mut chars_in_range = std::mem::take(&mut self.illuminated_scratch);
+        chars_in_range.clear();
         for &spotlight in &self.spotlights {
             let current_coord = ctx.terminal.arena[spotlight.0 as usize].motion.current_coord;
-            coords_in_range.extend(geometry::find_coords_in_circle(current_coord, range_));
-        }
-        let mut chars_in_range: BTreeSet<CharId> = BTreeSet::new();
-        for coord in coords_in_range {
-            if let Some(id) = ctx.terminal.get_character_by_input_coord(coord) {
-                if Self::is_spotlightable(ctx, id) {
-                    chars_in_range.insert(id);
+            for coord in geometry::coords_in_circle(current_coord, range_) {
+                if let Some(id) = ctx.terminal.get_character_by_input_coord(coord) {
+                    if Self::is_spotlightable(ctx, id) {
+                        chars_in_range.insert(id);
+                    }
                 }
             }
         }
-        let chars_no_longer_in_range: Vec<CharId> =
-            self.illuminated_chars.difference(&chars_in_range).copied().collect();
-        for id in chars_no_longer_in_range {
+        for id in self.illuminated_chars.iter().filter(|id| !chars_in_range.contains(id)) {
             let expand_override = self.get_expand_color_override(ctx, id);
             let colors = match expand_override {
                 None => self.character_color_map.get(&id).unwrap().1.clone(),
                 Some(overridden) => overridden,
             };
             let ch = &mut ctx.terminal.arena[id.0 as usize];
-            let input_symbol = ch.input_symbol.clone();
             let uses_pre = ch.uses_input_preexisting_colors;
-            ch.animation.set_appearance(&input_symbol, uses_pre, Some(&input_symbol.clone()), Some(colors));
+            ch.animation.set_appearance(&ch.input_symbol, uses_pre, None, Some(colors));
         }
 
-        for &id in &chars_in_range {
+        for id in &chars_in_range {
             let input_coord = ctx.terminal.arena[id.0 as usize].input_coord;
             let distance = self
                 .spotlights
@@ -246,11 +245,10 @@ impl Spotlights {
                 Some(overridden) => overridden,
             };
             let ch = &mut ctx.terminal.arena[id.0 as usize];
-            let input_symbol = ch.input_symbol.clone();
             let uses_pre = ch.uses_input_preexisting_colors;
-            ch.animation.set_appearance(&input_symbol, uses_pre, Some(&input_symbol.clone()), Some(colors));
+            ch.animation.set_appearance(&ch.input_symbol, uses_pre, None, Some(colors));
         }
-        self.illuminated_chars = chars_in_range;
+        self.illuminated_scratch = std::mem::replace(&mut self.illuminated_chars, chars_in_range);
     }
 }
 

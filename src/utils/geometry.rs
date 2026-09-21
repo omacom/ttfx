@@ -76,21 +76,39 @@ pub fn find_coords_on_circle(origin: Coord, radius: i64, coords_limit: i64, uniq
 /// find_coords_in_circle: actually an ellipse (a = diameter, b = diameter/2);
 /// int() truncation on the y offset, faithfully.
 pub fn find_coords_in_circle(center: Coord, diameter: i64) -> Vec<Coord> {
-    let (h, k) = (center.column, center.row);
-    let mut coords: Vec<Coord> = Vec::new();
+    let mut coords = Vec::new();
     if diameter == 0 {
         return coords;
     }
+    let (h, k) = (center.column, center.row);
     let a_squared = (diameter as f64).powf(2.0);
     let b_squared = (diameter as f64 / 2.0).powf(2.0);
+    // Keep the eager nested loop: collecting the flattened iterator is slower
+    // for callers that need a vector, particularly for small circles.
     for x in (h - diameter)..=(h + diameter) {
-        let x_component = ((x - h) as f64).powf(2.0) / a_squared;
-        let max_y_offset = (b_squared * (1.0 - x_component)).powf(0.5) as i64;
-        for y in (k - max_y_offset)..=(k + max_y_offset) {
+        for y in circle_column_y_range(x, h, k, a_squared, b_squared) {
             coords.push(Coord::new(x, y));
         }
     }
     coords
+}
+
+#[inline]
+fn circle_column_y_range(x: i64, h: i64, k: i64, a_squared: f64, b_squared: f64) -> std::ops::RangeInclusive<i64> {
+    let x_component = ((x - h) as f64).powf(2.0) / a_squared;
+    let max_y_offset = (b_squared * (1.0 - x_component)).powf(0.5) as i64;
+    (k - max_y_offset)..=(k + max_y_offset)
+}
+
+/// Stream the same column-major ellipse for callers that only visit its cells.
+pub(crate) fn coords_in_circle(center: Coord, diameter: i64) -> impl Iterator<Item = Coord> {
+    let (h, k) = (center.column, center.row);
+    let columns = (diameter != 0).then(|| (h - diameter)..=(h + diameter));
+    let a_squared = (diameter as f64).powf(2.0);
+    let b_squared = (diameter as f64 / 2.0).powf(2.0);
+    columns.into_iter().flatten().flat_map(move |x| {
+        circle_column_y_range(x, h, k, a_squared, b_squared).map(move |y| Coord::new(x, y))
+    })
 }
 
 /// find_coords_in_rect: full (2d+1)^2 block, empty for distance 0.
