@@ -6,7 +6,12 @@ description = "Terminal text effects — a Rust port of terminaltexteffects (TTE
 license = "MIT"
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+# Host builds stay an rlib. `cargo test --release` compiles this lib twice
+# (panic=abort for the binary, panic=unwind for the tests). A cdylib has no
+# hash in its filename, so those two outputs are the same file, and macOS ld
+# links that dylib when it links the CLI. The dylib does not export Rust
+# symbols, so the link fails. Wasm builds pass `--crate-type cdylib`.
+crate-type = ["rlib"]
 
 [features]
 default = ["all-effects"]

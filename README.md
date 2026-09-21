@@ -149,8 +149,10 @@ The default build compiles all 37 effects. To ship one, pass its CLI name as a C
 ```sh
 ./bin/build --effect decrypt
 cargo build --release --no-default-features --features decrypt
-cargo build --release --target wasm32-unknown-unknown --lib --no-default-features --features decrypt
+cargo rustc --release --target wasm32-unknown-unknown --lib --crate-type cdylib --no-default-features --features decrypt
 ```
+
+The wasm command asks for a cdylib. The library in `Cargo.toml` is an rlib so the macOS CLI link stays on that rlib.
 
 `--help`, shell completions, `--random-effect`, and the wasm `effect_catalog()` then list only the effects compiled in. Several can be selected the same way (`--features decrypt,matrix`).
 
