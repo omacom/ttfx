@@ -1,0 +1,12 @@
+# rings option sets (each also runs with every seed and input)
+--ring-colors ff0000 00ff00 0000ff 123456 196 --ring-gap 0.2
+--ring-gap 0.01 --spin-duration 40 --disperse-duration 30
+--ring-gap 0.5 --spin-speed 0.1-3.5
+--ring-gap 2.5 --spin-disperse-cycles 1
+--spin-duration 1 --disperse-duration 1 --spin-disperse-cycles 4
+--spin-duration 3 --disperse-duration 60 --spin-speed 0.05-0.1 --spin-disperse-cycles 3
+--spin-duration 25 --disperse-duration 2 --spin-speed 1.5-1.5 --spin-disperse-cycles 5
+--ring-colors 9 --final-gradient-stops 45 201 --final-gradient-steps 5
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction radial --spin-duration 50 --disperse-duration 50
+--final-gradient-stops ff00ff --final-gradient-direction diagonal --ring-colors ffffff 000000
