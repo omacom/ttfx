@@ -428,6 +428,15 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             26
         }
+        EffectCommand::Burn(c) => {
+            w.color(&c.starting_color)
+                .colors(&c.burn_colors)
+                .float(c.smoke_chance)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            5
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))

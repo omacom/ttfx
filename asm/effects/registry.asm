@@ -34,6 +34,7 @@
 %include "effects/beams.asm"
 %include "effects/binarypath.asm"
 %include "effects/smoke.asm"
+%include "effects/burn.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -84,6 +85,8 @@ effect_table:
     dq beams_build, beams_next_frame
   %elif id == EFFECT_BINARYPATH
     dq binarypath_build, binarypath_next_frame
+  %elif id == EFFECT_BURN
+    dq burn_build, burn_next_frame
   %elif id == EFFECT_SMOKE
     dq smoke_build, smoke_next_frame
   %else
