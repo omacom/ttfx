@@ -99,6 +99,12 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             2
         }
+        EffectCommand::Crumble(c) => {
+            w.colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            7
+        }
         EffectCommand::Decrypt(c) => {
             w.int(c.typing_speed)
                 .colors(&c.ciphertext_colors)
