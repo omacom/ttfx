@@ -36,13 +36,18 @@ lines = ['#' * (i * 7 % 23) + ' ' * (i % 3) + 'x' for i in range(14)]
 open(sys.argv[1], 'w').write('\n'.join(lines))
 PY
 
+# Effects that read the clock (matrix, thunderstorm) are only reproducible on
+# the virtual clock, so every run of theirs uses it.
+clock=()
+case "$EFFECT" in matrix|thunderstorm) clock=(--virtual-clock) ;; esac
+
 pass=0
 fail=0
 check() {
     local name="$1"; shift
     local input="$1"; shift
-    TTFX_ASM=0 "$BIN" "$@" < "$input" > "$WORK/r.out" 2> "$WORK/r.err"; local rs=$?
-    TTFX_ASM=force "$BIN" "$@" < "$input" > "$WORK/a.out" 2> "$WORK/a.err"; local as=$?
+    TTFX_ASM=0 "$BIN" "${clock[@]}" "$@" < "$input" > "$WORK/r.out" 2> "$WORK/r.err"; local rs=$?
+    TTFX_ASM=force "$BIN" "${clock[@]}" "$@" < "$input" > "$WORK/a.out" 2> "$WORK/a.err"; local as=$?
     if [ $rs -eq $as ] && cmp -s "$WORK/r.out" "$WORK/a.out" && cmp -s "$WORK/r.err" "$WORK/a.err"; then
         pass=$((pass + 1))
     else

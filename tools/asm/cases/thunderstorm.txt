@@ -1,0 +1,10 @@
+# thunderstorm option sets (each also runs with every seed and input);
+# short storms keep runs quick
+--storm-time 1
+--storm-time 2 --lightning-color ffffff --glowing-text-color 00ff00 --text-glow-time 1
+--storm-time 3 --raindrop-symbols o --spark-symbols x y z w --spark-glow-color 196 --spark-glow-time 1
+--storm-time 2 --text-glow-time 40 --spark-glow-time 60 --lightning-color 21 --glowing-text-color 000000
+--storm-time 1 --raindrop-symbols ▓ │ ░ ǅ --spark-symbols 😀 --final-gradient-stops ff0000 --final-gradient-steps 1
+--storm-time 2 --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal --final-gradient-frames 1
+--storm-time 2 --final-gradient-stops 45 201 226 --final-gradient-steps 20 --final-gradient-direction radial
+--storm-time 1 --final-gradient-direction diagonal --final-gradient-frames 9 --lightning-color 000000

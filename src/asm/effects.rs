@@ -64,6 +64,30 @@ impl Words {
     fn direction(&mut self, direction: GradientDirection) -> &mut Self {
         self.int(direction as i64)
     }
+
+    /// Single-codepoint symbols in the engine's packed format (UTF-8 bytes
+    /// from the low byte up, the length in bits 32-39).
+    fn symbols(&mut self, symbols: &[String]) -> Result<&mut Self, &'static str> {
+        let mut packed = Vec::with_capacity(symbols.len());
+        for symbol in symbols {
+            if symbol.chars().count() != 1 {
+                return Err("multi-codepoint symbols are not supported");
+            }
+            let bytes = symbol.as_bytes();
+            let word = bytes.iter().enumerate().fold(0u64, |w, (i, &b)| w | (b as u64) << (8 * i));
+            packed.push(word | (bytes.len() as u64) << 32);
+        }
+        Ok(self.array(packed))
+    }
+
+    /// A frame duration: the engine keeps durations and eased step totals in
+    /// u32, so larger values (runs of years) go to the Rust engine.
+    fn duration(&mut self, frames: i64) -> Result<&mut Self, &'static str> {
+        if !(1..=1 << 24).contains(&frames) {
+            return Err("frame durations above 2^24 are not supported");
+        }
+        Ok(self.int(frames))
+    }
 }
 
 /// The effect's id (EffectCommand order, asm/effects/ids.inc) and its words,
@@ -78,6 +102,21 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .ints(&c.final_gradient_steps)
                 .direction(c.final_gradient_direction);
             8
+        }
+        EffectCommand::Thunderstorm(c) => {
+            // final_gradient_frames is accepted but unused upstream.
+            w.color(&c.lightning_color)
+                .color(&c.glowing_text_color)
+                .duration(c.text_glow_time)?
+                .symbols(&c.raindrop_symbols)?
+                .symbols(&c.spark_symbols)?
+                .color(&c.spark_glow_color)
+                .duration(c.spark_glow_time)?
+                .int(c.storm_time)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            32
         }
         _ => return Err("this effect is not ported yet"),
     };

@@ -168,6 +168,7 @@ struct AsmSequence {
 
 extern "C" {
     fn ttfx_test_ease(id: u32, t: f64) -> f64;
+    fn ttfx_test_bezier_easing(params: *const [f64; 4], t: f64) -> f64;
     fn ttfx_test_easing_tracker_new(out: *mut AsmTracker, id: u32, total_steps: i64, clamp: u32);
     fn ttfx_test_easing_tracker_step(tracker: *mut AsmTracker) -> f64;
     fn ttfx_test_easing_tracker_reset(tracker: *mut AsmTracker);
@@ -215,6 +216,33 @@ fn easings_match_bits() {
         }
     }
     assert_eq!(Easing::CubicBezier(0.0, 0.0, 1.0, 1.0).asm_id(), None);
+}
+
+#[test]
+fn bezier_easings_match_bits() {
+    let _engine = engine();
+    let mut inputs: Vec<f64> = (0..=20_000).map(|i| i as f64 / 20_000.0).collect();
+    for t in [0.0_f64, 1.0] {
+        inputs.extend([t.next_down(), t, t.next_up()]);
+    }
+    inputs.extend([-0.0, f64::NEG_INFINITY, f64::INFINITY, f64::NAN, -3.5, 7.25]);
+    let mut cases = Cases::new(9);
+    let mut unit = move || (cases.next_u64() >> 11) as f64 * (1.0 / (1u64 << 53) as f64);
+    // thunderstorm's flash curves, then CSS-style curves with y overshoot,
+    // then degenerate derivatives (x1 = x2 = 0 or 1).
+    let mut curves: Vec<[f64; 4]> = (0..40).map(|_| [0.0, 1.6, 1.0, -0.6 + 1.0 * unit()]).collect();
+    for _ in 0..40 {
+        curves.push([unit(), unit() * 3.0 - 1.0, unit(), unit() * 3.0 - 1.0]);
+    }
+    curves.extend([[0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0], [0.25, 0.1, 0.25, 1.0]]);
+    for curve in &curves {
+        let easing = Easing::CubicBezier(curve[0], curve[1], curve[2], curve[3]);
+        for &t in &inputs {
+            // SAFETY: the pointer is to four f64 and the scalar follows SysV.
+            let got = unsafe { ttfx_test_bezier_easing(curve, t) };
+            assert_eq!(got.to_bits(), easing.ease(t).to_bits(), "{easing:?}({t:?})");
+        }
+    }
 }
 
 fn check_tracker(got: &AsmTracker, expected: &EasingTracker, clamp: bool) {

@@ -5,13 +5,18 @@
 ; InOutSine and the high polynomial branches multiply by -0.5.
 ; No sincos call occurs in these arms.
 
+%define EASE_BEZIER_BASE    31  ; first CubicBezier id (see bezier_new)
+
 section .text
 
 ; ease(edi=Easing id 0..30, xmm0=t) -> xmm0.
-; All real inputs are accepted, including extrapolation. CubicBezier is absent.
+; All real inputs are accepted, including extrapolation. Ids from
+; EASE_BEZIER_BASE up are the CubicBezier curves made by bezier_new.
 ; Clobbers all caller-saved registers (libm through CCALL).
 ease:
     mov     edi, edi                    ; id is a 32-bit argument
+    cmp     edi, EASE_BEZIER_BASE
+    jae     ease_bezier_id
     sub     rsp, 40
     movapd  xmm5, xmm0
     lea     rcx, [ease_table]
@@ -764,3 +769,191 @@ sequence_easer_step:
     add     rsp, 8
     pop     rbx
     ret
+
+; ------------------------------------------------ Easing::CubicBezier curves
+; A curve's four parameters live in a per-run table; its easing id is
+; EASE_BEZIER_BASE + its index, so scenes and paths carry it like a named
+; easing and ease() dispatches it.
+
+%define BEZIER_LIMIT        (1 << 20)
+
+; bezier_new(xmm0=x1, xmm1=y1, xmm2=x2, xmm3=y2) -> eax = easing id.
+; Easing::CubicBezier(x1, y1, x2, y2). Clobbers the C caller-saved set.
+bezier_new:
+    push    rbx
+    sub     rsp, 32
+    movsd   [rsp], xmm0
+    movsd   [rsp + 8], xmm1
+    movsd   [rsp + 16], xmm2
+    movsd   [rsp + 24], xmm3
+    cmp     qword [bezier_table], 0
+    jne     .have_table
+    mov     rdi, BEZIER_LIMIT * 32
+    call    reserve
+    mov     [bezier_table], rax
+.have_table:
+    mov     ebx, [bezier_count]
+    cmp     ebx, BEZIER_LIMIT
+    jae     .full
+    inc     dword [bezier_count]
+    mov     rax, rbx
+    shl     rax, 5
+    add     rax, [bezier_table]
+    vmovdqu ymm0, [rsp]
+    vmovdqu [rax], ymm0
+    vzeroupper
+    lea     eax, [rbx + EASE_BEZIER_BASE]
+    add     rsp, 32
+    pop     rbx
+    ret
+.full:
+    lea     rdi, [msg_bezier_full]
+    mov     esi, msg_bezier_full_len
+    jmp     fatal
+
+; ease_bezier_id(edi=id >= EASE_BEZIER_BASE, xmm0=t): ease() for a curve.
+; The last (id, t) is memoized, like upstream's lru_cache: scenes started
+; together (thunderstorm's flash on every text character) ask for the same
+; point of the same curve one after another.
+ease_bezier_id:
+    movq    rax, xmm0
+    cmp     edi, [bezier_memo_id]
+    jne     .miss
+    cmp     rax, [bezier_memo_t]
+    jne     .miss
+    movsd   xmm0, [bezier_memo_value]
+    ret
+.miss:
+    mov     [bezier_memo_id], edi
+    mov     [bezier_memo_t], rax
+    sub     edi, EASE_BEZIER_BASE
+    shl     rdi, 5
+    add     rdi, [bezier_table]
+    sub     rsp, 8
+    call    bezier_easing
+    add     rsp, 8
+    movsd   [bezier_memo_value], xmm0
+    ret
+
+; bezier_easing(rdi=&[x1, y1, x2, y2], xmm0=progress) -> xmm0.
+; easing::bezier_easing: Newton-Raphson on x (20 iterations, 1e-5
+; convergence, 1e-6 derivative bail), then y at the solved t. The oracle
+; squares with mulsd and cubes with pow(t, 3.0); products and sums keep the
+; source's grouping. Clobbers the C caller-saved set.
+bezier_easing:
+    xorpd   xmm1, xmm1
+    ucomisd xmm1, xmm0                  ; progress <= 0 -> 0
+    jae     .zero
+    movsd   xmm1, [ease_one]
+    ucomisd xmm0, xmm1                  ; progress >= 1 -> 1
+    jae     .one
+    push    rbx
+    sub     rsp, 96
+    ; [rsp] progress, +8 t, +16 1-t, +24 (1-t)^2, +32 t^2, +40 partial sum
+    ; +48 x1, +56 y1, +64 x2, +72 y2
+    movsd   [rsp], xmm0
+    movsd   [rsp + 8], xmm0
+    vmovdqu ymm1, [rdi]
+    vmovdqu [rsp + 48], ymm1
+    vzeroupper
+    mov     ebx, 20
+.newton:
+    call    .powers                     ; xmm0 = t^3
+    ; x(t) = 3 x1 (1-t)^2 t + 3 x2 (1-t) t^2 + t^3
+    movsd   xmm1, [ease_three]
+    mulsd   xmm1, [rsp + 48]
+    mulsd   xmm1, [rsp + 24]
+    mulsd   xmm1, [rsp + 8]
+    movsd   xmm2, [ease_three]
+    mulsd   xmm2, [rsp + 64]
+    mulsd   xmm2, [rsp + 16]
+    mulsd   xmm2, [rsp + 32]
+    addsd   xmm1, xmm2
+    addsd   xmm1, xmm0
+    subsd   xmm1, [rsp]                 ; dx
+    movapd  xmm3, xmm1
+    andpd   xmm3, [bezier_abs_mask]
+    movsd   xmm2, [bezier_x_epsilon]
+    ucomisd xmm2, xmm3
+    ja      .solved
+    ; x'(t) = 3 (1-t)^2 x1 + 6 (1-t) t (x2 - x1) + 3 t^2 (1 - x2)
+    movsd   xmm4, [ease_three]
+    mulsd   xmm4, [rsp + 24]
+    mulsd   xmm4, [rsp + 48]
+    movsd   xmm5, [bezier_six]
+    mulsd   xmm5, [rsp + 16]
+    mulsd   xmm5, [rsp + 8]
+    movsd   xmm2, [rsp + 64]
+    subsd   xmm2, [rsp + 48]
+    mulsd   xmm5, xmm2
+    addsd   xmm4, xmm5
+    movsd   xmm5, [ease_three]
+    mulsd   xmm5, [rsp + 32]
+    movsd   xmm2, [ease_one]
+    subsd   xmm2, [rsp + 64]
+    mulsd   xmm5, xmm2
+    addsd   xmm4, xmm5
+    movapd  xmm3, xmm4
+    andpd   xmm3, [bezier_abs_mask]
+    movsd   xmm2, [bezier_d_epsilon]
+    ucomisd xmm2, xmm3
+    ja      .solved
+    divsd   xmm1, xmm4
+    movsd   xmm2, [rsp + 8]
+    subsd   xmm2, xmm1
+    movsd   [rsp + 8], xmm2
+    dec     ebx
+    jnz     .newton
+    call    .powers
+.solved:
+    ; y(t) = 3 y1 (1-t)^2 t + 3 y2 (1-t) t^2 + t^3, xmm0 = t^3 at this t
+    movsd   xmm1, [ease_three]
+    mulsd   xmm1, [rsp + 56]
+    mulsd   xmm1, [rsp + 24]
+    mulsd   xmm1, [rsp + 8]
+    movsd   xmm2, [ease_three]
+    mulsd   xmm2, [rsp + 72]
+    mulsd   xmm2, [rsp + 16]
+    mulsd   xmm2, [rsp + 32]
+    addsd   xmm1, xmm2
+    addsd   xmm1, xmm0
+    movapd  xmm0, xmm1
+    add     rsp, 96
+    pop     rbx
+    ret
+.powers:
+    ; 1-t, (1-t)^2, t^2 into the frame (note the return address), t^3 in xmm0
+    movsd   xmm0, [rsp + 8 + 8]
+    movsd   xmm1, [ease_one]
+    subsd   xmm1, xmm0
+    movsd   [rsp + 8 + 16], xmm1
+    mulsd   xmm1, xmm1
+    movsd   [rsp + 8 + 24], xmm1
+    movapd  xmm1, xmm0
+    mulsd   xmm1, xmm1
+    movsd   [rsp + 8 + 32], xmm1
+    movsd   xmm1, [ease_three]
+    CCALL   pow
+    ret
+.zero:
+    xorpd   xmm0, xmm0
+    ret
+.one:
+    movsd   xmm0, [ease_one]
+    ret
+
+section .rodata
+align 16
+bezier_abs_mask:    dq 0x7fffffffffffffff, 0x7fffffffffffffff
+bezier_six:         dq 6.0
+bezier_x_epsilon:   dq 1e-5
+bezier_d_epsilon:   dq 1e-6
+STR msg_bezier_full, "ttfx: asm engine: bezier easing limit reached", 10
+
+section .tstate
+alignb 8
+bezier_table:       resq 1
+bezier_memo_t:      resq 1
+bezier_memo_value:  resq 1
+bezier_count:       resd 1
+bezier_memo_id:     resd 1              ; 0 (no curve) until the first call
