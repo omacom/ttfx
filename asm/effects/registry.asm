@@ -17,6 +17,7 @@
 %include "effects/decrypt.asm"
 %include "effects/highlight.asm"
 %include "effects/middleout.asm"
+%include "effects/pour.asm"
 %include "effects/sweep.asm"
 %include "effects/randomsequence.asm"
 %include "effects/expand.asm"
@@ -48,6 +49,8 @@ effect_table:
     dq highlight_build, highlight_next_frame
   %elif id == EFFECT_MIDDLEOUT
     dq middleout_build, middleout_next_frame
+  %elif id == EFFECT_POUR
+    dq pour_build, pour_next_frame
   %elif id == EFFECT_SWEEP
     dq sweep_build, sweep_next_frame
   %elif id == EFFECT_RANDOMSEQUENCE

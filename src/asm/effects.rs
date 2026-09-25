@@ -363,6 +363,25 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             6
         }
+        EffectCommand::Pour(c) => {
+            // frame durations are 32-bit in the engine; values below 1 still
+            // reach it and fail like Rust
+            if i32::try_from(c.final_gradient_frames).is_err() {
+                return Err("final gradient frames out of range");
+            }
+            w.int(c.pour_direction as i64)
+                .int(c.pour_speed)
+                .float(c.movement_speed_range.0)
+                .float(c.movement_speed_range.1)
+                .int(c.gap)
+                .color(&c.starting_color)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .int(c.final_gradient_frames)
+                .direction(c.final_gradient_direction)
+                .easing(c.movement_easing)?;
+            18
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
