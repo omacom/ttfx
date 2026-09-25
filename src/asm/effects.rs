@@ -107,6 +107,19 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             8
         }
+        EffectCommand::Scattered(c) => {
+            // frame durations are 32-bit in the engine
+            if i32::try_from(c.final_gradient_frames).is_err() {
+                return Err("final gradient frames out of range");
+            }
+            w.float(c.movement_speed)
+                .easing(c.movement_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .int(c.final_gradient_frames)
+                .direction(c.final_gradient_direction);
+            23
+        }
         EffectCommand::Synthgrid(c) => {
             w.colors(&c.grid_gradient_stops)
                 .ints(&c.grid_gradient_steps)
