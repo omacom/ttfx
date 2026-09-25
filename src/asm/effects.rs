@@ -107,35 +107,6 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             8
         }
-        EffectCommand::Highlight(c) => {
-            w.float(c.highlight_brightness)
-                .int(c.highlight_direction as i64)
-                .int(c.highlight_width)
-                .colors(&c.final_gradient_stops)
-                .ints(&c.final_gradient_steps)
-                .direction(c.final_gradient_direction);
-            12
-        }
-        EffectCommand::Sweep(c) => {
-            w.symbols(&c.sweep_symbols)?
-                .int(c.first_sweep_direction as i64)
-                .int(c.second_sweep_direction as i64)
-                .colors(&c.final_gradient_stops)
-                .ints(&c.final_gradient_steps)
-                .direction(c.final_gradient_direction);
-            30
-        }
-        EffectCommand::Randomsequence(c) => {
-            // frame durations are 32-bit in the engine
-            let frames = i32::try_from(c.final_gradient_frames)
-                .map_err(|_| "final gradient frames beyond 32 bits are not supported")?;
-            w.float(c.speed)
-                .colors(&c.final_gradient_stops)
-                .ints(&c.final_gradient_steps)
-                .int(frames as i64)
-                .direction(c.final_gradient_direction);
-            21
-        }
         EffectCommand::Expand(c) => {
             w.easing(c.expand_easing)?
                 .float(c.movement_speed)
@@ -144,64 +115,14 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             10
         }
-        EffectCommand::Spray(c) => {
-            w.int(c.spray_position as i64)
-                .float(c.spray_volume)
-                .float(c.movement_speed_range.0)
-                .float(c.movement_speed_range.1)
-                .easing(c.movement_easing)?
+        EffectCommand::Highlight(c) => {
+            w.float(c.highlight_brightness)
+                .int(c.highlight_direction as i64)
+                .int(c.highlight_width)
                 .colors(&c.final_gradient_stops)
                 .ints(&c.final_gradient_steps)
                 .direction(c.final_gradient_direction);
-            28
-        }
-        EffectCommand::Scattered(c) => {
-            // frame durations are 32-bit in the engine
-            if i32::try_from(c.final_gradient_frames).is_err() {
-                return Err("final gradient frames out of range");
-            }
-            w.float(c.movement_speed)
-                .easing(c.movement_easing)?
-                .colors(&c.final_gradient_stops)
-                .ints(&c.final_gradient_steps)
-                .int(c.final_gradient_frames)
-                .direction(c.final_gradient_direction);
-            23
-        }
-        EffectCommand::Synthgrid(c) => {
-            w.colors(&c.grid_gradient_stops)
-                .ints(&c.grid_gradient_steps)
-                .direction(c.grid_gradient_direction)
-                .colors(&c.text_gradient_stops)
-                .ints(&c.text_gradient_steps)
-                .direction(c.text_gradient_direction)
-                .symbol(&c.grid_row_symbol)?
-                .symbol(&c.grid_column_symbol)?
-                .symbols(&c.text_generation_symbols)?
-                .float(c.max_active_blocks);
-            31
-        }
-        // glitch_wave_colors is never read by the effect
-        EffectCommand::Vhstape(c) => {
-            w.colors(&c.glitch_line_colors)
-                .colors(&c.noise_colors)
-                .float(c.glitch_line_chance)
-                .float(c.noise_chance)
-                .int(c.total_glitch_time)
-                .colors(&c.final_gradient_stops)
-                .ints(&c.final_gradient_steps)
-                .direction(c.final_gradient_direction);
-            34
-        }
-        EffectCommand::Wipe(c) => {
-            // Frame durations are 32-bit in the engine; values below 1 still
-            // reach it and fail like Rust.
-            if i32::try_from(c.final_gradient_frames).is_err() {
-                return Err("final gradient frames out of range");
-            }
-            w.int(c.wipe_direction as i64)
-                .int(c.wipe_delay)
-                .easing(c.wipe_ease)?
+            12
         }
         EffectCommand::Matrix(c) => {
             if c.final_gradient_frames > i32::MAX as i64 {
@@ -252,7 +173,18 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .ints(&c.final_gradient_steps)
                 .int(c.final_gradient_frames)
                 .direction(c.final_gradient_direction);
-            36
+            14
+        }
+        EffectCommand::Randomsequence(c) => {
+            // frame durations are 32-bit in the engine
+            let frames = i32::try_from(c.final_gradient_frames)
+                .map_err(|_| "final gradient frames beyond 32 bits are not supported")?;
+            w.float(c.speed)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .int(frames as i64)
+                .direction(c.final_gradient_direction);
+            21
         }
         EffectCommand::Rings(c) => {
             w.colors(&c.ring_colors)
@@ -267,7 +199,78 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             22
         }
-            14
+        EffectCommand::Scattered(c) => {
+            // frame durations are 32-bit in the engine
+            if i32::try_from(c.final_gradient_frames).is_err() {
+                return Err("final gradient frames out of range");
+            }
+            w.float(c.movement_speed)
+                .easing(c.movement_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .int(c.final_gradient_frames)
+                .direction(c.final_gradient_direction);
+            23
+        }
+        EffectCommand::Spray(c) => {
+            w.int(c.spray_position as i64)
+                .float(c.spray_volume)
+                .float(c.movement_speed_range.0)
+                .float(c.movement_speed_range.1)
+                .easing(c.movement_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            28
+        }
+        EffectCommand::Sweep(c) => {
+            w.symbols(&c.sweep_symbols)?
+                .int(c.first_sweep_direction as i64)
+                .int(c.second_sweep_direction as i64)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            30
+        }
+        EffectCommand::Synthgrid(c) => {
+            w.colors(&c.grid_gradient_stops)
+                .ints(&c.grid_gradient_steps)
+                .direction(c.grid_gradient_direction)
+                .colors(&c.text_gradient_stops)
+                .ints(&c.text_gradient_steps)
+                .direction(c.text_gradient_direction)
+                .symbol(&c.grid_row_symbol)?
+                .symbol(&c.grid_column_symbol)?
+                .symbols(&c.text_generation_symbols)?
+                .float(c.max_active_blocks);
+            31
+        }
+        // glitch_wave_colors is never read by the effect
+        EffectCommand::Vhstape(c) => {
+            w.colors(&c.glitch_line_colors)
+                .colors(&c.noise_colors)
+                .float(c.glitch_line_chance)
+                .float(c.noise_chance)
+                .int(c.total_glitch_time)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            34
+        }
+        EffectCommand::Wipe(c) => {
+            // Frame durations are 32-bit in the engine; values below 1 still
+            // reach it and fail like Rust.
+            if i32::try_from(c.final_gradient_frames).is_err() {
+                return Err("final gradient frames out of range");
+            }
+            w.int(c.wipe_direction as i64)
+                .int(c.wipe_delay)
+                .easing(c.wipe_ease)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .int(c.final_gradient_frames)
+                .direction(c.final_gradient_direction);
+            36
         }
         _ => return Err("this effect is not ported yet"),
     };
