@@ -1,0 +1,28 @@
+# slide option sets (each also runs with every seed and input)
+--grouping row
+--grouping column
+--grouping diagonal
+--grouping row --reverse-direction
+--grouping column --reverse-direction
+--grouping diagonal --reverse-direction
+--grouping row --merge
+--grouping column --merge
+--grouping diagonal --merge
+--grouping row --merge --reverse-direction --gap 0
+--grouping column --merge --reverse-direction --gap 1
+--grouping diagonal --merge --reverse-direction --gap 4
+--grouping row --gap 0 --movement-speed 1.5 --movement-easing linear
+--grouping column --gap 7 --movement-speed 0.07 --movement-easing out_bounce
+--grouping diagonal --gap 0 --movement-speed 0.6 --movement-easing in_out_elastic
+--grouping row --reverse-direction --movement-easing in_back --final-gradient-direction radial
+--grouping column --movement-easing out_elastic --movement-speed 3 --final-gradient-direction diagonal
+--grouping diagonal --movement-easing in_out_back --movement-speed 100 --gap 3
+--movement-speed 0.5 --movement-easing in_out_sine --merge --gap 2
+--final-gradient-stops ff0000 00ff00 0000ff --final-gradient-steps 3 7 --final-gradient-direction horizontal
+--grouping column --final-gradient-stops 45 201 --final-gradient-steps 5 --final-gradient-frames 2
+--grouping diagonal --final-gradient-stops ffffff --final-gradient-steps 4 --final-gradient-direction radial
+--grouping row --merge --final-gradient-stops ff00ff 00ffff 9 abcdef --final-gradient-steps 1 5 20 --final-gradient-frames 1
+--final-gradient-steps 1 --final-gradient-frames 3 --movement-easing in_expo
+--final-gradient-frames 0
+--final-gradient-frames=-3
+--grouping diagonal --reverse-direction --movement-easing out_circ --final-gradient-frames 11 --gap 5
