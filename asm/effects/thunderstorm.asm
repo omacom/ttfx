@@ -1104,6 +1104,8 @@ ts_lightning_strike:
     mov     rsi, [ch_user1]
     mov     eax, [rsi + rax * 8 + 4]    ; flash
     SCENE_PTR r8, rax
+    mov     edi, [r8 + SC_OWNER]
+    call    doze_wake                   ; update.asm: its playback changes
     mov     [r8 + SC_EASE], edx
     or      dword [r8 + SC_FLAGS], SCF_EASED
     inc     rcx

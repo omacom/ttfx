@@ -14,6 +14,20 @@
 
 %define FRAME_REGION        (1 << 36)
 
+; eased shapes (see step_eased_scene)
+%define SHAPE_LIMIT         64
+%define SHAPE_SHIFT         6           ; 64-byte records
+%define SH_KEY              0           ; u64 easing << 32 | total steps
+%define SH_INDEX            8           ; u32 per step: index + 1
+%define SH_HANDLE           16          ; u32 per step: the visual (same frames)
+%define SH_REF              24          ; the reference frames
+%define SH_COUNT            32          ; u32 their count
+%define SCF_SHAPE_SAME      64
+%define SCF_SHAPE_TAG_SHIFT 8
+%define SCF_SHAPE_TAG       (127 << SCF_SHAPE_TAG_SHIFT)
+%define SCF_SHAPE           (SCF_SHAPE_SAME | SCF_SHAPE_TAG)
+%define EASED_MEMO_LIMIT    (1 << 16)
+
 section .text
 
 scenes_init:
@@ -27,6 +41,8 @@ scenes_init:
     call    reserve
     mov     [frame_region], rax
     mov     [frame_region_end], rax
+    lea     rax, [shapes]
+    mov     [shape_last], rax
     ret
 
 ; scene_ptr(esi=scene) -> r8 = record. Clobbers nothing else.
@@ -118,14 +134,17 @@ scene_new:
     jmp     .init
 .reuse:
     mov     r15d, eax
+    mov     edi, ebx
+    call    doze_wake
     SCENE_PTR r8, r15
 .init:
     ; everything but the map link starts over
     mov     ecx, [r8 + SC_NEXT]
-    vpxor   xmm0, xmm0, xmm0
-    vmovdqu [r8], ymm0
-    vmovdqu [r8 + SCENE_COLD], ymm0
-    vzeroupper
+    pxor    xmm0, xmm0
+    movdqu  [r8], xmm0
+    movdqu  [r8 + 16], xmm0
+    movdqu  [r8 + SCENE_COLD], xmm0
+    movdqu  [r8 + SCENE_COLD + 16], xmm0
     mov     [r8 + SC_NEXT], ecx
     mov     [r8 + SC_NAME], r12d
     mov     [r8 + SC_OWNER], ebx
@@ -276,6 +295,7 @@ scene_append_frame:
     add     esi, edx
     mov     [r8 + SC_EASE_TOTAL], esi
     inc     dword [r8 + SC_COUNT]
+    and     dword [r8 + SC_FLAGS], ~SCF_SHAPE
     cmp     ecx, [r8 + SC_HEAD]
     jne     .done
     mov     [r8 + SC_HEAD_HANDLE], ebx
@@ -303,6 +323,10 @@ scene_load_head:
 ; in original order, tick counters and the easing step zeroed.
 scene_reset:
     SCENE_PTR r8, rdi
+    push    rdi
+    mov     edi, [r8 + SC_OWNER]
+    call    doze_wake
+    pop     rdi
     mov     dword [r8 + SC_HEAD], 0
     mov     dword [r8 + SC_TICKS], 0
     mov     dword [r8 + SC_EASE_STEP], 0
@@ -557,6 +581,9 @@ scene_copy:
     mov     ebx, edi
     mov     r12d, esi
     mov     r13d, edx
+    SCENE_PTR r8, r12
+    mov     edi, [r8 + SC_OWNER]
+    call    doze_wake
     mov     edi, ebx
     mov     esi, r13d
     xor     edx, edx
@@ -567,19 +594,22 @@ scene_copy:
     SCENE_PTR rsi, r12
     ; copy everything but the name, the map link and the owner
     mov     r9d, [r8 + SC_NEXT]
-    vmovdqu ymm0, [rsi]
-    vmovdqu [r8], ymm0
-    vmovdqu ymm0, [rsi + SCENE_COLD]
-    vmovdqu [r8 + SCENE_COLD], ymm0
-    vzeroupper
+    movdqu  xmm0, [rsi]
+    movdqu  xmm1, [rsi + 16]
+    movdqu  [r8], xmm0
+    movdqu  [r8 + 16], xmm1
+    movdqu  xmm0, [rsi + SCENE_COLD]
+    movdqu  xmm1, [rsi + SCENE_COLD + 16]
+    movdqu  [r8 + SCENE_COLD], xmm0
+    movdqu  [r8 + SCENE_COLD + 16], xmm1
     ; and its preexisting colors
     mov     rdx, [scene_pre]
     mov     rcx, r12
     shl     rcx, 4
-    vmovdqu xmm0, [rdx + rcx]
+    movdqu  xmm0, [rdx + rcx]
     mov     ecx, [rsp]
     shl     rcx, 4
-    vmovdqu [rdx + rcx], xmm0
+    movdqu  [rdx + rcx], xmm0
     mov     [r8 + SC_NEXT], r9d
     mov     [r8 + SC_NAME], r13d
     mov     [r8 + SC_OWNER], ebx
@@ -603,6 +633,7 @@ scene_copy:
 ; semantics: the visual is the head of the remaining queue and playback is
 ; not reset. Fires SCENE_ACTIVATED.
 scene_activate:
+    call    doze_wake
     SCENE_PTR r8, rsi
     mov     ecx, [r8 + SC_HEAD]
     cmp     ecx, [r8 + SC_COUNT]
@@ -638,6 +669,7 @@ scene_activate_name:
 ; scene_deactivate(edi=slot, esi=name or NONE): Animation.deactivate_scene -
 ; any active scene, or only the named one.
 scene_deactivate:
+    call    doze_wake
     mov     rax, [ch_scene]
     mov     ecx, [rax + rdi * 4]
     cmp     ecx, NONE
@@ -676,7 +708,16 @@ scene_is_complete:
 
 ; step_animation(edi=slot): Animation.step_animation plus
 ; _complete_scene_if_finished, SCENE_COMPLETE dispatch included.
+; step_animation_awake is the same for a character known not to be dozing.
 step_animation:
+    mov     rax, [doze_bits]
+    mov     ecx, edi
+    shr     ecx, 6
+    mov     rax, [rax + rcx * 8]
+    bt      rax, rdi
+    jnc     step_animation_awake
+    call    doze_wake
+step_animation_awake:
     mov     rax, [ch_scene]
     mov     esi, [rax + rdi * 4]
     cmp     esi, NONE
@@ -717,8 +758,25 @@ step_animation:
     jmp     .check
 .exhausted:
     mov     [r8 + SC_HEAD], ecx
+    mov     [r8 + SC_TICKS], eax
+    jmp     .check
 .ticked:
     mov     [r8 + SC_TICKS], eax
+    cmp     edi, [doze_slot]
+    jne     .check
+    ; update's tick: the next duration - ticks ticks are pure but for the
+    ; last one when this is the last frame (its retirement completes)
+    test    dword [r8 + SC_FLAGS], SCF_LOOPING
+    jnz     .check
+    mov     esi, [r8 + SC_HEAD_DURATION]
+    sub     esi, eax
+    mov     ecx, [r8 + SC_HEAD]
+    inc     ecx
+    cmp     ecx, [r8 + SC_COUNT]
+    adc     esi, -1
+    jz      .check
+    call    doze_try
+    add     [r8 + SC_TICKS], esi
     jmp     .check
 .synced:
     call    step_synced_scene
@@ -808,11 +866,25 @@ step_synced_scene:
     divsd   xmm2, xmm0
     movapd  xmm0, xmm2
 .index:
-    ; round(final * ratio).min(final).max(0)
+    ; round(final * ratio).min(final).max(0); the product is almost always
+    ; in [0, 2^52), where rounding is one instruction (or the 2^52 trick)
     cvtsi2sd xmm1, r9
     mulsd   xmm1, xmm0
     movapd  xmm0, xmm1
-    call    round_half_even
+    xorpd   xmm2, xmm2
+    ucomisd xmm0, xmm2
+    jb      .round_slow
+    movsd   xmm2, [scene_two_52]
+    ucomisd xmm2, xmm0
+    jbe     .round_slow                 ; also NaN
+%if TIER >= 2
+    roundsd xmm0, xmm0, 0               ; nearest, ties to even
+%else
+    addsd   xmm0, xmm2                  ; x + 2^52 rounds to an integer,
+    subsd   xmm0, xmm2                  ; ties to even (MXCSR default)
+%endif
+    cvttsd2si rax, xmm0
+.rounded:
     cmp     rax, r9
     cmovg   rax, r9
     xor     ecx, ecx
@@ -822,53 +894,155 @@ step_synced_scene:
     shl     rax, FRAME_SHIFT
     add     rax, [r8 + SC_FRAMES]
     mov     eax, [rax + FR_HANDLE]
+    mov     rcx, [ch_handle]
+    cmp     [rcx + rdi * 4], eax
+    je      .same
     SET_HANDLE
+.same:
     ret
+.round_slow:
+    call    round_half_even
+    jmp     .rounded
 
-; step_eased_scene(edi=slot, r8=scene record): Animation._step_eased_scene.
-; Preserves rdi and r8 (the easing call clobbers everything else).
+; ------------------------------------------------------------ eased shapes
 ;
-; The tick index is a pure function of (easing, step, total), and effects
-; usually give thousands of characters the same eased scene shape, so the
-; first shape seen in a run (up to EASED_MEMO_LIMIT ticks) memoizes it:
-; eased_memo[step] = index + 1, 0 while unknown.
-%define EASED_MEMO_LIMIT    (1 << 16)
-step_eased_scene:
+; An eased scene's tick index is a pure function of (easing, step, total),
+; and effects usually give many characters the same shape, often with the
+; same frames too. A shape record memoizes, per step, index + 1 and - for
+; scenes whose frames equal its reference frames (a copy of the first
+; scene's) - the visual shown; 0 is unknown in both. A scene's SC_FLAGS
+; remember which shape its frames were compared with (the tag, shape index
+; + 1) and whether they are the same; appending a frame clears both.
+
+
+; shape_find(r8=eased scene record) -> r9 = its shape record, or 0 when
+; shapes are not memoized for it (too long, or the table is full).
+; Clobbers rax, rcx, rdx.
+shape_find:
     mov     eax, [r8 + SC_EASE]
     shl     rax, 32
     mov     ecx, [r8 + SC_EASE_TOTAL]
     or      rax, rcx
-    cmp     rax, [eased_memo_key]
-    jne     .memo_miss
-.memo_lookup:
-    mov     rcx, [eased_memo]
+    mov     r9, [shape_last]
+    cmp     rax, [r9 + SH_KEY]
+    je      .found
+    lea     r9, [shapes]
+    mov     edx, [shape_count]
+.search:
+    test    edx, edx
+    jz      .claim
+    cmp     rax, [r9 + SH_KEY]
+    je      .hit
+    add     r9, 1 << SHAPE_SHIFT
+    dec     edx
+    jmp     .search
+.claim:
+    cmp     dword [shape_count], SHAPE_LIMIT
+    jae     .none
+    cmp     ecx, EASED_MEMO_LIMIT
+    ja      .none
+    inc     dword [shape_count]
+    mov     [r9 + SH_KEY], rax
+    push    rdi
+    push    rsi
+    lea     rdi, [rcx * 4 + 8]
+    call    alloc
+    mov     [r9 + SH_INDEX], rax
+    mov     ecx, [r8 + SC_EASE_TOTAL]
+    lea     rdi, [rcx * 4 + 8]
+    call    alloc
+    mov     [r9 + SH_HANDLE], rax
+    mov     ecx, [r8 + SC_COUNT]
+    mov     [r9 + SH_COUNT], ecx
+    lea     rdi, [rcx * 8 + 8]
+    call    alloc
+    mov     [r9 + SH_REF], rax
+    mov     rdi, rax
+    mov     rsi, [r8 + SC_FRAMES]
+    mov     ecx, [r8 + SC_COUNT]
+    rep     movsq
+    pop     rsi
+    pop     rdi
+.hit:
+    mov     [shape_last], r9
+.found:
+    ret
+.none:
+    xor     r9d, r9d
+    ret
+
+; SHAPE_TAG dest32, shape register: dest = the shape's tag in SC_FLAGS'
+; position.
+%macro SHAPE_TAG 2
+    lea     %1, [shapes]
+    neg     %1
+    add     %1, %2
+    shr     %1, SHAPE_SHIFT
+    inc     %1
+    shl     %1, SCF_SHAPE_TAG_SHIFT
+%endmacro
+
+; shape_check(r8=scene record, r9=its shape): compare the scene's frames
+; with the shape's reference frames, recording the tag and the verdict in
+; SC_FLAGS. Clobbers rax, rcx, rdx.
+shape_check:
+    push    rsi
+    push    rdi
+    SHAPE_TAG rdx, r9
+    mov     eax, [r8 + SC_FLAGS]
+    and     eax, ~SCF_SHAPE
+    or      edx, eax
+    mov     ecx, [r8 + SC_COUNT]
+    cmp     ecx, [r9 + SH_COUNT]
+    jne     .store
+    mov     rsi, [r8 + SC_FRAMES]
+    mov     rdi, [r9 + SH_REF]
+.compare:
+    mov     rax, [rsi]
+    cmp     rax, [rdi]
+    jne     .store
+    add     rsi, FRAME_SIZE
+    add     rdi, FRAME_SIZE
+    dec     ecx
+    jnz     .compare
+    or      edx, SCF_SHAPE_SAME
+.store:
+    mov     [r8 + SC_FLAGS], edx
+    pop     rdi
+    pop     rsi
+    ret
+
+; step_eased_scene(edi=slot, r8=scene record): Animation._step_eased_scene.
+; Preserves rdi and r8 (the easing call clobbers everything else).
+step_eased_scene:
+    call    shape_find
+    test    r9, r9
+    jz      .compute
+    SHAPE_TAG rax, r9
+    mov     ecx, [r8 + SC_FLAGS]
+    and     ecx, SCF_SHAPE_TAG
+    cmp     ecx, eax
+    je      .checked
+    call    shape_check
+.checked:
     mov     edx, [r8 + SC_EASE_STEP]
+    test    dword [r8 + SC_FLAGS], SCF_SHAPE_SAME
+    jz      .memo_index
+    mov     rcx, [r9 + SH_HANDLE]
+    mov     eax, [rcx + rdx * 4]
+    test    eax, eax
+    jnz     .show
+.memo_index:
+    mov     rcx, [r9 + SH_INDEX]
     mov     eax, [rcx + rdx * 4]
     test    eax, eax
     jz      .compute
     dec     eax
     jmp     .index_map
-.memo_miss:
-    ; claim the memo for the first shape only
-    cmp     qword [eased_memo], 0
-    jne     .compute
-    cmp     ecx, EASED_MEMO_LIMIT
-    ja      .compute
-    mov     [eased_memo_key], rax
-    push    rdi
-    push    r8
-    lea     rdi, [rcx * 4 + 8]
-    sub     rsp, 8
-    call    alloc
-    add     rsp, 8
-    mov     [eased_memo], rax
-    pop     r8
-    pop     rdi
-    jmp     .memo_lookup
 .compute:
     push    rdi
     push    r8
-    sub     rsp, 8
+    push    r9
     mov     eax, [r8 + SC_EASE_STEP]
     cvtsi2sd xmm0, rax
     mov     eax, [r8 + SC_EASE_TOTAL]
@@ -877,7 +1051,6 @@ step_eased_scene:
     mov     edi, [r8 + SC_EASE]
     call    ease
     mov     r8, [rsp + 8]
-    mov     rdi, [rsp + 16]
     ; final = max(total - 1, 0); index = round(factor * final).min(final).max(0)
     mov     eax, [r8 + SC_EASE_TOTAL]
     dec     rax
@@ -893,20 +1066,15 @@ step_eased_scene:
     xor     ecx, ecx
     test    rax, rax
     cmovs   rax, rcx
-    add     rsp, 8
+    pop     r9
     pop     r8
     pop     rdi
-    ; remember it when this is the memoized shape
-    mov     ecx, [r8 + SC_EASE]
-    shl     rcx, 32
-    mov     edx, [r8 + SC_EASE_TOTAL]
-    or      rcx, rdx
-    cmp     rcx, [eased_memo_key]
-    jne     .index_map
-    mov     rcx, [eased_memo]
+    test    r9, r9
+    jz      .index_map
+    mov     rcx, [r9 + SH_INDEX]
     mov     edx, [r8 + SC_EASE_STEP]
-    lea     r9d, [eax + 1]
-    mov     [rcx + rdx * 4], r9d
+    lea     r10d, [eax + 1]
+    mov     [rcx + rdx * 4], r10d
 .index_map:
     ; frame_index_map[index]: the frame whose tick range holds index. A
     ; cursor (frame, its first tick) walks from the previous lookup, so the
@@ -921,24 +1089,33 @@ step_eased_scene:
     sub     edx, [rsi + rcx * 8 + FR_DURATION]
     jmp     .back
 .forward:
-    mov     r9d, edx
-    add     r9d, [rsi + rcx * 8 + FR_DURATION]
-    cmp     eax, r9d
+    mov     r10d, edx
+    add     r10d, [rsi + rcx * 8 + FR_DURATION]
+    cmp     eax, r10d
     jb      .found
-    mov     edx, r9d
+    mov     edx, r10d
     inc     ecx
     jmp     .forward
 .found:
     mov     [r8 + SC_CURSOR], ecx
     mov     [r8 + SC_CURSOR_START], edx
     mov     eax, [rsi + rcx * 8 + FR_HANDLE]
+    ; the shape remembers it for every scene with the same frames
+    test    r9, r9
+    jz      .show
+    test    dword [r8 + SC_FLAGS], SCF_SHAPE_SAME
+    jz      .show
+    mov     rcx, [r9 + SH_HANDLE]
+    mov     edx, [r8 + SC_EASE_STEP]
+    mov     [rcx + rdx * 4], eax
+.show:
     SET_HANDLE
     ; advance; the end either loops or empties the queue
     mov     eax, [r8 + SC_EASE_STEP]
     inc     eax
     mov     [r8 + SC_EASE_STEP], eax
     cmp     eax, [r8 + SC_EASE_TOTAL]
-    jne     .done
+    jne     .stepped
     test    dword [r8 + SC_FLAGS], SCF_LOOPING
     jz      .played
     mov     dword [r8 + SC_EASE_STEP], 0
@@ -948,6 +1125,66 @@ step_eased_scene:
     mov     [r8 + SC_HEAD], eax
 .done:
     ret
+.stepped:
+    ; update's tick: the next steps that show the same visual and do not
+    ; end the scene are pure - known from the shape's visuals when the
+    ; scene has its reference frames, else from its indexes and the frame
+    ; just shown (the cursor's)
+    cmp     edi, [doze_slot]
+    jne     .done
+    test    r9, r9
+    jz      .done
+    test    dword [r8 + SC_FLAGS], SCF_LOOPING
+    jnz     .done
+    mov     ecx, [r8 + SC_EASE_TOTAL]
+    sub     ecx, eax
+    dec     ecx                         ; steps before the last
+    jle     .done
+    mov     edx, 254
+    cmp     ecx, edx
+    cmova   ecx, edx
+    mov     edx, eax
+    mov     rax, [ch_handle]
+    mov     r10d, [rax + rdi * 4]       ; the visual shown
+    test    dword [r8 + SC_FLAGS], SCF_SHAPE_SAME
+    jz      .by_index
+    mov     rsi, [r9 + SH_HANDLE]
+    lea     rsi, [rsi + rdx * 4]
+    xor     eax, eax
+.same:
+    cmp     eax, ecx
+    jae     .scanned
+    cmp     [rsi + rax * 4], r10d       ; 0 (not known yet) never matches
+    jne     .scanned
+    inc     eax
+    jmp     .same
+.by_index:
+    mov     rsi, [r8 + SC_FRAMES]
+    mov     eax, [r8 + SC_CURSOR]
+    mov     r10d, [rsi + rax * 8 + FR_DURATION]
+    mov     rsi, [r9 + SH_INDEX]
+    lea     rsi, [rsi + rdx * 4]
+    mov     r9d, [r8 + SC_CURSOR_START]
+    xor     eax, eax
+.scan:
+    cmp     eax, ecx
+    jae     .scanned
+    mov     edx, [rsi + rax * 4]
+    test    edx, edx
+    jz      .scanned                    ; not known yet
+    dec     edx
+    sub     edx, r9d
+    cmp     edx, r10d
+    jae     .scanned                    ; another frame
+    inc     eax
+    jmp     .scan
+.scanned:
+    test    eax, eax
+    jz      .done
+    mov     esi, eax
+    call    doze_try
+    add     [r8 + SC_EASE_STEP], esi
+    ret
 
 ; ------------------------------------------------------------ appearance
 
@@ -956,6 +1193,7 @@ step_eased_scene:
 ; Under --existing-color-handling always, a character that uses its input
 ; colors shows those (and its bold) instead.
 set_appearance:
+    call    doze_wake
     push    rbx
     mov     ebx, edi
     test    rsi, rsi
@@ -999,6 +1237,7 @@ reset_appearance:
 section .rodata
 align 8
 scene_one:  dq 1.0
+scene_two_52: dq 0x4330000000000000   ; 2^52
 STR msg_scenes_full, "ttfx: asm engine: scene limit reached", 10
 STR msg_scene_empty, "activate_scene: empty scene"
 STR msg_scene_missing, "activate_scene: scene not found"
@@ -1014,5 +1253,7 @@ frame_region:   resq 1
 frame_region_end: resq 1
 scene_count:    resd 1
 alignb 8
-eased_memo:     resq 1
-eased_memo_key: resq 1
+shape_last:     resq 1              ; the last shape found (initially shapes)
+shape_count:    resd 1
+alignb 64
+shapes:         resb SHAPE_LIMIT << SHAPE_SHIFT
