@@ -39,6 +39,7 @@
 %include "effects/fireworks.asm"
 %include "effects/errorcorrect.asm"
 %include "effects/unstable.asm"
+%include "effects/spotlights.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -101,6 +102,8 @@ effect_table:
     dq errorcorrect_build, errorcorrect_next_frame
   %elif id == EFFECT_UNSTABLE
     dq unstable_build, unstable_next_frame
+  %elif id == EFFECT_SPOTLIGHTS
+    dq spotlights_build, spotlights_next_frame
   %else
     dq 0, 0
   %endif

@@ -496,6 +496,18 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             9
         }
+        EffectCommand::Spotlights(c) => {
+            w.float(c.beam_width_ratio)
+                .float(c.beam_falloff)
+                .int(c.search_duration)
+                .float(c.search_speed_range.0)
+                .float(c.search_speed_range.1)
+                .int(c.spotlight_count)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            27
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
