@@ -125,6 +125,17 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             30
         }
+        EffectCommand::Randomsequence(c) => {
+            // frame durations are 32-bit in the engine
+            let frames = i32::try_from(c.final_gradient_frames)
+                .map_err(|_| "final gradient frames beyond 32 bits are not supported")?;
+            w.float(c.speed)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .int(frames as i64)
+                .direction(c.final_gradient_direction);
+            21
+        }
         EffectCommand::Synthgrid(c) => {
             w.colors(&c.grid_gradient_stops)
                 .ints(&c.grid_gradient_steps)
