@@ -46,6 +46,7 @@
 %include "effects/smoke.asm"
 %include "effects/burn.asm"
 %include "effects/laseretch.asm"
+%include "effects/orbittingvolley.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -122,6 +123,8 @@ effect_table:
     dq laseretch_build, laseretch_next_frame
   %elif id == EFFECT_SMOKE
     dq smoke_build, smoke_next_frame
+  %elif id == EFFECT_ORBITTINGVOLLEY
+    dq orbittingvolley_build, orbittingvolley_next_frame
   %else
     dq 0, 0
   %endif
