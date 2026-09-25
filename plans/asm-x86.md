@@ -60,11 +60,50 @@ teardown).
 These are layout and algorithm wins, not ISA wins. AVX-512 only appears in the renderer's
 bounded copies, dirty-row scans and hashing. That agrees with §2.
 
+**All 37 effects (2026-09-25).** The engine now links into the Rust binary as
+`libttfx_asm.a` (feature `asm`, default on). Rust stays the front end and offers each run to
+`ttfx_asm_run` when the CPU has the v4 tier; `TTFX_ASM=0` forces Rust, `TTFX_ASM=force`
+fails loudly on a decline. Every effect and every option is ported, including ANSI input,
+`--wrap-text` and all three `--existing-color-handling` modes, so on a v4 CPU the asm engine
+takes every run.
+
+Verification: `tools/asm/oracle.sh <effect> full` for all 37 effects, 91,641 byte-identical
+cases (stdout, stderr and exit status against the Rust engine in the same binary), plus
+`cargo test --release --test asm_diff` (21 tests).
+
+| effect | Rust ms | asm ms | × | effect | Rust ms | asm ms | × |
+|---|---:|---:|---:|---|---:|---:|---:|
+| beams | 207 | 29 | 7.1 | pour | 197 | 41 | 4.8 |
+| binarypath | 708 | 420 | 1.7 | print | 267 | 16 | 16.7 |
+| blackhole | 354 | 143 | 2.5 | rain | 168 | 50 | 3.4 |
+| bouncyballs | 284 | 66 | 4.3 | randomsequence | 41 | 9 | 4.6 |
+| bubbles | 416 | 103 | 4.0 | rings | 562 | 157 | 3.6 |
+| burn | 306 | 46 | 6.7 | scattered | 117 | 58 | 2.0 |
+| colorshift | 303 | 23 | 13.2 | slice | 51 | 31 | 1.6 |
+| crumble | 253 | 88 | 2.9 | slide | 77 | 30 | 2.6 |
+| decrypt | 379 | 34 | 11.1 | smoke | 160 | 27 | 5.9 |
+| errorcorrect | 247 | 31 | 8.0 | spotlights | 261 | 47 | 5.6 |
+| expand | 96 | 56 | 1.7 | spray | 120 | 48 | 2.5 |
+| fireworks | 294 | 140 | 2.1 | swarm | 567 | 245 | 2.3 |
+| highlight | 38 | 8 | 4.8 | sweep | 54 | 9 | 6.0 |
+| laseretch | 490 | 97 | 5.1 | synthgrid | 103 | 12 | 8.6 |
+| matrix | 153 | 59 | 2.6 | thunderstorm | 252 | 31 | 8.1 |
+| middleout | 67 | 31 | 2.2 | unstable | 143 | 75 | 1.9 |
+| orbittingvolley | 58 | 31 | 1.9 | vhstape | 184 | 36 | 5.1 |
+| overflow | 95 | 45 | 2.1 | waves | 414 | 27 | 15.3 |
+| | | | | wipe | 34 | 9 | 3.8 |
+
+(200×50 canvas, 190×46 text, `--frame-rate 0`, seed 1, pinned, best of 5, output to
+`/dev/null`; matrix and thunderstorm with `--virtual-clock`.) Geometric mean 4.1×.
+Effects dominated by per-character motion (binarypath, expand, slice, unstable,
+orbittingvolley, scattered) gain least: the time goes to path/bezier math and the libm calls
+that must stay bit-identical to Rust's.
+
 **Next:**
 
-- motion (paths, bezier, easing), which needs the `pow`/`hypot` ports of §6.2;
-- the remaining gate effects (slide, rings, spotlights, burn), then G1;
-- ANSI input;
+- motion math for the effects under 2.5× (batch the per-character path steps; vectorize
+  where the Rust rounding allows it);
+- the v3 and v1 tiers (§10), so the asm engine also runs on pre-AVX-512 CPUs;
 - the generated CLI tables of §11.
 
 ## 1. Goals and non-goals
