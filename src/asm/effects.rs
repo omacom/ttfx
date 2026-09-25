@@ -418,6 +418,12 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .float(c.active_binary_groups);
             1
         }
+        EffectCommand::Crumble(c) => {
+            w.colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            7
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
