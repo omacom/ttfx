@@ -5,7 +5,12 @@ Both engines run from the same binary (TTFX_ASM=0 / TTFX_ASM=force) on a
 200x50 canvas with the oracle's 190x46 "big" text, --frame-rate 0, seed 1,
 output to /dev/null, pinned to one core, best of N runs.
 
-Usage: speed.py [--bin PATH] [--core N] [--runs N] [--asm-only] [effect ...]
+--cpu measures the child's user+system CPU time instead of wall time. It is
+far less sensitive to other load on the machine (it still sees cache and SMT
+contention), so use it when others are running; quote wall time from a quiet
+machine as the headline.
+
+Usage: speed.py [--bin PATH] [--core N] [--runs N] [--asm-only] [--cpu] [effect ...]
 """
 import argparse
 import math
@@ -22,6 +27,7 @@ p.add_argument("--bin", default=os.path.join(ROOT, "target/release/ttfx"))
 p.add_argument("--core", default=os.environ.get("SPEED_CORE", "8"))
 p.add_argument("--runs", type=int, default=5)
 p.add_argument("--asm-only", action="store_true", help="skip the Rust runs")
+p.add_argument("--cpu", action="store_true", help="child CPU time instead of wall time")
 p.add_argument("effects", nargs="*")
 a = p.parse_args()
 
@@ -47,10 +53,15 @@ def best(engine, effect):
     for _ in range(a.runs):
         with open(text) as stdin:
             start = time.perf_counter()
-            r = subprocess.run(args, stdin=stdin, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, env=env)
+            child = subprocess.Popen(args, stdin=stdin, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, env=env)
+            stderr = child.stderr.read()
+            _, status, usage = os.wait4(child.pid, 0)
             elapsed = time.perf_counter() - start
-        if r.returncode != 0:
-            sys.exit(f"{effect} TTFX_ASM={engine} exited {r.returncode}: {r.stderr.decode()[:200]}")
+        if a.cpu:
+            elapsed = usage.ru_utime + usage.ru_stime
+        code = os.waitstatus_to_exitcode(status)
+        if code != 0:
+            sys.exit(f"{effect} TTFX_ASM={engine} exited {code}: {stderr.decode()[:200]}")
         fastest = min(fastest, elapsed)
     return fastest * 1000
 
