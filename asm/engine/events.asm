@@ -126,9 +126,10 @@ event_register:
     mov     [r8 + EN_WAYPOINT + WP_NAME], r13d
     jmp     .link
 .copy_waypoint:
-    vmovdqu ymm0, [r13]
-    vmovdqu [r8 + EN_WAYPOINT], ymm0
-    vzeroupper
+    movdqu  xmm0, [r13]
+    movdqu  xmm1, [r13 + 16]
+    movdqu  [r8 + EN_WAYPOINT], xmm0
+    movdqu  [r8 + EN_WAYPOINT + 16], xmm1
 .link:
     mov     rcx, [ch_events]
     lea     rcx, [rcx + rbx * 4]
