@@ -11,6 +11,7 @@
 ;        advances the clock and renders).
 
 
+%include "effects/blackhole.asm"
 %include "effects/decrypt.asm"
 %include "effects/synthgrid.asm"
 %include "effects/vhstape.asm"
@@ -20,7 +21,9 @@ align 8
 effect_table:
 %assign id 0
 %rep EFFECT_COUNT
-  %if id == EFFECT_DECRYPT
+  %if id == EFFECT_BLACKHOLE
+    dq blackhole_build, blackhole_next_frame
+  %elif id == EFFECT_DECRYPT
     dq decrypt_build, decrypt_next_frame
   %elif id == EFFECT_SYNTHGRID
     dq synthgrid_build, synthgrid_next_frame

@@ -1,0 +1,11 @@
+# blackhole option sets (each also runs with every seed and input)
+--blackhole-color ff0000
+--blackhole-color 196 --star-colors ff0000 00ff00 0000ff
+--star-colors 45
+--star-colors 9 ffcc0d 21 702a8c --blackhole-color 00ffaa
+--final-gradient-stops ff00ff 00ffff --final-gradient-steps 5
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction vertical
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction radial
+--final-gradient-stops 123456 --final-gradient-steps 4 --final-gradient-direction diagonal
+--final-gradient-stops 45 201 --final-gradient-steps 2
