@@ -64,6 +64,26 @@ impl Words {
     fn direction(&mut self, direction: GradientDirection) -> &mut Self {
         self.int(direction as i64)
     }
+
+    /// A one-codepoint symbol packed as the engine's symbols are: the UTF-8
+    /// bytes in the low bytes and the length in bits 32-39.
+    fn symbol_word(symbol: &str) -> Result<u64, &'static str> {
+        let bytes = symbol.as_bytes();
+        if symbol.chars().count() != 1 {
+            return Err("multi-codepoint symbols are not supported");
+        }
+        let packed = bytes.iter().rev().fold(0u64, |word, &b| word << 8 | b as u64);
+        Ok(packed | (bytes.len() as u64) << 32)
+    }
+
+    fn symbol(&mut self, symbol: &str) -> Result<&mut Self, &'static str> {
+        Ok(self.int(Self::symbol_word(symbol)? as i64))
+    }
+
+    fn symbols(&mut self, symbols: &[String]) -> Result<&mut Self, &'static str> {
+        let words = symbols.iter().map(|s| Self::symbol_word(s)).collect::<Result<Vec<_>, _>>()?;
+        Ok(self.array(words))
+    }
 }
 
 /// The effect's id (EffectCommand order, asm/effects/ids.inc) and its words,
@@ -78,6 +98,19 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .ints(&c.final_gradient_steps)
                 .direction(c.final_gradient_direction);
             8
+        }
+        EffectCommand::Synthgrid(c) => {
+            w.colors(&c.grid_gradient_stops)
+                .ints(&c.grid_gradient_steps)
+                .direction(c.grid_gradient_direction)
+                .colors(&c.text_gradient_stops)
+                .ints(&c.text_gradient_steps)
+                .direction(c.text_gradient_direction)
+                .symbol(&c.grid_row_symbol)?
+                .symbol(&c.grid_column_symbol)?
+                .symbols(&c.text_generation_symbols)?
+                .float(c.max_active_blocks);
+            31
         }
         _ => return Err("this effect is not ported yet"),
     };

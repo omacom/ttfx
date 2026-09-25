@@ -1,0 +1,9 @@
+# synthgrid option sets (each also runs with every seed and input)
+--max-active-blocks 1
+--max-active-blocks 0.03 --text-generation-symbols x y Z 😀 ñ
+--grid-gradient-stops ff0000 00ff00 0000ff --grid-gradient-steps 3 7 --grid-gradient-direction radial
+--grid-gradient-stops 45 201 --grid-gradient-direction horizontal --text-gradient-direction diagonal
+--grid-gradient-stops ffffff --grid-gradient-steps 4 --grid-gradient-direction vertical --text-gradient-stops 123456 --text-gradient-steps 2
+--text-gradient-stops ff00ff 00ffff 9 abcdef --text-gradient-steps 1 5 20 --text-gradient-direction radial
+--text-gradient-direction horizontal --grid-row-symbol = --grid-column-symbol ┃
+--grid-row-symbol 🮂 --grid-column-symbol | --text-generation-symbols █ --max-active-blocks 0.5
