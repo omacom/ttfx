@@ -523,6 +523,21 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             4
         }
+        EffectCommand::Orbittingvolley(c) => {
+            w.symbol(&c.top_launcher_symbol)?
+                .symbol(&c.right_launcher_symbol)?
+                .symbol(&c.bottom_launcher_symbol)?
+                .symbol(&c.left_launcher_symbol)?
+                .float(c.launcher_movement_speed)
+                .float(c.character_movement_speed)
+                .float(c.volley_size)
+                .int(c.launch_delay)
+                .easing(c.character_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            16
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))

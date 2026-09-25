@@ -41,6 +41,7 @@
 %include "effects/unstable.asm"
 %include "effects/print.asm"
 %include "effects/bubbles.asm"
+%include "effects/orbittingvolley.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -107,6 +108,8 @@ effect_table:
     dq print_build, print_next_frame
   %elif id == EFFECT_BUBBLES
     dq bubbles_build, bubbles_next_frame
+  %elif id == EFFECT_ORBITTINGVOLLEY
+    dq orbittingvolley_build, orbittingvolley_next_frame
   %else
     dq 0, 0
   %endif
