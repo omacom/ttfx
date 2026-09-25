@@ -71,6 +71,33 @@ impl Words {
 pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
     let mut w = Words::default();
     let id = match effect {
+        EffectCommand::Beams(c) => {
+            if c.beam_gradient_frames > i32::MAX as i64 || c.final_gradient_frames > i32::MAX as i64 {
+                return Err("beam frame durations exceed the assembly scene limit");
+            }
+            let symbols = |values: &[String]| -> Result<Vec<u64>, &'static str> {
+                values.iter().map(|s| {
+                    if s.chars().count() != 1 {
+                        return Err("beam symbols must contain one codepoint");
+                    }
+                    let mut bytes = [0u8; 8];
+                    bytes[..s.len()].copy_from_slice(s.as_bytes());
+                    Ok(u64::from_le_bytes(bytes) | ((s.len() as u64) << 32))
+                }).collect()
+            };
+            w.colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction)
+                .array(symbols(&c.beam_row_symbols)?)
+                .array(symbols(&c.beam_column_symbols)?)
+                .int(c.beam_delay)
+                .int(c.beam_row_speed_range.0).int(c.beam_row_speed_range.1)
+                .int(c.beam_column_speed_range.0).int(c.beam_column_speed_range.1)
+                .colors(&c.beam_gradient_stops).ints(&c.beam_gradient_steps)
+                .int(c.beam_gradient_frames).int(c.final_gradient_frames)
+                .int(c.final_wipe_speed);
+            0
+        }
         EffectCommand::Decrypt(c) => {
             w.int(c.typing_speed)
                 .colors(&c.ciphertext_colors)
