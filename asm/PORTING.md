@@ -112,6 +112,12 @@ Read this before touching `asm/`. The plan and its reasoning are in
 - **Visuals** are u32 handles (pool offset | length << 24) made by `visual_make(fg, bg,
   symbol, attribute bits)`. They are interned, so equal visuals share a handle.
 
+- **Coordinates** are u64 values: the column as a signed i32 in the low 32 bits and the
+  row as a signed i32 in the high 32 bits. Functions returning coordinate lists allocate
+  the array with `alloc` and return `rax = pointer, rdx = count`.
+- **Easings** are ids in `Easing` enum order (Linear = 0 ... InOutBounce = 30):
+  `ease(edi = id, xmm0 = t) -> xmm0`.
+
 ## Porting an effect
 
 1. Read `src/effects/<name>.rs` completely, plus every engine function it calls. The
