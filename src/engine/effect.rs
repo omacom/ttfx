@@ -37,6 +37,10 @@ pub fn run_effect(
     tty_output: bool,
 ) -> Result<RunOutcome, EngineError> {
     effect.build(ctx)?;
+    // Deltas only make sense against a tty that keeps the previous frame on
+    // screen; a redirected stream gets whole frames.
+    let incremental = tty_output && ctx.terminal.config.incremental_output;
+    ctx.terminal.set_incremental_output(incremental);
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
     let mut outcome = RunOutcome::Complete;

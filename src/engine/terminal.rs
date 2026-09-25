@@ -19,6 +19,37 @@ use crate::utils::rng::Rng;
 const EMPTY_RENDER_CELL: u32 = u32::MAX;
 const NOT_VISIBLE: usize = usize::MAX;
 
+/// What the tty currently shows in one cell: the exact bytes last written
+/// there. Sized so every inline formatted symbol fits in 64 bytes total.
+#[derive(Clone, Copy)]
+struct ShownCell {
+    /// Byte length of `bytes`, or `ShownCell::UNKNOWN`.
+    len: u8,
+    bytes: [u8; ShownCell::CAPACITY],
+}
+
+impl ShownCell {
+    const CAPACITY: usize = 63;
+    /// "Nothing known to be on the tty here": never matches, forces a redraw.
+    const UNKNOWN: u8 = u8::MAX;
+    const NOTHING: ShownCell = ShownCell { len: ShownCell::UNKNOWN, bytes: [0; ShownCell::CAPACITY] };
+
+    fn shows(&self, symbol: &[u8]) -> bool {
+        self.len as usize == symbol.len() && &self.bytes[..symbol.len()] == symbol
+    }
+
+    /// Remember `symbol` as what the tty now shows. A symbol too long to keep
+    /// is recorded as unknown, so that cell is simply redrawn every frame.
+    fn set(&mut self, symbol: &[u8]) {
+        if symbol.len() <= ShownCell::CAPACITY {
+            self.len = symbol.len() as u8;
+            self.bytes[..symbol.len()].copy_from_slice(symbol);
+        } else {
+            self.len = ShownCell::UNKNOWN;
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct TerminalConfig {
     pub tab_width: i64,
@@ -36,6 +67,10 @@ pub struct TerminalConfig {
     pub reuse_canvas: bool,
     pub no_eol: bool,
     pub no_restore_cursor: bool,
+    /// Emit only the cells that changed since the last frame written to the
+    /// tty, instead of repainting the whole canvas every frame. Only takes
+    /// effect on the tty output path; frame dumps stay whole frames.
+    pub incremental_output: bool,
 }
 
 impl Default for TerminalConfig {
@@ -56,6 +91,7 @@ impl Default for TerminalConfig {
             reuse_canvas: false,
             no_eol: false,
             no_restore_cursor: false,
+            incremental_output: false,
         }
     }
 }
@@ -136,6 +172,11 @@ pub struct Terminal {
     visible_characters: Vec<CharId>,
     visible_positions: Vec<usize>,
     render_cells: Vec<u32>,
+    /// What each cell of the visible area currently shows on the tty, as
+    /// written by the last incremental frame (the second half of the double
+    /// buffer; `render_cells` is the first).
+    shown_cells: Vec<ShownCell>,
+    incremental_active: bool,
     pub terminal_state: Vec<String>,
     output_buffer: String,
     move_cursor_to_top: String,
@@ -244,6 +285,8 @@ impl Terminal {
             visible_characters: Vec::new(),
             visible_positions: vec![NOT_VISIBLE; arena_len],
             render_cells: Vec::new(),
+            shown_cells: Vec::new(),
+            incremental_active: false,
             terminal_state: Vec::new(),
             output_buffer: String::new(),
             move_cursor_to_top,
@@ -608,6 +651,89 @@ impl Terminal {
         }
     }
 
+    /// Whether `frame()` produces incremental frames (see
+    /// `get_incremental_output_string`). Off by default so frame dumps, the
+    /// parity harness and library callers keep getting whole frames.
+    pub fn set_incremental_output(&mut self, active: bool) {
+        self.incremental_active = active;
+    }
+
+    pub fn incremental_output(&self) -> bool {
+        self.incremental_active
+    }
+
+    /// The frame as a delta against what the tty already shows: only cells
+    /// whose formatted symbol differs from the last incremental frame are
+    /// emitted, each run preceded by a relative cursor move. The string is
+    /// meant to follow `move_cursor_to_top` exactly like a whole frame, and it
+    /// leaves the cursor where a whole frame would (end of the bottom row) so
+    /// teardown and `--no-eol` behave the same. An empty string means nothing
+    /// changed and nothing needs writing at all.
+    ///
+    /// Terminals rasterize every cell they are handed, changed or not, and on
+    /// a CPU renderer that is the dominant cost of a run by a wide margin; a
+    /// typical effect changes well under half of its cells per frame.
+    pub fn get_incremental_output_string(&mut self) -> String {
+        let (width, height) = self.update_render_cells();
+        let cell_count = width * height;
+        if self.shown_cells.len() != cell_count {
+            self.shown_cells.clear();
+            self.shown_cells.resize(cell_count, ShownCell::NOTHING);
+        }
+        let mut out = std::mem::take(&mut self.output_buffer).into_bytes();
+        out.clear();
+
+        let arena = &self.arena;
+        let render_cells = &self.render_cells;
+        let shown = &mut self.shown_cells;
+        // Output rows run top to bottom; the cursor starts at the top-left of
+        // the canvas (column 0 of output row 0) and only ever moves down.
+        let mut cursor_row = 0usize;
+        let mut cursor_col = 0usize;
+        let mut changed = false;
+        for (out_row, row_index) in (0..height).rev().enumerate() {
+            let mut in_run = false;
+            for col in 0..width {
+                let index = row_index * width + col;
+                let bytes: &[u8] = match render_cells[index] {
+                    EMPTY_RENDER_CELL => b" ",
+                    id => arena[id as usize].animation.current_character_visual.formatted_symbol.as_str().as_bytes(),
+                };
+                let cell = &mut shown[index];
+                if cell.shows(bytes) {
+                    in_run = false;
+                    continue;
+                }
+                cell.set(bytes);
+                if !in_run {
+                    if out_row != cursor_row {
+                        push_cursor_down(&mut out, out_row - cursor_row);
+                        cursor_row = out_row;
+                    }
+                    if col != cursor_col {
+                        push_cursor_to_column(&mut out, col + 1);
+                    }
+                    in_run = true;
+                }
+                out.extend_from_slice(bytes);
+                cursor_col = col + 1;
+                changed = true;
+            }
+        }
+        if changed {
+            // Park where a whole frame ends: after the last cell of the bottom row.
+            if cursor_row + 1 < height {
+                push_cursor_down(&mut out, height - 1 - cursor_row);
+            }
+            if cursor_col != width {
+                push_cursor_to_column(&mut out, width + 1);
+            }
+        }
+        // SAFETY: cursor sequences are ASCII and every cell is a whole
+        // formatted symbol, which is UTF-8.
+        unsafe { String::from_utf8_unchecked(out) }
+    }
+
     /// Whether a resize has landed, settled, and actually moved something.
     ///
     /// Settled: dragging a window edge emits a SIGWINCH per step, and rebuilding
@@ -677,6 +803,10 @@ impl Terminal {
     }
 
     pub fn print_frame(&mut self, out: &mut impl Write, output_string: &str) -> std::io::Result<()> {
+        // An empty incremental frame means the tty already shows this frame.
+        if output_string.is_empty() {
+            return Ok(());
+        }
         self.write_move_cursor_to_top(out)?;
         out.write_all(output_string.as_bytes())?;
         out.flush()
@@ -699,6 +829,35 @@ impl Terminal {
         }
         self.last_time_printed = Instant::now();
     }
+}
+
+/// CSI n B without going through core::fmt; called per changed run.
+fn push_cursor_down(out: &mut Vec<u8>, rows: usize) {
+    out.extend_from_slice(b"\x1b[");
+    push_usize(out, rows);
+    out.push(b'B');
+}
+
+/// CSI n G (1-based column).
+fn push_cursor_to_column(out: &mut Vec<u8>, column: usize) {
+    out.extend_from_slice(b"\x1b[");
+    push_usize(out, column);
+    out.push(b'G');
+}
+
+fn push_usize(out: &mut Vec<u8>, value: usize) {
+    let mut digits = [0u8; 20];
+    let mut n = value;
+    let mut i = digits.len();
+    loop {
+        i -= 1;
+        digits[i] = b'0' + (n % 10) as u8;
+        n /= 10;
+        if n == 0 {
+            break;
+        }
+    }
+    out.extend_from_slice(&digits[i..]);
 }
 
 /// shutil.get_terminal_size semantics: COLUMNS/LINES env vars win; else query
@@ -882,4 +1041,77 @@ fn setup_input_characters(
     canvas
         .anchor_text(arena, input_characters, config.anchor_text)
         .map_err(EngineError::Other)
+}
+
+#[cfg(test)]
+mod incremental_output_tests {
+    use super::*;
+    use crate::engine::animation::CharacterVisual;
+    use std::rc::Rc;
+
+    fn terminal(input: &str) -> Terminal {
+        let config = TerminalConfig { ignore_terminal_dimensions: true, ..TerminalConfig::default() };
+        let mut terminal = Terminal::new(input, config).unwrap();
+        let ids: Vec<CharId> = terminal.input_characters.clone();
+        for id in ids {
+            terminal.set_character_visibility(id, true);
+        }
+        terminal
+    }
+
+    #[test]
+    fn shown_cell_is_one_cache_line_with_no_padding() {
+        assert_eq!(std::mem::size_of::<ShownCell>(), 64);
+        assert_eq!(std::mem::align_of::<ShownCell>(), 1);
+    }
+
+    #[test]
+    fn first_frame_draws_every_cell_and_parks_at_the_end() {
+        let mut terminal = terminal("ab\ncd");
+        let frame = terminal.get_incremental_output_string();
+        // top row, then one row down and back to column 1 for the second row
+        assert_eq!(frame, "ab\x1b[1B\x1b[1Gcd");
+        assert_eq!(terminal.get_formatted_output_string(), "ab\ncd");
+    }
+
+    #[test]
+    fn unchanged_frame_emits_nothing() {
+        let mut terminal = terminal("ab\ncd");
+        terminal.get_incremental_output_string();
+        assert_eq!(terminal.get_incremental_output_string(), "");
+    }
+
+    #[test]
+    fn only_changed_cells_are_emitted_with_positioning() {
+        let mut terminal = terminal("abc\ndef\nghi");
+        terminal.get_incremental_output_string();
+        let id = terminal.get_character_by_input_coord(Coord::new(2, 2)).unwrap(); // 'e'
+        terminal.arena[id.0 as usize].animation.current_character_visual = Rc::new(CharacterVisual::plain("X"));
+        let frame = terminal.get_incremental_output_string();
+        // from the parked spot (bottom row end, col 4): the changed cell is
+        // one output row down from the top, column 2; then park again.
+        assert_eq!(frame, "\x1b[1B\x1b[2GX\x1b[1B\x1b[4G");
+        assert_eq!(terminal.get_formatted_output_string(), "abc\ndXf\nghi");
+        assert_eq!(terminal.get_incremental_output_string(), "");
+    }
+
+    #[test]
+    fn hidden_character_becomes_a_space() {
+        let mut terminal = terminal("ab");
+        terminal.get_incremental_output_string();
+        let id = terminal.get_character_by_input_coord(Coord::new(1, 1)).unwrap();
+        terminal.set_character_visibility(id, false);
+        assert_eq!(terminal.get_incremental_output_string(), " \x1b[3G");
+    }
+
+    #[test]
+    fn adjacent_changes_form_one_run() {
+        let mut terminal = terminal("abcd");
+        terminal.get_incremental_output_string();
+        for column in [2, 3] {
+            let id = terminal.get_character_by_input_coord(Coord::new(column, 1)).unwrap();
+            terminal.arena[id.0 as usize].animation.current_character_visual = Rc::new(CharacterVisual::plain("_"));
+        }
+        assert_eq!(terminal.get_incremental_output_string(), "\x1b[2G__\x1b[5G");
+    }
 }
