@@ -123,10 +123,13 @@ rng_next:
     lea     rbx, [rng_buf]
     xor     ecx, ecx
 .generate:
+    ; four draws per pass (RNG_BATCH is a multiple of 4)
+%assign i 0
+%rep 4
     lea     rax, [r8 + rdx]
     rol     rax, 23
     add     rax, r8                     ; result
-    mov     [rbx + rcx * 8], rax
+    mov     [rbx + rcx * 8 + i * 8], rax
     mov     r11, r9
     shl     r11, 17                     ; t
     xor     r10, r8                     ; s2 ^= s0
@@ -135,7 +138,9 @@ rng_next:
     xor     r8, rdx                     ; s0 ^= s3
     xor     r10, r11                    ; s2 ^= t
     rol     rdx, 45                     ; s3 = rotl(s3, 45)
-    inc     ecx
+%assign i i + 1
+%endrep
+    add     ecx, 4
     cmp     ecx, RNG_BATCH
     jb      .generate
     pop     rbx
@@ -153,9 +158,17 @@ rng_below:
     push    r12
     mov     r12, rdi
     lea     rax, [rdi - 1]
+%if TIER >= 3
     lzcnt   rax, rax                    ; 64 for n == 1
     mov     ebx, 64
     sub     ebx, eax                    ; bits
+%else
+    xor     ebx, ebx                    ; bits: 0 for n == 1
+    bsr     rax, rax
+    jz      .bits
+    lea     ebx, [eax + 1]
+.bits:
+%endif
     mov     eax, 1
     cmp     ebx, eax
     cmovb   ebx, eax                    ; bits.max(1)
@@ -163,13 +176,29 @@ rng_below:
     sub     eax, ebx
     mov     ebx, eax                    ; shift = 64 - bits
 .again:
-    call    rng_next
+    ; rng_next, its batch read inlined
+    mov     rcx, [rng_pos]
+    cmp     rcx, RNG_BATCH
+    jae     .refill
+    lea     rax, [rng_buf]
+    mov     rax, [rax + rcx * 8]
+    inc     rcx
+    mov     [rng_pos], rcx
+.drawn:
+%if TIER >= 3
     shrx    rax, rax, rbx
+%else
+    mov     ecx, ebx
+    shr     rax, cl
+%endif
     cmp     rax, r12
     jae     .again
     pop     r12
     pop     rbx
     ret
+.refill:
+    call    rng_next
+    jmp     .drawn
 
 ; rng_randint(rdi=a, rsi=b) -> rax in [a, b].
 rng_randint:
@@ -227,8 +256,18 @@ rng_threshold:
     mulsd   xmm0, [two_pow_53]
     movsd   xmm1, [two_pow_53]
     minsd   xmm0, xmm1
+%if TIER >= 2
     roundsd xmm0, xmm0, 2               ; toward +inf
     cvttsd2si rax, xmm0
+%else
+    ; ceil of a value in [0, 2^53]: truncate, then up when that lost a part
+    cvttsd2si rax, xmm0
+    cvtsi2sd xmm1, rax
+    ucomisd xmm0, xmm1
+    jbe     .ceiled
+    inc     rax
+.ceiled:
+%endif
     ret
 
 ; rng_uniform(xmm0=a, xmm1=b) -> xmm0 = a + (b - a) * random().

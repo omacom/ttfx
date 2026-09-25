@@ -83,7 +83,7 @@ chars_init:
     mov     rdi, CHAR_LIMIT * 4
     call    reserve
     mov     [added_chars], rax
-    ret
+    jmp     update_init
 
 ; new_char(rdi=packed symbol, esi=column, edx=row) -> eax = slot.
 ; EffectCharacter::new: the next character_id, the coordinate as both input

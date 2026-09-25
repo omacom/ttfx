@@ -346,6 +346,7 @@ grow_array:
 ; previous one (rebasing the total distance), playback restarts, the path's
 ; layer applies, and PATH_ACTIVATED fires.
 path_activate:
+    call    doze_wake                   ; update.asm: it must tick again
     push    rbx
     push    rbp
     push    r12
