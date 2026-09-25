@@ -43,6 +43,15 @@ lines = ['#' * (i * 7 % 23) + ' ' * (i % 3) + 'x' for i in range(14)]
 open(sys.argv[1], 'w').write('\n'.join(lines))
 PY
 
+# A full disk leaves generated inputs empty, and then both engines fail the
+# same way and every case "passes". Refuse to run on broken inputs.
+for f in "$WORK"/*; do
+    if [ ! -s "$f" ]; then
+        echo "oracle: input $(basename "$f") is empty - is the scratch disk full?" >&2
+        exit 2
+    fi
+done
+
 pass=0
 fail=0
 global=()
