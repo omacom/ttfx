@@ -14,6 +14,7 @@
 %include "effects/blackhole.asm"
 %include "effects/decrypt.asm"
 %include "effects/highlight.asm"
+%include "effects/sweep.asm"
 %include "effects/synthgrid.asm"
 %include "effects/vhstape.asm"
 %include "effects/wipe.asm"
@@ -29,6 +30,8 @@ effect_table:
     dq decrypt_build, decrypt_next_frame
   %elif id == EFFECT_HIGHLIGHT
     dq highlight_build, highlight_next_frame
+  %elif id == EFFECT_SWEEP
+    dq sweep_build, sweep_next_frame
   %elif id == EFFECT_SYNTHGRID
     dq synthgrid_build, synthgrid_next_frame
   %elif id == EFFECT_VHSTAPE

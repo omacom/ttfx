@@ -116,6 +116,15 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             12
         }
+        EffectCommand::Sweep(c) => {
+            w.symbols(&c.sweep_symbols)?
+                .int(c.first_sweep_direction as i64)
+                .int(c.second_sweep_direction as i64)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            30
+        }
         EffectCommand::Synthgrid(c) => {
             w.colors(&c.grid_gradient_stops)
                 .ints(&c.grid_gradient_steps)
