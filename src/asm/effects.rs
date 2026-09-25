@@ -144,6 +144,17 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             10
         }
+        EffectCommand::Spray(c) => {
+            w.int(c.spray_position as i64)
+                .float(c.spray_volume)
+                .float(c.movement_speed_range.0)
+                .float(c.movement_speed_range.1)
+                .easing(c.movement_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            28
+        }
         EffectCommand::Synthgrid(c) => {
             w.colors(&c.grid_gradient_stops)
                 .ints(&c.grid_gradient_steps)
