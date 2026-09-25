@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Run the Rust oracle and ttfx-asm on a real pty and compare what they do.
+"""Run the Rust and assembly engines on a real pty and compare what they do.
 
-Byte parity on the tty path (canvas prep, per-frame cursor moves, teardown),
-plus the signal contract: SIGINT tears down and exits 1, SIGTERM tears down and
-dies from the signal. Usage: pty_compare.py [rust] [asm]
+Both run from the same ttfx binary: TTFX_ASM=0 forces the Rust engine and
+TTFX_ASM=force the assembly engine (exit 3 if it declines). Checks byte parity
+on the tty path (canvas prep, per-frame cursor moves, teardown), plus the
+signal contract: SIGINT tears down and exits 1, SIGTERM tears down and dies
+from the signal. Usage: pty_compare.py [ttfx] [effect]
 """
 import os
 import pty
@@ -15,20 +17,24 @@ import termios
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-RUST = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "target/release/ttfx")
-ASM = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, "target/asm/ttfx-asm")
+BINARY = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "target/release/ttfx")
+EFFECT = sys.argv[2] if len(sys.argv) > 2 else "decrypt"
+RUST = "0"
+ASM = "force"
 INPUT = b"Hello, World!\nThis is ttfx.\n\tTabbed\n"
 
 
-def run(binary, args, cols=80, rows=24, send=None, after=0.0):
-    """Run with stdout/stderr on a pty; returns (bytes, wait status, seconds)."""
+def run(engine, args, cols=80, rows=24, send=None, after=0.0):
+    """Run with TTFX_ASM=engine and stdout/stderr on a pty; returns (bytes,
+    wait status, seconds)."""
     r_in, w_in = os.pipe()
     pid, master = pty.fork()
     if pid == 0:
         os.dup2(r_in, 0)
         os.close(w_in)
         env = {k: v for k, v in os.environ.items() if k not in ("COLUMNS", "LINES")}
-        os.execve(binary, [binary] + args, env)
+        env["TTFX_ASM"] = engine
+        os.execve(BINARY, [BINARY] + args, env)
     fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
     os.close(r_in)
     os.write(w_in, INPUT)
@@ -71,14 +77,14 @@ def check(name, ok, detail=""):
 # 1. full tty byte stream, unpaced, for a few sizes and seeds
 for cols, rows in ((80, 24), (30, 8), (12, 3)):
     for seed in ("1", "2"):
-        args = ["--seed", seed, "--frame-rate", "0", "decrypt"]
+        args = ["--seed", seed, "--frame-rate", "0", EFFECT]
         r = run(RUST, args, cols, rows)
         a = run(ASM, args, cols, rows)
         check(f"tty bytes {cols}x{rows} seed {seed}", r[0] == a[0] and r[1] == a[1],
               f"rust {len(r[0])}B {describe(r[1])}, asm {len(a[0])}B {describe(a[1])}")
 
 # 2. real-clock pacing: both take about as long at the default 60 fps
-args = ["--seed", "3", "decrypt"]
+args = ["--seed", "3", EFFECT]
 r = run(RUST, args)
 a = run(ASM, args)
 check("paced output identical", r[0] == a[0], f"{len(r[0])}B vs {len(a[0])}B")
