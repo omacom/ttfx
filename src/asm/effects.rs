@@ -345,6 +345,24 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             24
         }
+        EffectCommand::Colorshift(c) => {
+            // frame durations are 32-bit in the engine
+            let frames = i32::try_from(c.gradient_frames)
+                .map_err(|_| "gradient frames beyond 32 bits are not supported")?;
+            w.colors(&c.gradient_stops)
+                .ints(&c.gradient_steps)
+                .int(frames as i64)
+                .flag(c.no_travel)
+                .direction(c.travel_direction)
+                .flag(c.reverse_travel_direction)
+                .flag(c.no_loop)
+                .int(c.cycles)
+                .flag(c.skip_final_gradient)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            6
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))

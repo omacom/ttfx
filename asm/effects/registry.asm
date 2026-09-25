@@ -13,6 +13,7 @@
 
 %include "effects/blackhole.asm"
 %include "effects/bouncyballs.asm"
+%include "effects/colorshift.asm"
 %include "effects/decrypt.asm"
 %include "effects/highlight.asm"
 %include "effects/middleout.asm"
@@ -39,6 +40,8 @@ effect_table:
     dq blackhole_build, blackhole_next_frame
   %elif id == EFFECT_BOUNCYBALLS
     dq bouncyballs_build, bouncyballs_next_frame
+  %elif id == EFFECT_COLORSHIFT
+    dq colorshift_build, colorshift_next_frame
   %elif id == EFFECT_DECRYPT
     dq decrypt_build, decrypt_next_frame
   %elif id == EFFECT_HIGHLIGHT
