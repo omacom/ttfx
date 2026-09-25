@@ -66,6 +66,9 @@ Read this before touching `asm/`. The plan and its reasoning are in
 - **Calling C:** libm (`pow`, `sin`, `cos`, `sincos`, `exp2`, `hypot`) and Rust callbacks
   go through `CCALL fn`, which aligns the stack. Only `xmm0/xmm1` (and `rdi`...) carry
   arguments, and the callee clobbers all caller-saved registers.
+- **64-bit immediates:** `mov qword [mem], imm` only takes a sign-extended 32-bit
+  immediate, and NASM silently truncates a wider one (for example a packed symbol with
+  its length in bits 32-39). Load such values through a register first.
 - **Output:** never write to fds yourself. The engine's run loop owns output, pacing,
   signals and the clock.
 - **Style:** comments state what upstream Rust function a routine transcribes, and why for
