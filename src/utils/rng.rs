@@ -36,6 +36,15 @@ impl Rng {
         Rng::seeded(u64::from_le_bytes(buf))
     }
 
+    /// The raw generator state, so another engine can continue the stream.
+    pub fn state(&self) -> [u64; 4] {
+        self.s
+    }
+
+    pub fn from_state(s: [u64; 4]) -> Self {
+        Rng { s }
+    }
+
     /// Core generator: xoshiro256++ next().
     fn next_u64(&mut self) -> u64 {
         let result = self.s[0].wrapping_add(self.s[3]).rotate_left(23).wrapping_add(self.s[0]);

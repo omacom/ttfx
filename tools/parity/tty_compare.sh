@@ -6,7 +6,7 @@
 set -u
 cd "$(dirname "$0")/../.."
 
-RUST=./target/release/ttfx
+RUST=${RUST:-./target/release/ttfx}
 PY="python3 tools/parity/tty_run.py"
 export COLUMNS=80 LINES=24
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT

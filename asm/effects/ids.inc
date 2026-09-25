@@ -1,0 +1,41 @@
+; effects/ids.inc - effect ids: EffectCommand variants in alphabetical order.
+; src/asm/mod.rs maps names to the same numbers.
+
+%define EFFECT_BEAMS            0
+%define EFFECT_BINARYPATH       1
+%define EFFECT_BLACKHOLE        2
+%define EFFECT_BOUNCYBALLS      3
+%define EFFECT_BUBBLES          4
+%define EFFECT_BURN             5
+%define EFFECT_COLORSHIFT       6
+%define EFFECT_CRUMBLE          7
+%define EFFECT_DECRYPT          8
+%define EFFECT_ERRORCORRECT     9
+%define EFFECT_EXPAND           10
+%define EFFECT_FIREWORKS        11
+%define EFFECT_HIGHLIGHT        12
+%define EFFECT_LASERETCH        13
+%define EFFECT_MATRIX           14
+%define EFFECT_MIDDLEOUT        15
+%define EFFECT_ORBITTINGVOLLEY  16
+%define EFFECT_OVERFLOW         17
+%define EFFECT_POUR             18
+%define EFFECT_PRINT            19
+%define EFFECT_RAIN             20
+%define EFFECT_RANDOMSEQUENCE   21
+%define EFFECT_RINGS            22
+%define EFFECT_SCATTERED        23
+%define EFFECT_SLICE            24
+%define EFFECT_SLIDE            25
+%define EFFECT_SMOKE            26
+%define EFFECT_SPOTLIGHTS       27
+%define EFFECT_SPRAY            28
+%define EFFECT_SWARM            29
+%define EFFECT_SWEEP            30
+%define EFFECT_SYNTHGRID        31
+%define EFFECT_THUNDERSTORM     32
+%define EFFECT_UNSTABLE         33
+%define EFFECT_VHSTAPE          34
+%define EFFECT_WAVES            35
+%define EFFECT_WIPE             36
+%define EFFECT_COUNT            37
