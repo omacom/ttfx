@@ -6,7 +6,7 @@
 use super::ffi::color_word;
 use crate::effects::EffectCommand;
 use crate::utils::easing::Easing;
-use crate::utils::graphics::{Color, GradientDirection};
+use crate::utils::graphics::{Color, Gradient, GradientDirection};
 
 #[derive(Default)]
 pub struct Words {
@@ -256,6 +256,34 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .ints(&c.final_gradient_steps)
                 .direction(c.final_gradient_direction);
             34
+        }
+        EffectCommand::Waves(c) => {
+            // Frame durations and the eased scene's step total are 32-bit in
+            // the engine: each apply_gradient_to_symbols adds
+            // max(symbols, spectrum) frames of wave_length ticks.
+            let spectrum = Gradient::new(&c.wave_gradient_stops, &c.wave_gradient_steps, false, false)
+                .map_err(|_| "invalid wave gradient")?
+                .spectrum
+                .len() as i64;
+            let total = (c.wave_symbols.len() as i64)
+                .max(spectrum)
+                .checked_mul(c.wave_count)
+                .and_then(|n| n.checked_mul(c.wave_length))
+                .ok_or("wave scene too long")?;
+            if total > i32::MAX as i64 {
+                return Err("wave scene too long");
+            }
+            w.symbols(&c.wave_symbols)?
+                .colors(&c.wave_gradient_stops)
+                .ints(&c.wave_gradient_steps)
+                .int(c.wave_count)
+                .int(c.wave_length)
+                .int(c.wave_direction as i64)
+                .easing(c.wave_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            35
         }
         EffectCommand::Wipe(c) => {
             // Frame durations are 32-bit in the engine; values below 1 still

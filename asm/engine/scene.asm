@@ -827,7 +827,45 @@ step_synced_scene:
 
 ; step_eased_scene(edi=slot, r8=scene record): Animation._step_eased_scene.
 ; Preserves rdi and r8 (the easing call clobbers everything else).
+;
+; The tick index is a pure function of (easing, step, total), and effects
+; usually give thousands of characters the same eased scene shape, so the
+; first shape seen in a run (up to EASED_MEMO_LIMIT ticks) memoizes it:
+; eased_memo[step] = index + 1, 0 while unknown.
+%define EASED_MEMO_LIMIT    (1 << 16)
 step_eased_scene:
+    mov     eax, [r8 + SC_EASE]
+    shl     rax, 32
+    mov     ecx, [r8 + SC_EASE_TOTAL]
+    or      rax, rcx
+    cmp     rax, [eased_memo_key]
+    jne     .memo_miss
+.memo_lookup:
+    mov     rcx, [eased_memo]
+    mov     edx, [r8 + SC_EASE_STEP]
+    mov     eax, [rcx + rdx * 4]
+    test    eax, eax
+    jz      .compute
+    dec     eax
+    jmp     .index_map
+.memo_miss:
+    ; claim the memo for the first shape only
+    cmp     qword [eased_memo], 0
+    jne     .compute
+    cmp     ecx, EASED_MEMO_LIMIT
+    ja      .compute
+    mov     [eased_memo_key], rax
+    push    rdi
+    push    r8
+    lea     rdi, [rcx * 4 + 8]
+    sub     rsp, 8
+    call    alloc
+    add     rsp, 8
+    mov     [eased_memo], rax
+    pop     r8
+    pop     rdi
+    jmp     .memo_lookup
+.compute:
     push    rdi
     push    r8
     sub     rsp, 8
@@ -855,6 +893,21 @@ step_eased_scene:
     xor     ecx, ecx
     test    rax, rax
     cmovs   rax, rcx
+    add     rsp, 8
+    pop     r8
+    pop     rdi
+    ; remember it when this is the memoized shape
+    mov     ecx, [r8 + SC_EASE]
+    shl     rcx, 32
+    mov     edx, [r8 + SC_EASE_TOTAL]
+    or      rcx, rdx
+    cmp     rcx, [eased_memo_key]
+    jne     .index_map
+    mov     rcx, [eased_memo]
+    mov     edx, [r8 + SC_EASE_STEP]
+    lea     r9d, [eax + 1]
+    mov     [rcx + rdx * 4], r9d
+.index_map:
     ; frame_index_map[index]: the frame whose tick range holds index. A
     ; cursor (frame, its first tick) walks from the previous lookup, so the
     ; usual small moves cost a step or two.
@@ -894,9 +947,6 @@ step_eased_scene:
     mov     eax, [r8 + SC_COUNT]
     mov     [r8 + SC_HEAD], eax
 .done:
-    add     rsp, 8
-    pop     r8
-    pop     rdi
     ret
 
 ; ------------------------------------------------------------ appearance
@@ -963,3 +1013,6 @@ scene_pre:      resq 1
 frame_region:   resq 1
 frame_region_end: resq 1
 scene_count:    resd 1
+alignb 8
+eased_memo:     resq 1
+eased_memo_key: resq 1

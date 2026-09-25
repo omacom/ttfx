@@ -1,0 +1,16 @@
+# waves option sets (each also runs with every seed and input)
+--wave-direction column_right_to_left --wave-easing linear
+--wave-direction row_top_to_bottom --wave-easing out_bounce --wave-count 2
+--wave-direction row_bottom_to_top --wave-easing in_out_elastic --wave-length 1
+--wave-direction center_to_outside --wave-easing in_back --final-gradient-direction radial
+--wave-direction outside_to_center --wave-easing in_out_back --final-gradient-direction horizontal
+--wave-easing in_expo --wave-count 1 --wave-length 3 --final-gradient-direction vertical
+--wave-easing out_elastic --wave-symbols a b c --wave-count 3
+--wave-easing in_out_bounce --wave-symbols ░ ▒ ▓ █ ▓ ▒ ░ x y z 1 2 3 4 5 6 7 8 9 0 q w e r t y u i o p a s d f g h j k l --wave-gradient-steps 2
+--wave-symbols * --wave-gradient-stops ff0000 --wave-gradient-steps 4 --wave-count 4
+--wave-gradient-stops ff0000 00ff00 0000ff --wave-gradient-steps 3 9 --wave-easing out_circ
+--wave-gradient-stops 45 201 88 --wave-gradient-steps 1 --wave-easing in_quint
+--final-gradient-stops ff00ff 00ffff 9 abcdef --final-gradient-steps 1 5 20 --wave-easing out_quart
+--final-gradient-stops ffffff --final-gradient-steps 4 --wave-easing in_out_circ
+--final-gradient-stops 196 --final-gradient-steps 1 --wave-length 4 --wave-count 1
+--wave-easing in_sine --wave-count 12 --wave-length 1 --wave-direction column_left_to_right
