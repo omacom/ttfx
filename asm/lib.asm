@@ -595,6 +595,7 @@ enforce_framerate:
 %include "engine/anim.asm"
 %include "engine/render.asm"
 %include "effects/registry.asm"
+%include "tests.asm"
 
 section .rodata
 STR msg_frames_eq, "frames="

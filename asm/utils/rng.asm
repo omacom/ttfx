@@ -193,6 +193,75 @@ rng_randrange:
     pop     rbx
     ret
 
+; rng_random -> xmm0 in [0, 1): (next >> 11) * 2^-53, Python random().
+; Clobbers rcx, rdx, r8-r11.
+rng_random:
+    call    rng_next
+    shr     rax, 11
+    cvtsi2sd xmm0, rax
+    mulsd   xmm0, [two_pow_minus_53]
+    ret
+
+; rng_uniform(xmm0=a, xmm1=b) -> xmm0 = a + (b - a) * random().
+rng_uniform:
+    sub     rsp, 24
+    movsd   [rsp], xmm0
+    movsd   [rsp + 8], xmm1
+    call    rng_random
+    movsd   xmm1, [rsp + 8]
+    subsd   xmm1, [rsp]
+    mulsd   xmm0, xmm1
+    addsd   xmm0, [rsp]
+    add     rsp, 24
+    ret
+
+; rng_shuffle32(rdi=u32 array, rsi=length) / rng_shuffle64(rdi=u64 array,
+; rsi=length): Fisher-Yates from the top, CPython's loop
+; (for i in reversed(range(1, n)): j = randbelow(i + 1); swap).
+rng_shuffle32:
+    push    rbx
+    push    r12
+    mov     rbx, rdi
+    mov     r12, rsi
+.next:
+    dec     r12
+    jle     .done
+    lea     rdi, [r12 + 1]
+    call    rng_below
+    mov     ecx, [rbx + r12 * 4]
+    mov     edx, [rbx + rax * 4]
+    mov     [rbx + r12 * 4], edx
+    mov     [rbx + rax * 4], ecx
+    jmp     .next
+.done:
+    pop     r12
+    pop     rbx
+    ret
+
+rng_shuffle64:
+    push    rbx
+    push    r12
+    mov     rbx, rdi
+    mov     r12, rsi
+.next:
+    dec     r12
+    jle     .done
+    lea     rdi, [r12 + 1]
+    call    rng_below
+    mov     rcx, [rbx + r12 * 8]
+    mov     rdx, [rbx + rax * 8]
+    mov     [rbx + r12 * 8], rdx
+    mov     [rbx + rax * 8], rcx
+    jmp     .next
+.done:
+    pop     r12
+    pop     rbx
+    ret
+
+section .rodata
+align 8
+two_pow_minus_53:   dq 0x3CA0000000000000   ; 1.0 / (1 << 53)
+
 section .tstate
 alignb 64
 rng_buf:    resq RNG_BATCH
