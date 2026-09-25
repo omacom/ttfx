@@ -437,6 +437,21 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             5
         }
+        EffectCommand::Laseretch(c) => {
+            // final_gradient_frames is accepted but unused upstream.
+            let group = matches!(c.etch_pattern, crate::effects::laseretch::EtchPattern::Group(_));
+            w.flag(group)
+                .int(c.etch_speed)
+                .int(c.etch_delay)
+                .colors(&c.cool_gradient_stops)
+                .colors(&c.laser_gradient_stops)
+                .colors(&c.spark_gradient_stops)
+                .duration(c.spark_cooling_frames)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            13
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
