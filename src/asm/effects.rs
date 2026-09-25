@@ -535,6 +535,30 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             4
         }
+        EffectCommand::Slide(c) => {
+            use crate::effects::slide::SlideGrouping;
+            // frame durations are 32-bit in the engine; values below 1 still
+            // reach it and fail like Rust
+            if i32::try_from(c.final_gradient_frames).is_err() {
+                return Err("final gradient frames out of range");
+            }
+            let grouping = match c.grouping {
+                SlideGrouping::Row => 0,
+                SlideGrouping::Column => 1,
+                SlideGrouping::Diagonal => 2,
+            };
+            w.float(c.movement_speed)
+                .int(grouping)
+                .int(c.gap)
+                .flag(c.reverse_direction)
+                .flag(c.merge)
+                .easing(c.movement_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .int(c.final_gradient_frames)
+                .direction(c.final_gradient_direction);
+            25
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))

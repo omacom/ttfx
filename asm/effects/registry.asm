@@ -42,6 +42,7 @@
 %include "effects/print.asm"
 %include "effects/bubbles.asm"
 %include "effects/swarm.asm"
+%include "effects/slide.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -110,6 +111,8 @@ effect_table:
     dq bubbles_build, bubbles_next_frame
   %elif id == EFFECT_SWARM
     dq swarm_build, swarm_next_frame
+  %elif id == EFFECT_SLIDE
+    dq slide_build, slide_next_frame
   %else
     dq 0, 0
   %endif
