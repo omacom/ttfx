@@ -12,6 +12,7 @@
 
 
 %include "effects/blackhole.asm"
+%include "effects/colorshift.asm"
 %include "effects/decrypt.asm"
 %include "effects/highlight.asm"
 %include "effects/sweep.asm"
@@ -28,6 +29,8 @@ effect_table:
 %rep EFFECT_COUNT
   %if id == EFFECT_BLACKHOLE
     dq blackhole_build, blackhole_next_frame
+  %elif id == EFFECT_COLORSHIFT
+    dq colorshift_build, colorshift_next_frame
   %elif id == EFFECT_DECRYPT
     dq decrypt_build, decrypt_next_frame
   %elif id == EFFECT_HIGHLIGHT

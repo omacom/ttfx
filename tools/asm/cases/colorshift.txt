@@ -1,0 +1,21 @@
+# colorshift option sets (each also runs with every seed and input)
+--cycles 1
+--cycles 1 --travel-direction horizontal
+--cycles 1 --travel-direction vertical --reverse-travel-direction
+--cycles 2 --travel-direction diagonal --gradient-frames 1
+--cycles 1 --travel-direction radial --reverse-travel-direction --no-loop
+--cycles 1 --travel-direction horizontal --reverse-travel-direction --gradient-steps 3 5
+--cycles 2 --no-travel --gradient-frames 1 --gradient-steps 2
+--cycles 1 --no-travel --no-loop --skip-final-gradient
+--cycles 2 --skip-final-gradient --travel-direction diagonal --reverse-travel-direction
+--cycles 1 --no-loop --gradient-stops ff0000 00ff00 0000ff --gradient-steps 4 9 --travel-direction vertical
+--cycles 1 --gradient-stops 45 201 --gradient-steps 3 --final-gradient-stops ffffff --final-gradient-steps 4
+--cycles 1 --gradient-stops abcdef --gradient-steps 6 --travel-direction horizontal
+--cycles 1 --gradient-stops abcdef --gradient-steps 5 --no-loop --reverse-travel-direction
+--cycles 1 --gradient-frames 3 --final-gradient-direction horizontal --final-gradient-stops ff00ff 00ffff 9 --final-gradient-steps 1 5
+--cycles 1 --final-gradient-direction radial --gradient-steps 1
+--cycles 1 --final-gradient-direction diagonal --travel-direction radial
+--cycles 3 --gradient-steps 1 --gradient-frames 1 --no-travel
+--gradient-frames 0
+--cycles 0
+--gradient-steps 0
