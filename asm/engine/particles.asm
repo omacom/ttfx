@@ -147,6 +147,7 @@ particle_reset:
     push    r12
     mov     ebx, edi
     mov     r12d, esi
+    call    doze_wake
     test    r12d, RESET_DEACTIVATE_PATH
     jz      .scene
     mov     rax, [ch_path]
@@ -300,6 +301,8 @@ pool_reclaim:
 .deactivate:
     test    r13d, r13d
     jz      .remove
+    mov     edi, ebx
+    call    doze_wake
     mov     rax, [ch_path]
     mov     dword [rax + rbx * 4], NONE
     mov     rax, [ch_scene]
