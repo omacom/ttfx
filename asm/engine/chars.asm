@@ -214,10 +214,7 @@ set_layer:
     cmp     [rax + rdi * 4], esi
     je      .same
     mov     [rax + rdi * 4], esi
-    mov     rax, [ch_flags]
-    test    word [rax + rdi * 2], CF_VISIBLE
-    jz      .same
-    mov     byte [grid_valid], 0
+    jmp     layer_changed
 .same:
     ret
 

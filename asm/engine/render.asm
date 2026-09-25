@@ -46,6 +46,16 @@ render_init:
     mov     [handle_grid], rax
     mov     rdi, CHAR_LIMIT * 4
     call    reserve
+    mov     [ch_cnext], rax
+    mov     rdi, CHAR_LIMIT * 4
+    call    reserve
+    mov     [ch_cprev], rax
+    mov     rdi, [grid_cells]
+    lea     rdi, [rdi * 4 + 64]
+    call    reserve
+    mov     [cell_head], rax
+    mov     rdi, CHAR_LIMIT * 4
+    call    reserve
     mov     [visible_list], rax
     mov     rdi, CHAR_LIMIT * 4
     call    reserve
@@ -133,11 +143,109 @@ paint:
 .keep:
     ret
 
+; cell_link(edi=slot, eax=cell): put a visible character into a cell's list
+; and let it compete for the cell. Clobbers rcx, rdx, rsi, r8.
+cell_link:
+    mov     rcx, [ch_cell]
+    mov     [rcx + rdi * 4], eax
+    mov     r8, [cell_head]
+    mov     edx, [r8 + rax * 4]
+    mov     rcx, [ch_cnext]
+    mov     [rcx + rdi * 4], edx
+    mov     rcx, [ch_cprev]
+    mov     dword [rcx + rdi * 4], NONE
+    cmp     edx, NONE
+    je      .head
+    mov     [rcx + rdx * 4], edi
+.head:
+    mov     [r8 + rax * 4], edi
+    jmp     paint
+
+; cell_unlink(edi=slot): take a character out of its cell; if it owned the
+; cell, the best remaining character (or nobody) takes over.
+; Clobbers rax, rcx, rdx, rsi, r8, r9.
+cell_unlink:
+    mov     rax, [ch_cell]
+    mov     r9d, [rax + rdi * 4]
+    cmp     r9d, NONE
+    je      .done
+    mov     dword [rax + rdi * 4], NONE
+    mov     rcx, [ch_cnext]
+    mov     edx, [rcx + rdi * 4]        ; next
+    mov     rsi, [ch_cprev]
+    mov     eax, [rsi + rdi * 4]        ; previous
+    cmp     eax, NONE
+    je      .was_head
+    mov     [rcx + rax * 4], edx
+    jmp     .fix_next
+.was_head:
+    mov     r8, [cell_head]
+    mov     [r8 + r9 * 4], edx
+.fix_next:
+    cmp     edx, NONE
+    je      .owner
+    mov     [rsi + rdx * 4], eax
+.owner:
+    mov     r8, [slot_grid]
+    cmp     [r8 + r9 * 4], edi
+    jne     .done
+    mov     eax, r9d
+    jmp     cell_rewin
+.done:
+    ret
+
+; cell_rewin(eax=cell): the cell's owner is the best of its list, or nobody.
+; Clobbers rcx, rdx, rsi, r8.
+cell_rewin:
+    push    rbx
+    mov     r8, [cell_head]
+    mov     ecx, [r8 + rax * 4]         ; candidate
+    mov     ebx, NONE                   ; best so far
+.scan:
+    cmp     ecx, NONE
+    je      .chosen
+    cmp     ebx, NONE
+    je      .take
+    mov     rsi, [ch_layer]
+    mov     edx, [rsi + rcx * 4]
+    cmp     edx, [rsi + rbx * 4]
+    jg      .take
+    jl      .next
+    mov     rsi, [ch_id]
+    mov     edx, [rsi + rcx * 4]
+    cmp     edx, [rsi + rbx * 4]
+    jbe     .next
+.take:
+    mov     ebx, ecx
+.next:
+    mov     rsi, [ch_cnext]
+    mov     ecx, [rsi + rcx * 4]
+    jmp     .scan
+.chosen:
+    mov     rsi, [slot_grid]
+    mov     rdx, [handle_grid]
+    cmp     ebx, NONE
+    je      .empty
+    mov     [rsi + rax * 4], ebx
+    mov     rsi, [ch_handle]
+    mov     ecx, [rsi + rbx * 4]
+    mov     [rdx + rax * 4], ecx
+    jmp     .dirty
+.empty:
+    mov     dword [rsi + rax * 4], EMPTY_SLOT
+    mov     ecx, [space_handle]
+    mov     [rdx + rax * 4], ecx
+.dirty:
+    mov     rsi, [dirty_cells]
+    mov     byte [rsi + rax], 1
+    pop     rbx
+    ret
+
 ; set_visibility(edi=slot, esi=visible): Terminal.set_character_visibility.
 set_visibility:
     test    esi, esi
     jnz     set_visible
-    ; hide: swap-remove from the visible list; the grid is rebuilt next frame
+    ; hide: swap-remove from the visible list and leave the cell
     mov     rax, [ch_flags]
     test    word [rax + rdi * 2], CF_VISIBLE
     jz      .done
@@ -150,9 +258,9 @@ set_visibility:
     mov     r9d, [r8 + rdx * 4]         ; the character moved into the hole
     mov     [r8 + rcx * 4], r9d
     mov     [rax + r9 * 4], ecx
-    mov     rax, [ch_cell]
-    mov     dword [rax + rdi * 4], NONE
-    mov     byte [grid_valid], 0
+    cmp     byte [grid_valid], 0
+    je      .done
+    jmp     cell_unlink
 .done:
     ret
 
@@ -171,16 +279,15 @@ set_visible:
     cmp     byte [grid_valid], 0
     je      .done
     call    cell_of
-    mov     rcx, [ch_cell]
-    mov     [rcx + rdi * 4], eax
     cmp     eax, NONE
     je      .done
-    jmp     paint
+    jmp     cell_link
 .done:
     ret
 
-; coordinate_changed(edi=slot): the character's current coordinate changed.
-; A visible character that lands in another cell invalidates the grid.
+; coordinate_changed(edi=slot): the character's current coordinate changed;
+; a visible character that changes cells leaves the old one and joins the
+; new one.
 coordinate_changed:
     mov     rax, [ch_flags]
     test    word [rax + rdi * 2], CF_VISIBLE
@@ -191,7 +298,28 @@ coordinate_changed:
     mov     rcx, [ch_cell]
     cmp     [rcx + rdi * 4], eax
     je      .done
-    mov     byte [grid_valid], 0
+    push    rax
+    call    cell_unlink
+    pop     rax
+    cmp     eax, NONE
+    je      .done
+    jmp     cell_link
+.done:
+    ret
+
+; layer_changed(edi=slot): a visible character's layer changed; its cell
+; picks its owner again.
+layer_changed:
+    mov     rax, [ch_flags]
+    test    word [rax + rdi * 2], CF_VISIBLE
+    jz      .done
+    cmp     byte [grid_valid], 0
+    je      .done
+    mov     rax, [ch_cell]
+    mov     eax, [rax + rdi * 4]
+    cmp     eax, NONE
+    je      .done
+    jmp     cell_rewin
 .done:
     ret
 
@@ -210,6 +338,7 @@ repaint:
     shr     rcx, 4
     mov     rax, [slot_grid]
     mov     rdx, [handle_grid]
+    mov     rsi, [cell_head]
     vpternlogd zmm0, zmm0, zmm0, 0xff
     vpbroadcastd zmm1, [space_handle]
 .clear:
@@ -217,8 +346,10 @@ repaint:
     jz      .paint
     vmovdqu32 [rax], zmm0
     vmovdqu32 [rdx], zmm1
+    vmovdqu32 [rsi], zmm0
     add     rax, 64
     add     rdx, 64
+    add     rsi, 64
     dec     rcx
     jmp     .clear
 .paint:
@@ -236,7 +367,7 @@ repaint:
     mov     [rcx + rdi * 4], eax
     cmp     eax, NONE
     je      .next
-    call    paint
+    call    cell_link
     jmp     .next
 .done:
     mov     byte [grid_valid], 1
@@ -438,6 +569,9 @@ grid_cells:     resq 1
 slot_grid:      resq 1
 handle_grid:    resq 1
 visible_list:   resq 1
+ch_cnext:       resq 1
+ch_cprev:       resq 1
+cell_head:      resq 1
 visible_pos:    resq 1
 visible_count:  resd 1
 grid_valid:     resb 1
