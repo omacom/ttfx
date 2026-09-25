@@ -18,7 +18,11 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
 BIN="${BIN:-$ROOT/target/release/ttfx}"
 EFFECT="${1:?usage: oracle.sh <effect> [quick|full]}"
 MODE="${2:-quick}"
-WORK="$(mktemp -d)"
+# Parity dumps get large and many oracles run at once: keep the scratch files
+# on disk, not in a tmpfs /tmp that can fill up and truncate them.
+TMPROOT="${ORACLE_TMP:-$ROOT/target/oracle-tmp}"
+mkdir -p "$TMPROOT"
+WORK="$(mktemp -d "$TMPROOT/run.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
 # inputs
