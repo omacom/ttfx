@@ -272,6 +272,18 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             36
         }
+        EffectCommand::Middleout(c) => {
+            w.color(&c.starting_color)
+                .int(c.expand_direction as i64)
+                .float(c.center_movement_speed)
+                .float(c.full_movement_speed)
+                .easing(c.center_easing)?
+                .easing(c.full_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            15
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
