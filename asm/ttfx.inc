@@ -129,32 +129,133 @@ bits 64
 ; code (Color::from_xterm) also carries that code in bits 32-39 and bit 40.
 %define COLOR_XTERM_BIT     40
 
-; ------------------------------------------------------------- engine sizes
-%define NONE                -1          ; "no scene" / "no action" sentinel
-%define SCENE_SIZE          32          ; bytes per scene record
-%define FRAME_SIZE          8           ; bytes per frame record
-%define ACTION_SIZE         16          ; bytes per event action record
+; ------------------------------------------------------------- engine records
+%define NONE                -1          ; "no scene/path/character" sentinel
+%define AUTO                -1          ; "generate the next auto id" for names
 
-; scene record layout (SCENE_SIZE bytes)
-%define SC_FRAMES           0           ; u32 index of the first frame
-%define SC_COUNT            4           ; u32 number of frames
-%define SC_HEAD             8           ; u32 head of the remaining-frames queue
-%define SC_TICKS            12          ; u32 ticks_elapsed of the head frame
-%define SC_HEAD_HANDLE      16          ; u32 the head frame's visual (cached)
-%define SC_HEAD_DURATION    20          ; u32 the head frame's duration (cached)
-%define SC_ON_COMPLETE      24          ; i32 first SCENE_COMPLETE action, NONE if none
-%define SC_FLAGS            28          ; u32 bit 0: looping
-%define SC_LOOPING          1
+; Names of scenes, paths and waypoints are u32. Rust's auto ids are decimal
+; strings "0", "1", ...; those are the numbers themselves. Effects give their
+; literal names (e.g. "fast_decrypt") constants from NAME_LITERAL up.
+%define NAME_LITERAL        0x80000000
 
-; frame record layout (FRAME_SIZE bytes)
-%define FR_HANDLE           0           ; u32 visual handle
-%define FR_DURATION         4           ; u32 duration in ticks
+; scene record: a 32-byte hot half (what a tick touches) at [scenes] +
+; index * 32, and a 32-byte cold half at a fixed distance past it in the same
+; reservation, so cold fields are plain displacements from the same pointer.
+%define SCENE_LIMIT         (1 << 24)
+%define SCENE_SIZE          32
+%define SCENE_SHIFT         5
+%define SCENE_COLD          (SCENE_LIMIT * SCENE_SIZE)
+%define SC_FRAMES           0           ; u64 pointer to the frame array
+%define SC_COUNT            8           ; u32 frames
+%define SC_HEAD             12          ; u32 head of the remaining-frames queue
+%define SC_TICKS            16          ; u32 ticks_elapsed of the head frame
+%define SC_HEAD_HANDLE      20          ; u32 the head frame's visual (cached)
+%define SC_HEAD_DURATION    24          ; u32 the head frame's duration (cached)
+%define SC_FLAGS            28          ; u32 SCF_*
+%define SC_NAME             SCENE_COLD + 0   ; u32
+%define SC_NEXT             SCENE_COLD + 4   ; i32 next scene of the same character
+%define SC_EASE             SCENE_COLD + 8   ; u32 easing id (SCF_EASED)
+%define SC_EASE_TOTAL       SCENE_COLD + 12  ; u32 easing_total_steps
+%define SC_EASE_STEP        SCENE_COLD + 16  ; u32 easing_current_step
+%define SC_OWNER            SCENE_COLD + 20  ; u32 character slot
+%define SC_CURSOR           SCENE_COLD + 24  ; u32 eased lookup cursor: a frame ...
+%define SC_CURSOR_START     SCENE_COLD + 28  ; u32 ... and its first tick
+; a scene's preexisting colors (SCF_PREEXISTING) live in [scene_pre]:
+; 16 bytes per scene, fg then bg
 
-; action record layout (ACTION_SIZE bytes)
-%define AC_KIND             0           ; u32 action kind
-%define AC_ARG              4           ; u32 argument (scene index, ...)
-%define AC_NEXT             8           ; i32 next action in the list, NONE at the end
-%define ACT_ACTIVATE_SCENE  1
+%define SCF_LOOPING         1
+%define SCF_SYNC_STEP       2
+%define SCF_SYNC_DISTANCE   4
+%define SCF_EASED           8
+%define SCF_PREEXISTING     16
+%define SCF_PRE_BOLD        32
+%define SCF_SYNC            (SCF_SYNC_STEP | SCF_SYNC_DISTANCE)
+
+; frame record (FRAME_SIZE bytes)
+%define FRAME_SIZE          8
+%define FRAME_SHIFT         3
+%define FR_HANDLE           0           ; u32 visual
+%define FR_DURATION         4           ; u32 ticks
+
+; path record (PATH_SIZE bytes; index into [paths])
+%define PATH_SIZE           128
+%define PA_NAME             0           ; u32
+%define PA_NEXT             4           ; i32 next path of the same character
+%define PA_SPEED            8           ; f64
+%define PA_EASE             16          ; i32 easing id or NONE
+%define PA_LAYER            20          ; i32 (PAF_LAYER)
+%define PA_FLAGS            24          ; u32 PAF_*
+%define PA_OWNER            28          ; u32 character slot
+%define PA_HOLD             32          ; i64 hold_time
+%define PA_HOLD_LEFT        40          ; i64 hold_time_remaining
+%define PA_TOTAL            48          ; f64 total_distance
+%define PA_STEP             56          ; i64 current_step
+%define PA_MAX              64          ; i64 max_steps
+%define PA_LAST             72          ; f64 last_distance_reached
+%define PA_ORIGIN_DIST      80          ; f64 origin segment distance (PAF_ORIGIN)
+%define PA_SEGS             88          ; u64 pointer to segments
+%define PA_SEG_COUNT        96          ; u32
+%define PA_SEG_CAP          100         ; u32
+%define PA_WPS              104         ; u64 pointer to waypoints
+%define PA_WP_COUNT         112         ; u32
+%define PA_WP_CAP           116         ; u32
+
+%define PAF_LAYER           1
+%define PAF_LOOP            2
+%define PAF_ORIGIN          4
+
+; waypoint record (WAYPOINT_SIZE bytes) - also a waypoint event key
+%define WAYPOINT_SIZE       32
+%define WP_COORD            0           ; u64 packed coordinate
+%define WP_NAME             8           ; u32
+%define WP_BEZ_COUNT        12          ; u32 bezier control points
+%define WP_BEZ              16          ; u64 pointer to packed coordinates, 0 if none
+
+; segment record (SEGMENT_SIZE bytes): start and end waypoints by value
+%define SEGMENT_SIZE        80
+%define SG_START            0
+%define SG_END              32
+%define SG_DISTANCE         64          ; f64
+%define SG_ENTERED          72          ; u8 enter_event_triggered
+%define SG_EXITED           73          ; u8 exit_event_triggered
+
+; events (Event enum order)
+%define EV_SEGMENT_ENTERED  0
+%define EV_SEGMENT_EXITED   1
+%define EV_PATH_ACTIVATED   2
+%define EV_PATH_COMPLETE    3
+%define EV_PATH_HOLDING     4
+%define EV_SCENE_ACTIVATED  5
+%define EV_SCENE_COMPLETE   6
+
+%define CALLER_SCENE        1           ; caller = scene name
+%define CALLER_PATH         2           ; caller = path name
+%define CALLER_WAYPOINT     3           ; caller = pointer to a waypoint record
+
+; event entry (ENTRY_SIZE bytes; index into [event_entries])
+%define ENTRY_SIZE          64
+%define EN_NEXT             0           ; i32 next entry of the same character
+%define EN_EVENT            4           ; u8
+%define EN_KIND             5           ; u8 CALLER_*
+%define EN_WAYPOINT         8           ; waypoint key (WAYPOINT_SIZE) or name at +8
+%define EN_FIRST            40          ; i32 first action
+%define EN_LAST             44          ; i32 last action
+
+; event action (ACTION_SIZE bytes; index into [event_actions])
+%define ACTION_SIZE         32
+%define AC_KIND             0           ; u32 ACT_*
+%define AC_NEXT             4           ; i32
+%define AC_ARG0             8
+%define AC_ARG1             16
+
+%define ACT_ACTIVATE_PATH       1       ; arg0 = path name
+%define ACT_ACTIVATE_SCENE      2       ; arg0 = scene name
+%define ACT_DEACTIVATE_PATH     3       ; arg0 = path name or NONE (any)
+%define ACT_DEACTIVATE_SCENE    4       ; arg0 = scene name or NONE (any)
+%define ACT_RESET_APPEARANCE    5
+%define ACT_SET_LAYER           6       ; arg0 = layer
+%define ACT_SET_COORDINATE      7       ; arg0 = packed coordinate
+%define ACT_CALLBACK            8       ; arg0 = fn(edi=slot, rsi=arg1), arg1 = payload
 
 ; A visual handle packs its pool offset (low 24 bits) and byte length (high 8).
 %define HANDLE_OFFSET_MASK  0x00ffffff

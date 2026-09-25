@@ -44,28 +44,12 @@ render_init:
     mov     rdi, rbx
     call    alloc
     mov     [handle_grid], rax
-    mov     rbx, [char_capacity]
-    inc     rbx
-    lea     rdi, [rbx * 4]
-    call    alloc
+    mov     rdi, CHAR_LIMIT * 4
+    call    reserve
     mov     [visible_list], rax
-    lea     rdi, [rbx * 4]
-    call    alloc
+    mov     rdi, CHAR_LIMIT * 4
+    call    reserve
     mov     [visible_pos], rax
-    lea     rdi, [rbx * 4 + 64]
-    call    alloc
-    mov     [ch_cell], rax
-    ; every character starts outside the grid
-    mov     rdi, rax
-    lea     rcx, [rbx + 15]
-    shr     rcx, 4
-    vpternlogd zmm0, zmm0, zmm0, 0xff
-.none:
-    vmovdqu32 [rdi], zmm0
-    add     rdi, 64
-    dec     rcx
-    jnz     .none
-    vzeroupper
     mov     rdi, OUTPUT_RESERVE
     call    reserve
     mov     [out_base], rax
@@ -149,12 +133,35 @@ paint:
 .keep:
     ret
 
+; set_visibility(edi=slot, esi=visible): Terminal.set_character_visibility.
+set_visibility:
+    test    esi, esi
+    jnz     set_visible
+    ; hide: swap-remove from the visible list; the grid is rebuilt next frame
+    mov     rax, [ch_flags]
+    test    word [rax + rdi * 2], CF_VISIBLE
+    jz      .done
+    and     word [rax + rdi * 2], ~CF_VISIBLE
+    mov     rax, [visible_pos]
+    mov     ecx, [rax + rdi * 4]        ; position of the hidden character
+    dec     dword [visible_count]
+    mov     edx, [visible_count]        ; last position
+    mov     r8, [visible_list]
+    mov     r9d, [r8 + rdx * 4]         ; the character moved into the hole
+    mov     [r8 + rcx * 4], r9d
+    mov     [rax + r9 * 4], ecx
+    mov     rax, [ch_cell]
+    mov     dword [rax + rdi * 4], NONE
+    mov     byte [grid_valid], 0
+.done:
+    ret
+
 ; set_visible(edi=slot): Terminal.set_character_visibility(id, true).
 set_visible:
     mov     rax, [ch_flags]
-    test    byte [rax + rdi], CF_VISIBLE
+    test    word [rax + rdi * 2], CF_VISIBLE
     jnz     .done
-    or      byte [rax + rdi], CF_VISIBLE
+    or      word [rax + rdi * 2], CF_VISIBLE
     mov     ecx, [visible_count]
     mov     rax, [visible_list]
     mov     [rax + rcx * 4], edi
@@ -169,6 +176,22 @@ set_visible:
     cmp     eax, NONE
     je      .done
     jmp     paint
+.done:
+    ret
+
+; coordinate_changed(edi=slot): the character's current coordinate changed.
+; A visible character that lands in another cell invalidates the grid.
+coordinate_changed:
+    mov     rax, [ch_flags]
+    test    word [rax + rdi * 2], CF_VISIBLE
+    jz      .done
+    cmp     byte [grid_valid], 0
+    je      .done
+    call    cell_of
+    mov     rcx, [ch_cell]
+    cmp     [rcx + rdi * 4], eax
+    je      .done
+    mov     byte [grid_valid], 0
 .done:
     ret
 
@@ -416,7 +439,6 @@ slot_grid:      resq 1
 handle_grid:    resq 1
 visible_list:   resq 1
 visible_pos:    resq 1
-ch_cell:        resq 1
 visible_count:  resd 1
 grid_valid:     resb 1
 all_dirty:      resb 1

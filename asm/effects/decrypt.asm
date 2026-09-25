@@ -3,10 +3,8 @@
 ;
 ; Config (src/asm/effects.rs DecryptAsm):
 ;
-; Scene layout: with N input characters in TopToBottomLeftToRight order, the
-; k-th character owns scene k ("typing") and scenes N+3k .. N+3k+2
-; ("fast_decrypt", "slow_decrypt", "discovered"). Scenes are created in
-; exactly the order Rust creates them, so every RNG draw lines up.
+; Scenes are created in exactly the order Rust creates them, so every RNG
+; draw lines up.
 
 struc DECRYPT
     .typing_speed:      resq 1
@@ -20,6 +18,14 @@ struc DECRYPT
 endstruc
 
 %define ENCRYPTED_COUNT     523         ; 94 + 24 + 127 + 278 symbols
+
+; scene names
+%define TYPING              NAME_LITERAL + 0
+%define FAST_DECRYPT        NAME_LITERAL + 1
+%define SLOW_DECRYPT        NAME_LITERAL + 2
+%define DISCOVERED          NAME_LITERAL + 3
+
+; ch_user0 holds the typing scene (low half) and fast_decrypt (high half)
 
 section .text
 
@@ -47,9 +53,15 @@ decrypt_build:
 .typing:
     cmp     rbx, r13
     jae     .decrypting
-    xor     edi, edi
-    call    scene_new                   ; == rbx
+    mov     edi, [r12 + rbx * 4]
+    mov     esi, TYPING
+    xor     edx, edx
+    mov     ecx, NONE
+    call    scene_new
     mov     r14d, eax
+    mov     edi, [r12 + rbx * 4]
+    mov     rcx, [ch_user0]
+    mov     [rcx + rdi * 8], eax
     xor     ebp, ebp
 .block:
     call    choose_cipher               ; eax = color index
@@ -58,7 +70,7 @@ decrypt_build:
     mov     esi, eax
     mov     edi, r14d
     mov     edx, 2
-    call    scene_add_frame
+    call    scene_add_frame_visual
     inc     ebp
     cmp     ebp, 4
     jb      .block
@@ -71,7 +83,7 @@ decrypt_build:
     mov     esi, eax
     mov     edi, r14d
     mov     edx, 1
-    call    scene_add_frame
+    call    scene_add_frame_visual
     inc     rbx
     jmp     .typing
 .decrypting:
@@ -105,9 +117,13 @@ make_decrypting_scenes:
     push    r15
     mov     r12d, edi                   ; slot
     ; fast_decrypt: one color, 80 random symbols of duration 2
-    xor     edi, edi
+    mov     esi, FAST_DECRYPT
+    xor     edx, edx
+    mov     ecx, NONE
     call    scene_new
     mov     r13d, eax                   ; fast scene
+    mov     rcx, [ch_user0]
+    mov     [rcx + r12 * 8 + 4], eax
     call    choose_cipher
     mov     r14d, eax                   ; color index for the whole character
     xor     ebp, ebp
@@ -120,12 +136,15 @@ make_decrypting_scenes:
     mov     esi, eax
     mov     edi, r13d
     mov     edx, 2
-    call    scene_add_frame
+    call    scene_add_frame_visual
     inc     ebp
     cmp     ebp, 80
     jb      .fast
     ; slow_decrypt: 1-15 frames of long or flickering durations
-    xor     edi, edi
+    mov     edi, r12d
+    mov     esi, SLOW_DECRYPT
+    xor     edx, edx
+    mov     ecx, NONE
     call    scene_new
     mov     r15d, eax                   ; slow scene
     mov     edi, 1
@@ -158,12 +177,15 @@ make_decrypting_scenes:
     mov     esi, eax
     mov     edi, r15d
     pop     rdx
-    call    scene_add_frame
+    call    scene_add_frame_visual
     dec     ebp
     jmp     .slow
 .discovered:
     ; discovered: white -> final color in 10 steps (11 colors), duration 5
-    xor     edi, edi
+    mov     edi, r12d
+    mov     esi, DISCOVERED
+    xor     edx, edx
+    mov     ecx, NONE
     call    scene_new
     mov     ebp, eax                    ; discovered scene
     mov     rax, [ch_row]
@@ -190,31 +212,38 @@ make_decrypting_scenes:
     cmp     r14d, ebx
     jae     .events
     lea     rax, [pair_spectrum]
-    mov     rdi, [rax + r14 * 8]
-    mov     rsi, NONE
-    mov     rdx, [ch_sym]
-    mov     rdx, [rdx + r12 * 8]
-    xor     ecx, ecx
-    call    visual_make
-    mov     esi, eax
+    mov     rcx, [rax + r14 * 8]
+    mov     r8, NONE
+    mov     rsi, [ch_sym]
+    mov     rsi, [rsi + r12 * 8]
     mov     edi, ebp
     mov     edx, 5
+    xor     r9d, r9d
     call    scene_add_frame
     inc     r14d
     jmp     .gradient
 .events:
     ; fast complete -> slow; slow complete -> discovered; start on fast
-    mov     edi, r13d
-    mov     esi, ACT_ACTIVATE_SCENE
-    mov     edx, r15d
-    call    on_scene_complete
-    mov     edi, r15d
-    mov     esi, ACT_ACTIVATE_SCENE
-    mov     edx, ebp
-    call    on_scene_complete
+    push    0
+    push    0
+    mov     edi, r12d
+    mov     esi, EV_SCENE_COMPLETE
+    mov     edx, CALLER_SCENE
+    mov     ecx, FAST_DECRYPT
+    mov     r8d, ACT_ACTIVATE_SCENE
+    mov     r9d, SLOW_DECRYPT
+    call    event_register
+    mov     edi, r12d
+    mov     esi, EV_SCENE_COMPLETE
+    mov     edx, CALLER_SCENE
+    mov     ecx, SLOW_DECRYPT
+    mov     r8d, ACT_ACTIVATE_SCENE
+    mov     r9d, DISCOVERED
+    call    event_register
+    add     rsp, 16
     mov     edi, r12d
     mov     esi, r13d
-    call    activate_scene
+    call    scene_activate
     pop     r15
     pop     r14
     pop     r13
@@ -354,10 +383,9 @@ decrypt_next_frame:
     push    rdi
     call    active_insert
     pop     rdi
-    mov     rax, [input_count]
-    lea     esi, [rax + rbx * 2]
-    add     esi, ebx                    ; fast scene = N + 3k
-    call    activate_scene
+    mov     rax, [ch_user0]
+    mov     esi, [rax + rdi * 8 + 4]    ; fast_decrypt
+    call    scene_activate
     inc     rbx
     jmp     .start
 .started:
@@ -395,8 +423,9 @@ decrypt_next_frame:
     push    rdi
     call    set_visible
     mov     rdi, [rsp]
-    mov     esi, ebx                    ; typing scene = k
-    call    activate_scene
+    mov     rax, [ch_user0]
+    mov     esi, [rax + rdi * 8]        ; typing
+    call    scene_activate
     pop     rdi
     call    active_insert
     jmp     .type

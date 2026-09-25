@@ -71,3 +71,40 @@ ttfx_test_rng_shuffle64:
     pop     r12
     pop     rbx
     ret
+
+; Easing utilities already follow SysV. Storage layouts are in easing.asm.
+global ttfx_test_ease
+ttfx_test_ease:
+    jmp     ease
+
+global ttfx_test_easing_tracker_new
+ttfx_test_easing_tracker_new:
+    jmp     easing_tracker_new
+
+global ttfx_test_easing_tracker_step
+ttfx_test_easing_tracker_step:
+    jmp     easing_tracker_step
+
+global ttfx_test_easing_tracker_reset
+ttfx_test_easing_tracker_reset:
+    jmp     easing_tracker_reset
+
+global ttfx_test_easing_tracker_is_complete
+ttfx_test_easing_tracker_is_complete:
+    jmp     easing_tracker_is_complete
+
+global ttfx_test_sequence_easer_new
+ttfx_test_sequence_easer_new:
+    jmp     sequence_easer_new
+
+global ttfx_test_sequence_easer_step
+ttfx_test_sequence_easer_step:
+    jmp     sequence_easer_step
+
+global ttfx_test_sequence_easer_reset
+ttfx_test_sequence_easer_reset:
+    jmp     sequence_easer_reset
+
+global ttfx_test_sequence_easer_is_complete
+ttfx_test_sequence_easer_is_complete:
+    jmp     sequence_easer_is_complete

@@ -1,16 +1,6 @@
-; engine/terminal.asm - the input preprocessor, canvas layout and text
-; anchoring of Terminal::new (src/engine/terminal.rs, input.rs, canvas.rs).
-;
-; Characters live in struct-of-arrays form, indexed by slot. A slot is
-; allocated per parsed character in the order Rust pushes them to its arena,
-; so ascending slot order equals ascending character_id order.
-;
-; This slice covers plain text: tabs, \r and \n. An escape sequence exits 3
-; ("unsupported"), so harnesses can tell a gap from a mismatch.
-
-%define CF_VISIBLE      1
-%define CF_ORPHAN       2               ; overwritten by a later character
-%define CF_INPUT        4               ; kept input character
+; engine/terminal.asm - canvas layout, text anchoring, fill characters,
+; neighbors and character queries of Terminal (src/engine/terminal.rs,
+; canvas.rs).
 
 section .text
 
@@ -22,11 +12,12 @@ terminal_init:
     push    r13
     push    r14
     push    r15
-    call    count_capacity
-    call    alloc_characters
-    call    preprocess
+    call    input_init
     call    compute_layout
     call    anchor_text
+    call    build_coord_map
+    call    make_fill_characters
+    call    setup_neighbors
     pop     r15
     pop     r14
     pop     r13
@@ -34,331 +25,6 @@ terminal_init:
     pop     rbp
     pop     rbx
     ret
-
-; count_capacity: an upper bound on parsed characters (tabs expand to at most
-; tab_width cells) and on rows.
-count_capacity:
-    mov     rsi, [input_ptr]
-    mov     r9, rsi
-    add     r9, [input_len]
-    xor     r10d, r10d                  ; characters
-    mov     r11d, 1                     ; rows
-.loop:
-    cmp     rsi, r9
-    jae     .done
-    call    utf8_decode
-    add     rsi, rdx
-    cmp     eax, 10
-    je      .newline
-    cmp     eax, 13
-    je      .loop
-    cmp     eax, 9
-    je      .tab
-    inc     r10
-    jmp     .loop
-.tab:
-    add     r10, [cfg_tab_width]
-    jmp     .loop
-.newline:
-    inc     r11
-    jmp     .loop
-.done:
-    inc     r10
-    mov     [char_capacity], r10
-    mov     [row_capacity], r11
-    ret
-
-; alloc_characters: the SoA arrays, sized by char_capacity (+1 sentinel slot).
-alloc_characters:
-    push    rbx
-    mov     rbx, [char_capacity]
-    inc     rbx
-    lea     rdi, [rbx * 8]
-    call    alloc
-    mov     [ch_sym], rax
-    lea     rdi, [rbx * 4]
-    call    alloc
-    mov     [ch_row], rax
-    lea     rdi, [rbx * 4]
-    call    alloc
-    mov     [ch_col], rax
-    lea     rdi, [rbx * 4]
-    call    alloc
-    mov     [ch_id], rax
-    lea     rdi, [rbx * 4]
-    call    alloc
-    mov     [ch_layer], rax
-    lea     rdi, [rbx * 4]
-    call    alloc
-    mov     [ch_handle], rax
-    lea     rdi, [rbx * 4]
-    call    alloc
-    mov     [ch_scene], rax
-    mov     rdi, rbx
-    call    alloc
-    mov     [ch_flags], rax
-    lea     rdi, [rbx * 4]
-    call    alloc
-    mov     [cells], rax
-    lea     rdi, [rbx * 4]
-    call    alloc
-    mov     [input_chars], rax
-    mov     rbx, [row_capacity]
-    inc     rbx
-    lea     rdi, [rbx * 8]
-    call    alloc
-    mov     [row_start], rax
-    lea     rdi, [rbx * 8]
-    call    alloc
-    mov     [row_len], rax
-    lea     rdi, [rbx * 8]
-    call    alloc
-    mov     [line_len], rax
-    pop     rbx
-    ret
-
-; new_char(rdi=packed symbol) -> eax = slot. Allocates the next character id.
-new_char:
-    mov     eax, [char_count]
-    mov     rcx, [ch_sym]
-    mov     [rcx + rax * 8], rdi
-    mov     rcx, [ch_id]
-    mov     edx, [next_character_id]
-    mov     [rcx + rax * 4], edx
-    inc     dword [next_character_id]
-    mov     rcx, [ch_scene]
-    mov     dword [rcx + rax * 4], NONE
-    inc     dword [char_count]
-    ret
-
-; preprocess: the mini terminal emulator (input.rs preprocess), plain text.
-; Registers: r12 = row, r13 = column, r14 = current row length,
-; r15 = cells cursor for the current row, rbx = input cursor, rbp = input end.
-preprocess:
-    push    rbx
-    push    rbp
-    push    r12
-    push    r13
-    push    r14
-    push    r15
-    mov     rbx, [input_ptr]
-    mov     rbp, rbx
-    add     rbp, [input_len]
-    xor     r12d, r12d
-    xor     r13d, r13d
-    xor     r14d, r14d
-    mov     r15, [cells]
-    mov     qword [max_row], 0
-    mov     qword [max_col], 0
-    mov     rax, [row_start]
-    mov     qword [rax], 0
-.loop:
-    cmp     rbx, rbp
-    jae     .end
-    mov     rsi, rbx
-    call    utf8_decode
-    cmp     eax, 0x1b
-    je      .escape
-    cmp     eax, 10
-    je      .newline
-    cmp     eax, 13
-    je      .return
-    cmp     eax, 9
-    je      .tab
-    ; ordinary character: its UTF-8 bytes packed with the length
-    mov     ecx, edx
-    xor     edi, edi
-.pack:
-    dec     ecx
-    shl     edi, 8
-    movzx   eax, byte [rbx + rcx]
-    or      edi, eax
-    test    ecx, ecx
-    jnz     .pack
-    mov     eax, edx
-    shl     rax, 32
-    or      rdi, rax
-    add     rbx, rdx
-    call    put_char
-    jmp     .loop
-.tab:
-    inc     rbx
-    ; tab_width - (column % tab_width) spaces
-    mov     rax, r13
-    xor     edx, edx
-    div     qword [cfg_tab_width]
-    mov     rcx, [cfg_tab_width]
-    sub     rcx, rdx
-.tab_space:
-    push    rcx
-    mov     rdi, (1 << 32) | ' '
-    call    put_char
-    pop     rcx
-    dec     rcx
-    jnz     .tab_space
-    jmp     .loop
-.return:
-    inc     rbx
-    xor     r13d, r13d
-    jmp     .loop
-.newline:
-    inc     rbx
-    call    finish_row
-    inc     r12
-    xor     r13d, r13d
-    cmp     r12, [max_row]
-    jbe     .loop
-    mov     [max_row], r12
-    jmp     .loop
-.end:
-    call    finish_row
-    pop     r15
-    pop     r14
-    pop     r13
-    pop     r12
-    pop     rbp
-    pop     rbx
-    jmp     finish_lines
-.escape:
-    FAIL    msg_escape_unsupported
-
-; put_char(rdi=packed symbol): write at (row r12, column r13), advance.
-put_char:
-    call    new_char                    ; eax = slot
-    cmp     r13, r14
-    jb      .overwrite
-    mov     [r15 + r14 * 4], eax
-    inc     r14
-    jmp     .placed
-.overwrite:
-    mov     ecx, [r15 + r13 * 4]
-    mov     rdx, [ch_flags]
-    or      byte [rdx + rcx], CF_ORPHAN
-    mov     [r15 + r13 * 4], eax
-.placed:
-    cmp     r12, [max_row]
-    jbe     .col
-    mov     [max_row], r12
-.col:
-    cmp     r13, [max_col]
-    jbe     .advance
-    mov     [max_col], r13
-.advance:
-    inc     r13
-    ret
-
-; finish_row: record the current row's length; the next row starts after it.
-finish_row:
-    mov     rax, [row_len]
-    mov     [rax + r12 * 8], r14
-    lea     r15, [r15 + r14 * 4]
-    mov     rax, [row_start]
-    mov     rcx, [rax + r12 * 8]
-    add     rcx, r14
-    mov     [rax + r12 * 8 + 8], rcx
-    xor     r14d, r14d
-    ret
-
-; finish_lines: account the padding ids, trim trailing plain spaces and
-; trailing empty lines, then assign bottom-up 1-based input coordinates.
-finish_lines:
-    push    rbx
-    push    r12
-    push    r13
-    mov     r8, [row_len]
-    mov     r9, [row_start]
-    mov     r10, [line_len]
-    mov     r11, [cells]
-    ; padding: every missing cell of the (max_row+1) x (max_col+1) screen
-    ; consumes an id, after all real characters
-    xor     ebx, ebx
-    xor     r12d, r12d                  ; last non-empty line + 1
-.rows:
-    cmp     rbx, [max_row]
-    ja      .rows_done
-    mov     rax, [max_col]
-    inc     rax
-    sub     rax, [r8 + rbx * 8]
-    add     [next_character_id], eax
-    ; trimmed length: drop trailing plain spaces
-    mov     rcx, [r8 + rbx * 8]
-    mov     rdx, [r9 + rbx * 8]
-.trim:
-    test    rcx, rcx
-    jz      .trimmed
-    lea     rax, [rdx + rcx - 1]
-    mov     eax, [r11 + rax * 4]
-    mov     rsi, [ch_sym]
-    mov     rax, [rsi + rax * 8]
-    mov     rsi, (1 << 32) | ' '
-    cmp     rax, rsi
-    jne     .trimmed
-    dec     rcx
-    jmp     .trim
-.trimmed:
-    mov     [r10 + rbx * 8], rcx
-    test    rcx, rcx
-    jz      .next_row
-    lea     r12, [rbx + 1]
-.next_row:
-    inc     rbx
-    jmp     .rows
-.rows_done:
-    mov     [line_count], r12
-    mov     rax, [request]
-    mov     [rax + RQ_LINE_COUNT], r12
-    mov     rcx, [line_len]
-    mov     [rax + RQ_LINE_LENGTHS], rcx
-    test    r12, r12
-    jz      .no_input_chars
-    ; coordinates and the input character list, top row first
-    xor     ebx, ebx
-    xor     r13d, r13d                  ; input character count
-.coord_rows:
-    cmp     rbx, r12
-    jae     .coords_done
-    mov     rdx, [r9 + rbx * 8]
-    mov     rcx, [r10 + rbx * 8]
-    xor     esi, esi
-.coord_cols:
-    cmp     rsi, rcx
-    jae     .coord_next_row
-    lea     rax, [rdx + rsi]
-    mov     eax, [r11 + rax * 4]        ; slot
-    mov     rdi, [ch_sym]
-    mov     rdi, [rdi + rax * 8]
-    push    rdx
-    mov     rdx, (1 << 32) | ' '
-    cmp     rdi, rdx
-    pop     rdx
-    je      .coord_skip
-    lea     edi, [esi + 1]
-    mov     r8, [ch_col]
-    mov     [r8 + rax * 4], edi
-    mov     edi, r12d
-    sub     edi, ebx
-    mov     r8, [ch_row]
-    mov     [r8 + rax * 4], edi
-    mov     r8, [input_chars]
-    mov     [r8 + r13 * 4], eax
-    inc     r13
-.coord_skip:
-    inc     rsi
-    jmp     .coord_cols
-.coord_next_row:
-    inc     rbx
-    jmp     .coord_rows
-.coords_done:
-    mov     [input_count], r13
-    pop     r13
-    pop     r12
-    pop     rbx
-    ret
-.no_input_chars:
-    jmp     error_no_input_chars
-
-error_no_input_chars:
-    FAIL    msg_no_input_chars
 
 ; floor_div2(rax) -> rax = rax // 2 (Python floor division).
 floor_div2:
@@ -583,10 +249,14 @@ anchor_text:
     mov     edx, [r8 + rax * 4]
     add     edx, esi
     mov     [r8 + rax * 4], edx
+    mov     r14, [ch_icol]
+    mov     [r14 + rax * 4], edx
     push    rcx
     mov     ecx, [r9 + rax * 4]
     add     ecx, edi
     mov     [r9 + rax * 4], ecx
+    mov     r14, [ch_irow]
+    mov     [r14 + rax * 4], ecx
     ; in canvas: 1 <= column <= right, 1 <= row <= top
     cmp     edx, 1
     jl      .drop
@@ -601,7 +271,7 @@ anchor_text:
     mov     [r12 + rbx * 4], eax
     inc     rbx
     mov     r14, [ch_flags]
-    or      byte [r14 + rax], CF_INPUT
+    or      word [r14 + rax * 2], CF_INPUT
     cmp     edx, r10d
     cmovl   r10d, edx
     cmp     edx, r11d
@@ -633,6 +303,852 @@ anchor_text:
 .all_outside:
     FAIL    msg_all_outside
 
+; build_coord_map: character_by_input_coord as a canvas-sized grid of slots
+; (NONE where empty), seeded with the kept input characters; plus the text
+; center.
+build_coord_map:
+    push    rbx
+    mov     rax, [canvas_top]
+    imul    rax, [canvas_right]
+    mov     [coord_map_cells], rax
+    lea     rdi, [rax * 4 + 64]
+    call    reserve
+    mov     [coord_map], rax
+    ; fill with NONE
+    mov     rdi, rax
+    mov     rcx, [coord_map_cells]
+    mov     eax, NONE
+    rep     stosd
+    xor     ebx, ebx
+.each:
+    cmp     rbx, [input_count]
+    jae     .center
+    mov     rax, [input_chars]
+    mov     edi, [rax + rbx * 4]
+    call    char_input_coord
+    mov     rsi, rax
+    call    coord_map_index
+    mov     rcx, [coord_map]
+    mov     [rcx + rax * 4], edi
+    inc     rbx
+    jmp     .each
+.center:
+    mov     rax, [text_top]
+    sub     rax, [text_bottom]
+    sar     rax, 1
+    add     rax, [text_bottom]
+    mov     [text_center_row], rax
+    mov     rax, [text_right]
+    sub     rax, [text_left]
+    sar     rax, 1
+    add     rax, [text_left]
+    mov     [text_center_col], rax
+    pop     rbx
+    ret
+
+; coord_map_index(rsi=coord inside the canvas) -> rax = grid index.
+coord_map_index:
+    mov     rax, rsi
+    sar     rax, 32
+    dec     rax
+    imul    rax, [canvas_right]
+    movsxd  rcx, esi
+    lea     rax, [rax + rcx - 1]
+    ret
+
+; char_at_input_coord(rsi=coord) -> eax = slot or NONE
+; (Terminal.get_character_by_input_coord).
+char_at_input_coord:
+    mov     rax, rsi
+    sar     rax, 32
+    cmp     rax, 1
+    jl      .none
+    cmp     rax, [canvas_top]
+    jg      .none
+    movsxd  rcx, esi
+    cmp     rcx, 1
+    jl      .none
+    cmp     rcx, [canvas_right]
+    jg      .none
+    call    coord_map_index
+    mov     rcx, [coord_map]
+    mov     eax, [rcx + rax * 4]
+    ret
+.none:
+    mov     eax, NONE
+    ret
+
+; make_fill_characters: Terminal._make_fill_characters - row-major from
+; (1, 1), a space for every unoccupied canvas cell, split inner/outer by the
+; text box.
+make_fill_characters:
+    push    rbx
+    push    r12
+    push    r13
+    mov     rdi, [coord_map_cells]
+    lea     rdi, [rdi * 4 + 64]
+    call    reserve
+    mov     [inner_fill_chars], rax
+    mov     rdi, [coord_map_cells]
+    lea     rdi, [rdi * 4 + 64]
+    call    reserve
+    mov     [outer_fill_chars], rax
+    mov     r12, 1                      ; row
+.row:
+    cmp     r12, [canvas_top]
+    jg      .done
+    mov     r13, 1                      ; column
+.column:
+    cmp     r13, [canvas_right]
+    jg      .next_row
+    mov     rsi, r12
+    shl     rsi, 32
+    or      rsi, r13
+    call    coord_map_index
+    mov     rbx, rax
+    mov     rcx, [coord_map]
+    cmp     dword [rcx + rbx * 4], NONE
+    jne     .next
+    mov     rdi, (1 << 32) | ' '
+    mov     esi, r13d
+    mov     edx, r12d
+    call    new_char
+    mov     rcx, [coord_map]
+    mov     [rcx + rbx * 4], eax
+    ; inner when inside the text box
+    mov     edx, CF_FILL_OUTER
+    cmp     r13, [text_left]
+    jl      .flag
+    cmp     r13, [text_right]
+    jg      .flag
+    cmp     r12, [text_bottom]
+    jl      .flag
+    cmp     r12, [text_top]
+    jg      .flag
+    mov     edx, CF_FILL_INNER
+.flag:
+    mov     rcx, [ch_flags]
+    or      [rcx + rax * 2], dx
+    cmp     edx, CF_FILL_INNER
+    jne     .outer
+    mov     ecx, [inner_fill_count]
+    mov     rdx, [inner_fill_chars]
+    mov     [rdx + rcx * 4], eax
+    inc     dword [inner_fill_count]
+    jmp     .next
+.outer:
+    mov     ecx, [outer_fill_count]
+    mov     rdx, [outer_fill_chars]
+    mov     [rdx + rcx * 4], eax
+    inc     dword [outer_fill_count]
+.next:
+    inc     r13
+    jmp     .column
+.next_row:
+    inc     r12
+    jmp     .row
+.done:
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+; setup_neighbors: north/east/south/west of every mapped character.
+setup_neighbors:
+    push    rbx
+    push    r12
+    push    r13
+    mov     r12, 1
+.row:
+    cmp     r12, [canvas_top]
+    jg      .done
+    mov     r13, 1
+.column:
+    cmp     r13, [canvas_right]
+    jg      .next_row
+    mov     rsi, r12
+    shl     rsi, 32
+    or      rsi, r13
+    call    coord_map_index
+    mov     rcx, [coord_map]
+    mov     ebx, [rcx + rax * 4]        ; this character
+    mov     r8, rbx
+    shl     r8, 4
+    add     r8, [ch_nbr]
+    lea     rsi, [r12 + 1]              ; north: row + 1
+    shl     rsi, 32
+    or      rsi, r13
+    call    char_at_input_coord
+    mov     [r8 + NBR_NORTH], eax
+    mov     rsi, r12
+    shl     rsi, 32
+    lea     rax, [r13 + 1]              ; east: column + 1
+    or      rsi, rax
+    call    char_at_input_coord
+    mov     [r8 + NBR_EAST], eax
+    lea     rsi, [r12 - 1]              ; south: row - 1
+    shl     rsi, 32
+    or      rsi, r13
+    call    char_at_input_coord
+    mov     [r8 + NBR_SOUTH], eax
+    mov     rsi, r12
+    shl     rsi, 32
+    lea     rax, [r13 - 1]              ; west: column - 1
+    mov     eax, eax
+    or      rsi, rax
+    call    char_at_input_coord
+    mov     [r8 + NBR_WEST], eax
+    inc     r13
+    jmp     .column
+.next_row:
+    inc     r12
+    jmp     .row
+.done:
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+; ---------------------------------------------------------------- queries
+
+%define FILTER_INPUT        1
+%define FILTER_INNER_FILL   2
+%define FILTER_OUTER_FILL   4
+%define FILTER_ADDED        8
+
+; CharacterSort order
+%define SORT_RANDOM                 0
+%define SORT_TOP_TO_BOTTOM_L2R      1
+%define SORT_BOTTOM_TO_TOP_R2L      2
+%define SORT_BOTTOM_TO_TOP_L2R      3
+%define SORT_TOP_TO_BOTTOM_R2L      4
+%define SORT_OUTSIDE_ROW_TO_MIDDLE  5
+%define SORT_MIDDLE_ROW_TO_OUTSIDE  6
+
+; CharacterGroup order
+%define GROUP_COLUMN_L2R            0
+%define GROUP_COLUMN_R2L            1
+%define GROUP_ROW_TOP_TO_BOTTOM     2
+%define GROUP_ROW_BOTTOM_TO_TOP     3
+%define GROUP_DIAG_BL_TO_TR         4
+%define GROUP_DIAG_TR_TO_BL         5
+%define GROUP_DIAG_TL_TO_BR         6
+%define GROUP_DIAG_BR_TO_TL         7
+%define GROUP_CENTER_TO_OUTSIDE     8
+%define GROUP_OUTSIDE_TO_CENTER     9
+
+; collect_characters(edi=FILTER_* bits) -> rax = u32 slot array, rdx = count.
+; Input characters, inner fill, outer fill, added - in that order.
+collect_characters:
+    push    rbx
+    push    r12
+    push    r13
+    mov     ebx, edi
+    mov     rdi, [input_count]
+    mov     eax, [inner_fill_count]
+    add     rdi, rax
+    mov     eax, [outer_fill_count]
+    add     rdi, rax
+    mov     eax, [added_count]
+    add     rdi, rax
+    lea     rdi, [rdi * 4 + 64]
+    call    alloc
+    mov     r12, rax
+    xor     r13d, r13d
+    test    ebx, FILTER_INPUT
+    jz      .inner
+    mov     rsi, [input_chars]
+    mov     rcx, [input_count]
+    call    .append
+.inner:
+    test    ebx, FILTER_INNER_FILL
+    jz      .outer
+    mov     rsi, [inner_fill_chars]
+    mov     ecx, [inner_fill_count]
+    call    .append
+.outer:
+    test    ebx, FILTER_OUTER_FILL
+    jz      .added
+    mov     rsi, [outer_fill_chars]
+    mov     ecx, [outer_fill_count]
+    call    .append
+.added:
+    test    ebx, FILTER_ADDED
+    jz      .done
+    mov     rsi, [added_chars]
+    mov     ecx, [added_count]
+    call    .append
+.done:
+    mov     rax, r12
+    mov     rdx, r13
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+.append:
+    lea     rdi, [r12 + r13 * 4]
+    add     r13, rcx
+    rep     movsd
+    ret
+
+; key_row_desc_col(edi=slot) -> rax: (-row, column) as an unsigned-ordered key
+; over input coordinates. key_row_col: (row, column).
+key_row_desc_col:
+    mov     rax, [ch_irow]
+    mov     eax, [rax + rdi * 4]
+    neg     eax
+    jmp     key_with_column
+key_row_col:
+    mov     rax, [ch_irow]
+    mov     eax, [rax + rdi * 4]
+key_with_column:
+    add     eax, 0x80000000
+    shl     rax, 32
+    mov     rcx, [ch_icol]
+    mov     ecx, [rcx + rdi * 4]
+    add     ecx, 0x80000000
+    or      rax, rcx
+    ret
+
+; sort_slots_by(rdi=u32 slots, rsi=count, rdx=key function) - stable sort by
+; the 64-bit unsigned key the function computes for each slot.
+sort_slots_by:
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    mov     r12, rdi
+    mov     r13, rsi
+    mov     r14, rdx
+    cmp     r13, 1
+    jbe     .done
+    ; pairs of (key, slot)
+    mov     rdi, r13
+    shl     rdi, 4
+    call    alloc
+    mov     r15, rax
+    xor     ebx, ebx
+.keys:
+    cmp     rbx, r13
+    jae     .sort
+    mov     edi, [r12 + rbx * 4]
+    call    r14
+    mov     rcx, rbx
+    shl     rcx, 4
+    mov     [r15 + rcx], rax
+    mov     edi, [r12 + rbx * 4]
+    mov     [r15 + rcx + 8], rdi
+    inc     rbx
+    jmp     .keys
+.sort:
+    mov     rdi, r15
+    mov     rsi, r13
+    call    sort_pairs
+    xor     ebx, ebx
+.back:
+    cmp     rbx, r13
+    jae     .done
+    mov     rcx, rbx
+    shl     rcx, 4
+    mov     eax, [r15 + rcx + 8]
+    mov     [r12 + rbx * 4], eax
+    inc     rbx
+    jmp     .back
+.done:
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+; sort_pairs(rdi=pairs of (u64 key, u64 value), rsi=count): stable merge sort
+; by key (unsigned), bottom-up with one scratch buffer.
+sort_pairs:
+    push    rbx
+    push    rbp
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    mov     r12, rdi                    ; source
+    mov     [sort_pairs_origin], rdi
+    mov     r13, rsi                    ; count
+    mov     rdi, rsi
+    shl     rdi, 4
+    call    alloc
+    mov     r14, rax                    ; destination
+    mov     rbp, 1                      ; run width
+.pass:
+    cmp     rbp, r13
+    jae     .finished
+    xor     ebx, ebx                    ; left start
+.merge:
+    cmp     rbx, r13
+    jae     .swap
+    lea     r8, [rbx + rbp]             ; middle
+    cmp     r8, r13
+    cmova   r8, r13
+    lea     r9, [r8 + rbp]              ; end
+    cmp     r9, r13
+    cmova   r9, r13
+    mov     r10, rbx                    ; i (left)
+    mov     r11, r8                     ; j (right)
+    mov     r15, rbx                    ; k (out)
+.pick:
+    cmp     r15, r9
+    jae     .merged
+    cmp     r10, r8
+    jae     .take_right
+    cmp     r11, r9
+    jae     .take_left
+    mov     rax, r10
+    shl     rax, 4
+    mov     rcx, r11
+    shl     rcx, 4
+    mov     rdx, [r12 + rcx]
+    cmp     rdx, [r12 + rax]
+    jb      .take_right                 ; strictly smaller right wins; ties keep left
+.take_left:
+    mov     rax, r10
+    inc     r10
+    jmp     .put
+.take_right:
+    mov     rax, r11
+    inc     r11
+.put:
+    shl     rax, 4
+    mov     rcx, r15
+    shl     rcx, 4
+    vmovdqu xmm0, [r12 + rax]
+    vmovdqu [r14 + rcx], xmm0
+    inc     r15
+    jmp     .pick
+.merged:
+    mov     rbx, r9
+    jmp     .merge
+.swap:
+    xchg    r12, r14
+    add     rbp, rbp
+    jmp     .pass
+.finished:
+    ; the sorted data is in r12; copy it back if that is the scratch buffer
+    mov     rsi, r12
+    mov     rdi, [sort_pairs_origin]
+    cmp     rsi, rdi
+    je      .done
+    mov     rcx, r13
+    shl     rcx, 4
+    rep     movsb
+.done:
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbp
+    pop     rbx
+    ret
+
+; get_characters(edi=FILTER_* bits, esi=SORT_*) -> rax = slots, rdx = count.
+; Terminal.get_characters; the random sort shuffles with the engine RNG.
+get_characters:
+    push    rbx
+    push    r12
+    push    r13
+    mov     ebx, esi
+    call    collect_characters
+    mov     r12, rax
+    mov     r13, rdx
+    mov     rdi, r12
+    mov     rsi, r13
+    lea     rdx, [key_row_desc_col]
+    call    sort_slots_stable
+    cmp     ebx, SORT_RANDOM
+    je      .random
+    cmp     ebx, SORT_BOTTOM_TO_TOP_R2L
+    je      .reverse
+    cmp     ebx, SORT_BOTTOM_TO_TOP_L2R
+    je      .row_col
+    cmp     ebx, SORT_TOP_TO_BOTTOM_R2L
+    je      .row_col_reversed
+    cmp     ebx, SORT_OUTSIDE_ROW_TO_MIDDLE
+    je      .interleave
+    cmp     ebx, SORT_MIDDLE_ROW_TO_OUTSIDE
+    je      .interleave_reversed
+    jmp     .done
+.random:
+    mov     rdi, r12
+    mov     rsi, r13
+    call    rng_shuffle32
+    jmp     .done
+.row_col:
+    mov     rdi, r12
+    mov     rsi, r13
+    lea     rdx, [key_row_col]
+    call    sort_slots_stable
+    jmp     .done
+.row_col_reversed:
+    mov     rdi, r12
+    mov     rsi, r13
+    lea     rdx, [key_row_col]
+    call    sort_slots_stable
+.reverse:
+    mov     rdi, r12
+    mov     rsi, r13
+    call    reverse_u32
+    jmp     .done
+.interleave:
+    call    .alternate
+    jmp     .done
+.interleave_reversed:
+    call    .alternate
+    jmp     .reverse
+.done:
+    mov     rax, r12
+    mov     rdx, r13
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+.alternate:
+    ; alternately pop the front and the back (outside rows first)
+    lea     rdi, [r13 * 4 + 64]
+    call    alloc
+    xor     ecx, ecx                    ; front
+    lea     rdx, [r13 - 1]              ; back
+    xor     r8d, r8d                    ; out index
+.alt_next:
+    cmp     r8, r13
+    jae     .alt_done
+    mov     r9d, [r12 + rcx * 4]
+    inc     rcx
+    mov     [rax + r8 * 4], r9d
+    inc     r8
+    cmp     r8, r13
+    jae     .alt_done
+    mov     r9d, [r12 + rdx * 4]
+    dec     rdx
+    mov     [rax + r8 * 4], r9d
+    inc     r8
+    jmp     .alt_next
+.alt_done:
+    mov     r12, rax
+    ret
+
+sort_slots_stable equ sort_slots_by
+
+; reverse_u32(rdi=array, rsi=count)
+reverse_u32:
+    lea     rsi, [rdi + rsi * 4 - 4]
+.loop:
+    cmp     rdi, rsi
+    jae     .done
+    mov     eax, [rdi]
+    mov     ecx, [rsi]
+    mov     [rdi], ecx
+    mov     [rsi], eax
+    add     rdi, 4
+    sub     rsi, 4
+    jmp     .loop
+.done:
+    ret
+
+; get_characters_grouped(edi=FILTER_* bits, esi=GROUP_*) -> rax = groups,
+; rdx = group count. Each group is 16 bytes: (u32 slot array, count).
+; Terminal.get_characters_grouped: characters in (row, column) order, then
+; bucketed by the grouping key (keys outside the canvas range dropped, empty
+; buckets skipped), buckets in ascending key order, reversed for the
+; opposite direction.
+get_characters_grouped:
+    push    rbx
+    push    rbp
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    mov     ebx, esi
+    call    collect_characters
+    mov     r12, rax
+    mov     r13, rdx
+    mov     rdi, r12
+    mov     rsi, r13
+    lea     rdx, [key_row_col]
+    call    sort_slots_stable
+    ; key function and inclusive range per grouping
+    mov     eax, ebx
+    shr     eax, 1                      ; 0 column, 1 row, 2 diag, 3 anti, 4 center
+    mov     [group_kind], eax
+    ; (key, slot) pairs for the kept characters, stable-sorted by key
+    mov     rdi, r13
+    shl     rdi, 4
+    add     rdi, 64
+    call    alloc
+    mov     r14, rax
+    xor     r15d, r15d                  ; kept
+    xor     ebp, ebp
+.key:
+    cmp     rbp, r13
+    jae     .keyed
+    mov     edi, [r12 + rbp * 4]
+    call    group_key                   ; rax = key (i64), ZF set when out of range
+    jz      .skip
+    mov     rcx, r15
+    shl     rcx, 4
+    mov     rdx, 0x8000000000000000
+    add     rax, rdx                    ; unsigned order
+    mov     [r14 + rcx], rax
+    mov     edi, [r12 + rbp * 4]
+    mov     [r14 + rcx + 8], rdi
+    inc     r15
+.skip:
+    inc     rbp
+    jmp     .key
+.keyed:
+    mov     rdi, r14
+    mov     rsi, r15
+    call    sort_pairs
+    ; runs of equal keys become groups; members go to one slot array
+    lea     rdi, [r15 * 4 + 64]
+    call    alloc
+    mov     r12, rax                    ; members
+    mov     rdi, r15
+    shl     rdi, 4
+    add     rdi, 64
+    call    alloc
+    mov     r13, rax                    ; groups
+    xor     ebp, ebp                    ; group count
+    xor     ecx, ecx
+.member:
+    cmp     rcx, r15
+    jae     .grouped
+    mov     rdx, rcx
+    shl     rdx, 4
+    mov     eax, [r14 + rdx + 8]
+    mov     [r12 + rcx * 4], eax
+    ; a new group when the key differs from the previous one
+    test    rcx, rcx
+    jz      .new_group
+    mov     rax, [r14 + rdx]
+    cmp     rax, [r14 + rdx - 16]
+    je      .same_group
+.new_group:
+    mov     rax, rbp
+    shl     rax, 4
+    lea     rdx, [r12 + rcx * 4]
+    mov     [r13 + rax], rdx
+    mov     qword [r13 + rax + 8], 0
+    inc     rbp
+.same_group:
+    mov     rax, rbp
+    dec     rax
+    shl     rax, 4
+    inc     qword [r13 + rax + 8]
+    inc     rcx
+    jmp     .member
+.grouped:
+    ; column right-to-left, row top-to-bottom, and the diagonal/center
+    ; variants listed second run their buckets in reverse
+    mov     eax, (1 << GROUP_COLUMN_R2L) | (1 << GROUP_ROW_TOP_TO_BOTTOM) | (1 << GROUP_DIAG_TR_TO_BL) | (1 << GROUP_DIAG_BR_TO_TL) | (1 << GROUP_OUTSIDE_TO_CENTER)
+    bt      eax, ebx
+    jnc     .result
+.reverse:
+    ; reverse the order of the 16-byte group records
+    mov     rdi, r13
+    mov     rsi, rbp
+    shl     rsi, 4
+    lea     rsi, [r13 + rsi - 16]
+.rev:
+    cmp     rdi, rsi
+    jae     .result
+    vmovdqu xmm0, [rdi]
+    vmovdqu xmm1, [rsi]
+    vmovdqu [rdi], xmm1
+    vmovdqu [rsi], xmm0
+    add     rdi, 16
+    sub     rsi, 16
+    jmp     .rev
+.result:
+    mov     rax, r13
+    mov     rdx, rbp
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbp
+    pop     rbx
+    ret
+
+; group_key(edi=slot) -> rax = the grouping key of [group_kind]; ZF set
+; when it falls outside ordered_buckets' range (the character is dropped).
+group_key:
+    mov     rax, [ch_irow]
+    movsxd  r8, dword [rax + rdi * 4]   ; row
+    mov     rax, [ch_icol]
+    movsxd  r9, dword [rax + rdi * 4]   ; column
+    mov     eax, [group_kind]
+    cmp     eax, 1
+    je      .row
+    cmp     eax, 2
+    je      .diagonal
+    cmp     eax, 3
+    je      .anti
+    cmp     eax, 4
+    je      .center
+    ; column in [0, right]
+    mov     rax, r9
+    xor     ecx, ecx
+    mov     rdx, [canvas_right]
+    jmp     .range
+.row:
+    mov     rax, r8
+    xor     ecx, ecx
+    mov     rdx, [canvas_top]
+    jmp     .range
+.diagonal:
+    lea     rax, [r8 + r9]
+    xor     ecx, ecx
+    mov     rdx, [canvas_top]
+    add     rdx, [canvas_right]
+    jmp     .range
+.anti:
+    mov     rax, r9
+    sub     rax, r8                     ; column - row
+    mov     rcx, 1
+    sub     rcx, [canvas_top]           ; left - top
+    mov     rdx, [canvas_right]
+    dec     rdx                         ; right - bottom
+    jmp     .range
+.center:
+    ; Manhattan distance from the text center; every character is kept
+    mov     rax, r9
+    sub     rax, [text_center_col]
+    mov     rcx, rax
+    neg     rcx
+    cmovns  rax, rcx
+    mov     rdx, r8
+    sub     rdx, [text_center_row]
+    mov     rcx, rdx
+    neg     rcx
+    cmovns  rdx, rcx
+    add     rax, rdx
+    or      ecx, 1                      ; ZF clear
+    ret
+.range:
+    cmp     rax, rcx
+    jl      .out
+    cmp     rax, rdx
+    jg      .out
+    or      ecx, 1
+    test    ecx, ecx                    ; ZF clear
+    ret
+.out:
+    xor     ecx, ecx                    ; ZF set
+    ret
+
+; ---------------------------------------------------------------- canvas
+
+; canvas_random_column(edi=within text) -> rax  (Canvas.random_column)
+canvas_random_column:
+    test    edi, edi
+    jz      .canvas
+    mov     rdi, [text_left]
+    mov     rsi, [text_right]
+    jmp     rng_randint
+.canvas:
+    mov     edi, 1
+    mov     rsi, [canvas_right]
+    jmp     rng_randint
+
+; canvas_random_row(edi=within text) -> rax  (Canvas.random_row)
+canvas_random_row:
+    test    edi, edi
+    jz      .canvas
+    mov     rdi, [text_bottom]
+    mov     rsi, [text_top]
+    jmp     rng_randint
+.canvas:
+    mov     edi, 1
+    mov     rsi, [canvas_top]
+    jmp     rng_randint
+
+; canvas_random_coord(edi=outside scope, esi=within text) -> rax = coord.
+; Canvas.random_coord, with its exact draw order: above, below, left, right
+; are built (four draws), then one is chosen.
+canvas_random_coord:
+    push    rbx
+    push    r12
+    sub     rsp, 32
+    test    edi, edi
+    jz      .inside
+    xor     edi, edi
+    call    canvas_random_column
+    mov     rcx, [canvas_top]
+    inc     rcx
+    shl     rcx, 32
+    mov     eax, eax
+    or      rax, rcx
+    mov     [rsp], rax                  ; above
+    xor     edi, edi
+    call    canvas_random_column
+    mov     rcx, 0                      ; bottom - 1
+    shl     rcx, 32
+    mov     eax, eax
+    or      rax, rcx
+    mov     [rsp + 8], rax              ; below
+    xor     edi, edi
+    call    canvas_random_row
+    shl     rax, 32
+    mov     ecx, 0                      ; left - 1
+    or      rax, rcx
+    mov     [rsp + 16], rax             ; left
+    xor     edi, edi
+    call    canvas_random_row
+    shl     rax, 32
+    mov     rcx, [canvas_right]
+    inc     rcx
+    mov     ecx, ecx
+    or      rax, rcx
+    mov     [rsp + 24], rax             ; right
+    mov     edi, 4
+    call    rng_below
+    mov     rax, [rsp + rax * 8]
+    jmp     .done
+.inside:
+    mov     ebx, esi
+    mov     edi, esi
+    call    canvas_random_column
+    mov     r12, rax
+    mov     edi, ebx
+    call    canvas_random_row
+    shl     rax, 32
+    mov     r12d, r12d
+    or      rax, r12
+.done:
+    add     rsp, 32
+    pop     r12
+    pop     rbx
+    ret
+
+; coord_in_canvas(rsi=coord) -> eax = 1 inside [1, right] x [1, top].
+coord_in_canvas:
+    mov     rax, rsi
+    sar     rax, 32
+    cmp     rax, 1
+    jl      .no
+    cmp     rax, [canvas_top]
+    jg      .no
+    movsxd  rax, esi
+    cmp     rax, 1
+    jl      .no
+    cmp     rax, [canvas_right]
+    jg      .no
+    mov     eax, 1
+    ret
+.no:
+    xor     eax, eax
+    ret
+
 section .rodata
 ; Anchor enum order: n ne e se s sw w nw c.
 ; column group: 1 = S|N|C (centered), 2 = SE|E|NE (east), 0 = west
@@ -640,34 +1156,11 @@ anchor_column_group:    db 1, 2, 2, 2, 1, 0, 0, 0, 1
 ; row group: 1 = W|E|C (centered), 2 = NW|N|NE (north), 0 = south
 anchor_row_group:       db 2, 2, 1, 0, 0, 0, 1, 2, 1
 
-STR msg_escape_unsupported, "internal: the asm engine was offered ANSI input"
-STR msg_no_input_chars, "no input characters to anchor"
 STR msg_all_outside, "all input characters fall outside the canvas after anchoring"
 
 
 section .tstate
 alignb 8
-char_capacity:      resq 1
-row_capacity:       resq 1
-char_count:         resd 1
-next_character_id:  resd 1
-ch_sym:             resq 1
-ch_row:             resq 1
-ch_col:             resq 1
-ch_id:              resq 1
-ch_layer:           resq 1
-ch_handle:          resq 1
-ch_scene:           resq 1
-ch_flags:           resq 1
-cells:              resq 1
-row_start:          resq 1
-row_len:            resq 1
-line_len:           resq 1
-line_count:         resq 1
-input_chars:        resq 1
-input_count:        resq 1
-max_row:            resq 1
-max_col:            resq 1
 term_width:         resq 1
 term_height:        resq 1
 canvas_top:         resq 1
@@ -684,3 +1177,13 @@ text_top:           resq 1
 text_bottom:        resq 1
 text_left:          resq 1
 text_right:         resq 1
+text_center_row:    resq 1
+text_center_col:    resq 1
+coord_map:          resq 1
+coord_map_cells:    resq 1
+inner_fill_chars:   resq 1
+outer_fill_chars:   resq 1
+inner_fill_count:   resd 1
+outer_fill_count:   resd 1
+group_kind:         resd 1
+sort_pairs_origin:  resq 1

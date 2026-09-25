@@ -123,10 +123,14 @@ ttfx_asm_run:
     call    reserve
     mov     [arena_ptr], rax
     call    visual_init
+    call    chars_init
     call    terminal_init
     call    monotonic_ns
     mov     [last_frame_ns], rax        ; Terminal::new's last_time_printed
-    call    anim_init
+    call    scenes_init
+    call    paths_init
+    call    events_init
+    call    update_init
     call    render_init
     call    clock_init
     call    [effect_build]
@@ -164,6 +168,25 @@ engine_fail:
     mov     rsp, [fail_rsp]
     mov     eax, OUT_ERROR
     jmp     ttfx_asm_run.return
+
+; fail_with_number(rdi=message, edx=length, rsi=number): FAIL with the
+; message followed by the number in decimal ("... Received: -3").
+fail_with_number:
+    push    rsi
+    lea     rsi, [rdi]
+    lea     rdi, [fail_buffer]
+    mov     ecx, edx
+    rep     movsb
+    pop     rsi
+    push    rdi
+    call    format_i64
+    pop     rdi
+    add     rdi, rax
+    lea     rsi, [fail_buffer]
+    sub     rdi, rsi
+    mov     rsi, rdi
+    lea     rdi, [fail_buffer]
+    jmp     engine_fail
 
 ; load_request: copy the request's settings into the cfg_* globals.
 load_request:
@@ -590,9 +613,17 @@ enforce_framerate:
 %include "utils/rng.asm"
 %include "utils/graphics.asm"
 %include "utils/hexterm.asm"
+%include "utils/easing.asm"
+%include "utils/pathgeom.asm"
 %include "engine/visual.asm"
+%include "engine/chars.asm"
+%include "engine/input.asm"
 %include "engine/terminal.asm"
-%include "engine/anim.asm"
+%include "engine/scene.asm"
+%include "engine/events.asm"
+%include "engine/motion.asm"
+%include "engine/update.asm"
+%include "engine/particles.asm"
 %include "engine/render.asm"
 %include "effects/registry.asm"
 %include "tests.asm"
@@ -632,6 +663,7 @@ cfg_anchor_text:    resq 1
 cfg_existing_colors: resq 1
 cfg_max_frames:     resq 1
 move_to_top:        resb 32
+fail_buffer:        resb 256
 move_to_top_len:    resd 1
 clock_is_virtual:   resb 1
 ; RQ_FLAGS, one byte per bit, in FL_* order

@@ -5,6 +5,7 @@
 
 use super::ffi::color_word;
 use crate::effects::EffectCommand;
+use crate::utils::easing::Easing;
 use crate::utils::graphics::{Color, GradientDirection};
 
 #[derive(Default)]
@@ -54,6 +55,10 @@ impl Words {
 
     fn ints(&mut self, values: &[i64]) -> &mut Self {
         self.array(values.iter().map(|&v| v as u64).collect())
+    }
+
+    fn easing(&mut self, easing: Easing) -> Result<&mut Self, &'static str> {
+        Ok(self.int(easing.asm_id().ok_or("custom cubic bezier easing is not supported")?))
     }
 
     fn direction(&mut self, direction: GradientDirection) -> &mut Self {
