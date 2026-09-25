@@ -175,6 +175,16 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             14
         }
+        EffectCommand::Overflow(c) => {
+            w.colors(&c.overflow_gradient_stops)
+                .int(c.overflow_cycles_range.0)
+                .int(c.overflow_cycles_range.1)
+                .int(c.overflow_speed)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            17
+        }
         EffectCommand::Randomsequence(c) => {
             // frame durations are 32-bit in the engine
             let frames = i32::try_from(c.final_gradient_frames)
