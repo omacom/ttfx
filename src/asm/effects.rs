@@ -418,6 +418,17 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .float(c.active_binary_groups);
             1
         }
+        EffectCommand::Errorcorrect(c) => {
+            w.float(c.error_pairs)
+                .int(c.swap_delay)
+                .color(&c.error_color)
+                .color(&c.correct_color)
+                .float(c.movement_speed)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            9
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
