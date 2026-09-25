@@ -84,6 +84,15 @@ impl Words {
         let words = symbols.iter().map(|s| Self::symbol_word(s)).collect::<Result<Vec<_>, _>>()?;
         Ok(self.array(words))
     }
+
+    /// A frame duration: the engine keeps durations and eased step totals in
+    /// u32, so larger values (runs of years) go to the Rust engine.
+    fn duration(&mut self, frames: i64) -> Result<&mut Self, &'static str> {
+        if !(1..=1 << 24).contains(&frames) {
+            return Err("frame durations above 2^24 are not supported");
+        }
+        Ok(self.int(frames))
+    }
 }
 
 /// The effect's id (EffectCommand order, asm/effects/ids.inc) and its words,
@@ -294,6 +303,21 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction)
                 .easing(c.movement_easing)?;
             20
+        }
+        EffectCommand::Thunderstorm(c) => {
+            // final_gradient_frames is accepted but unused upstream.
+            w.color(&c.lightning_color)
+                .color(&c.glowing_text_color)
+                .duration(c.text_glow_time)?
+                .symbols(&c.raindrop_symbols)?
+                .symbols(&c.spark_symbols)?
+                .color(&c.spark_glow_color)
+                .duration(c.spark_glow_time)?
+                .int(c.storm_time)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            32
         }
         _ => return Err("this effect is not ported yet"),
     };

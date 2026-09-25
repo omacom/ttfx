@@ -77,6 +77,11 @@ global ttfx_test_ease
 ttfx_test_ease:
     jmp     ease
 
+; ttfx_test_bezier_easing(rdi=&[x1, y1, x2, y2], xmm0=t) -> xmm0
+global ttfx_test_bezier_easing
+ttfx_test_bezier_easing:
+    jmp     bezier_easing
+
 global ttfx_test_easing_tracker_new
 ttfx_test_easing_tracker_new:
     jmp     easing_tracker_new
