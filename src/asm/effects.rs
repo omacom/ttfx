@@ -132,6 +132,21 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             34
         }
+        EffectCommand::Wipe(c) => {
+            // Frame durations are 32-bit in the engine; values below 1 still
+            // reach it and fail like Rust.
+            if i32::try_from(c.final_gradient_frames).is_err() {
+                return Err("final gradient frames out of range");
+            }
+            w.int(c.wipe_direction as i64)
+                .int(c.wipe_delay)
+                .easing(c.wipe_ease)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .int(c.final_gradient_frames)
+                .direction(c.final_gradient_direction);
+            36
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
