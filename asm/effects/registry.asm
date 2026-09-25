@@ -12,6 +12,7 @@
 
 
 %include "effects/blackhole.asm"
+%include "effects/bouncyballs.asm"
 %include "effects/decrypt.asm"
 %include "effects/synthgrid.asm"
 %include "effects/vhstape.asm"
@@ -23,6 +24,8 @@ effect_table:
 %rep EFFECT_COUNT
   %if id == EFFECT_BLACKHOLE
     dq blackhole_build, blackhole_next_frame
+  %elif id == EFFECT_BOUNCYBALLS
+    dq bouncyballs_build, bouncyballs_next_frame
   %elif id == EFFECT_DECRYPT
     dq decrypt_build, decrypt_next_frame
   %elif id == EFFECT_SYNTHGRID
