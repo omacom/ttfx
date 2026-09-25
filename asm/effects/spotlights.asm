@@ -196,7 +196,7 @@ spotlights_build:
     movapd  xmm0, xmm1
     mov     rcx, [effect_config]
     divsd   xmm0, [rcx + SPOTLIGHTS.beam_width_ratio]
-    roundsd xmm0, xmm0, 1
+    FLOORSD xmm0, rax, xmm2
     minsd   xmm0, xmm1                  ; NaN takes smallest, as f64::min
     call    f64_to_i64
     mov     ecx, 1
@@ -892,7 +892,7 @@ spotlights_next_frame:
     cmovl   rax, [canvas_top]
     cvtsi2sd xmm0, rax
     divsd   xmm0, [spl_one_half]
-    roundsd xmm0, xmm0, 1
+    FLOORSD xmm0, rax, xmm1
     cvtsi2sd xmm1, qword [spl_range]
     ucomisd xmm1, xmm0
     jbe     .update

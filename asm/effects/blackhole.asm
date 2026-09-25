@@ -675,7 +675,12 @@ blackhole_next_frame:
     cmp     rbx, rcx
     jae     .collapse_next
     mov     r8, [rdx + rbx * 8]
+%if TIER >= 3
     andn    r8, r8, [rax + rbx * 8]
+%else
+    not     r8
+    and     r8, [rax + rbx * 8]
+%endif
     jnz     .update
     inc     rbx
     jmp     .word

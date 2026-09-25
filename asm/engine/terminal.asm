@@ -727,8 +727,13 @@ sort_pairs:
     shl     rax, 4
     mov     rcx, r15
     shl     rcx, 4
+%if TIER >= 3
     vmovdqu xmm0, [r12 + rax]
     vmovdqu [r14 + rcx], xmm0
+%else
+    movdqu  xmm0, [r12 + rax]
+    movdqu  [r14 + rcx], xmm0
+%endif
     inc     r15
     jmp     .pick
 .merged:
@@ -967,10 +972,17 @@ get_characters_grouped:
 .rev:
     cmp     rdi, rsi
     jae     .result
+%if TIER >= 3
     vmovdqu xmm0, [rdi]
     vmovdqu xmm1, [rsi]
     vmovdqu [rdi], xmm1
     vmovdqu [rsi], xmm0
+%else
+    movdqu  xmm0, [rdi]
+    movdqu  xmm1, [rsi]
+    movdqu  [rdi], xmm1
+    movdqu  [rsi], xmm0
+%endif
     add     rdi, 16
     sub     rsi, 16
     jmp     .rev

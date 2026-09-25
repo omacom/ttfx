@@ -806,9 +806,16 @@ vhs_glitch_wave:
     mov     [vhs_wave_count], r12
     lea     rax, [vhs_new_lines]
     lea     rcx, [vhs_wave_lines]
+%if TIER >= 3
     vmovdqu ymm0, [rax]
     vmovdqu [rcx], ymm0
     vzeroupper
+%else
+    movdqu  xmm0, [rax]
+    movdqu  xmm1, [rax + 16]
+    movdqu  [rcx], xmm0
+    movdqu  [rcx + 16], xmm1
+%endif
     mov     rax, [text_bottom]
     add     rax, 2
     cmp     [vhs_wave_top], rax
