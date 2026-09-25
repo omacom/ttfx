@@ -108,6 +108,17 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             2
         }
+        EffectCommand::Bouncyballs(c) => {
+            w.colors(&c.ball_colors)
+                .symbols(&c.ball_symbols)?
+                .int(c.ball_delay)
+                .float(c.movement_speed)
+                .easing(c.movement_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            3
+        }
         EffectCommand::Decrypt(c) => {
             w.int(c.typing_speed)
                 .colors(&c.ciphertext_colors)
