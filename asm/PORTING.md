@@ -14,9 +14,9 @@ Read this before touching `asm/`. The plan and its reasoning are in
   and Rust is never changed to match the asm.
 - `build.rs` assembles `asm/lib.asm` with NASM. It is one translation unit, and every
   file is `%include`d from `lib.asm`.
-- NASM 3.x is required. If it isn't on PATH, set it with
-  `export NASM=/tmp/claude-1000/-home-dhh-Work-omacom-ttfx/460835a3-07de-429e-921a-0ba805ca040b/scratchpad/tools/usr/bin/nasm`.
-- Build with `cargo build --release`. If NASM is missing, cargo fails and says so.
+- NASM 3.x is required (`pacman -S nasm`, or point `NASM=` at one). Build with
+  `cargo build --release`. If NASM is missing, the build warns and produces a pure-Rust
+  binary, and `TTFX_ASM=force` then exits 3.
 
 ## Verifying
 
@@ -33,9 +33,39 @@ Read this before touching `asm/`. The plan and its reasoning are in
     first, because the engine's state is global and cargo runs tests in parallel.
   - Compare the results **and** any RNG state afterwards, and use large, structured
     input sets (boundaries, not only random values).
-- **Speed:** `TTFX_ASM=0` vs `TTFX_ASM=force` on
-  `--canvas-width 200 --canvas-height 50 --ignore-terminal-dimensions`, pinned with
-  `taskset -c 8`. Report both numbers.
+- **Speed:** `tools/asm/speed.py [effect ...]` times `TTFX_ASM=0` against
+  `TTFX_ASM=force` (200x50, `--frame-rate 0`, pinned, best of 5) and prints the
+  geometric-mean speedup, which is the project's headline number. When several people
+  benchmark at once, give each their own core with `--core N` (or `SPEED_CORE`).
+  `--asm-only` skips the Rust runs.
+- **Profiling:** the release binary is stripped. Build an unstripped copy with
+  `CARGO_PROFILE_RELEASE_STRIP=false cargo build --release --target-dir target/prof`,
+  then `perf record` / `perf report --sort sym` on it. NASM labels show up as symbols,
+  including local ones (`path_step.walk`).
+
+## CPU tiers
+
+The engine is assembled once per tier and the best tier the CPU supports is used.
+`TIER` (defined in `ttfx.inc`, set per build with `-DTIER=n`) is the instruction-set
+budget:
+
+| TIER | level | adds |
+|---|---|---|
+| 1 | x86-64 baseline | SSE2, CMOV |
+| 2 | x86-64-v2 | SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT |
+| 3 | x86-64-v3 | AVX, AVX2, BMI1, BMI2, LZCNT, MOVBE, F16C (FMA is available but see below) |
+| 4 | x86-64-v4 | AVX-512 F, BW, CD, DQ, VL |
+
+- Anything beyond SSE2 must sit under `%if TIER >= n`, with an `%else` path for the
+  lower tiers that produces exactly the same results. Plain scalar SSE2 float code
+  (`mulsd`, `cvttsd2si`, ...) needs no guard.
+- **Never use FMA (or any fused/contracted form) in float math that must match Rust.**
+  Rust doesn't contract `a*b+c`, so a fused result differs in the last bit.
+- `roundsd`/`roundpd` are SSE4.1 (TIER 2). `popcnt` is TIER 2. `lzcnt`, `tzcnt`,
+  `andn`, `blsr`, `shlx`/`shrx`/`sarx`, `bzhi`, `pdep`/`pext` are TIER 3. Note that
+  `tzcnt` silently runs as `bsf` on older CPUs, with a different result for zero.
+- Mixing VEX/EVEX with legacy SSE code needs `vzeroupper` before returning to SSE code
+  or calling C.
 
 ## Conventions
 
