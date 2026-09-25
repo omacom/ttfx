@@ -30,10 +30,14 @@ fn main() {
     match status {
         Ok(status) if status.success() => {}
         Ok(_) => panic!("NASM failed to assemble asm/lib.asm"),
-        Err(e) => panic!(
-            "building ttfx's assembly engine needs NASM >= 3.0 ({nasm}: {e}).\n\
-             Install it (pacman -S nasm), point NASM= at it, or build with --no-default-features."
-        ),
+        // No NASM: build the pure-Rust engine rather than failing the build.
+        Err(e) => {
+            println!(
+                "cargo::warning=NASM not found ({nasm}: {e}); building without the assembly \
+                 engine. Install NASM >= 3.0 (pacman -S nasm) or point NASM= at it."
+            );
+            return;
+        }
     }
     let status = Command::new("ar").arg("crs").arg(&library).arg(&object).status().expect("ar");
     assert!(status.success(), "ar failed to archive the assembly engine");

@@ -620,7 +620,6 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             27
         }
-        _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
 }
