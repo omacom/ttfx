@@ -12,6 +12,7 @@
 
 
 %include "effects/decrypt.asm"
+%include "effects/binarypath.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -20,6 +21,8 @@ effect_table:
 %rep EFFECT_COUNT
   %if id == EFFECT_DECRYPT
     dq decrypt_build, decrypt_next_frame
+  %elif id == EFFECT_BINARYPATH
+    dq binarypath_build, binarypath_next_frame
   %else
     dq 0, 0
   %endif

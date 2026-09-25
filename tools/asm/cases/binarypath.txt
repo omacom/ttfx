@@ -1,0 +1,4 @@
+# Collapse uses fixed InQuad easing; the effect has no easing option.
+--final-gradient-stops ff0000 33 00ff88 --final-gradient-steps 1 4 --final-gradient-direction horizontal --binary-colors 0 ffffff --movement-speed 3.5 --active-binary-groups 1
+--final-gradient-stops ffffff --final-gradient-steps 1 --final-gradient-direction vertical --binary-colors 196 --movement-speed 0.5 --active-binary-groups 0.2
+--final-gradient-stops 000000 0000ff --final-gradient-steps 2 7 1 --final-gradient-direction diagonal --binary-colors 112233 abcdef 255 --movement-speed inf --active-binary-groups 0
