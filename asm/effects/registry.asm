@@ -13,6 +13,7 @@
 
 %include "effects/decrypt.asm"
 %include "effects/synthgrid.asm"
+%include "effects/wipe.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -23,6 +24,8 @@ effect_table:
     dq decrypt_build, decrypt_next_frame
   %elif id == EFFECT_SYNTHGRID
     dq synthgrid_build, synthgrid_next_frame
+  %elif id == EFFECT_WIPE
+    dq wipe_build, wipe_next_frame
   %else
     dq 0, 0
   %endif
