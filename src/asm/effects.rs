@@ -409,6 +409,15 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .int(c.final_wipe_speed);
             0
         }
+        EffectCommand::Binarypath(c) => {
+            w.colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction)
+                .colors(&c.binary_colors)
+                .float(c.movement_speed)
+                .float(c.active_binary_groups);
+            1
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
