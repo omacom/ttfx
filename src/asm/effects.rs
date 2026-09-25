@@ -79,6 +79,19 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             8
         }
+        EffectCommand::Rings(c) => {
+            w.colors(&c.ring_colors)
+                .float(c.ring_gap)
+                .int(c.spin_duration)
+                .float(c.spin_speed.0)
+                .float(c.spin_speed.1)
+                .int(c.disperse_duration)
+                .int(c.spin_disperse_cycles)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            22
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))

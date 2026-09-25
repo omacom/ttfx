@@ -809,6 +809,27 @@ paths_clear:
     mov     dword [rax + rdi * 4], NONE
     ret
 
+; path_reset(edi=path): `motion.paths.remove(id)` followed by `new_path` with
+; the same id and parameters (rings' "disperse"): the record is emptied in
+; place - no waypoints, segments or distances, playback at the start - and
+; keeps its name, speed, easing, layer, hold time and loop flag. Its arrays'
+; capacity is reused. Clobbers rax.
+path_reset:
+    PATH_PTR rax, rdi
+    and     dword [rax + PA_FLAGS], ~PAF_ORIGIN
+    mov     dword [rax + PA_WP_COUNT], 0
+    mov     dword [rax + PA_SEG_COUNT], 0
+    mov     qword [rax + PA_TOTAL], 0
+    mov     qword [rax + PA_STEP], 0
+    mov     qword [rax + PA_MAX], 0
+    mov     qword [rax + PA_LAST], 0
+    mov     qword [rax + PA_ORIGIN_DIST], 0
+    push    rcx
+    mov     rcx, [rax + PA_HOLD]
+    mov     [rax + PA_HOLD_LEFT], rcx
+    pop     rcx
+    ret
+
 section .rodata
 align 8
 path_one:   dq 1.0
