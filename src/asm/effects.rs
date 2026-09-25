@@ -178,6 +178,52 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
             w.int(c.wipe_direction as i64)
                 .int(c.wipe_delay)
                 .easing(c.wipe_ease)?
+        }
+        EffectCommand::Matrix(c) => {
+            if c.final_gradient_frames > i32::MAX as i64 {
+                return Err("--final-gradient-frames beyond i32 is not supported");
+            }
+            // Matrix compares colors (Color == compares the hex string as
+            // given), so a hex color whose spelling differs from the one
+            // Color::from_rgb would generate gets a tag in bits 48+ that
+            // keeps it distinct from generated colors of the same RGB. The
+            // renderer and color math only read bits 0-40.
+            let mut spellings: Vec<String> = Vec::new();
+            let mut tagged = |color: &Color| -> u64 {
+                let word = color_word(color);
+                let spelled = color.rgb_color.to_string();
+                let (r, g, b) = color.rgb_ints();
+                if color.xterm_color.is_some() || spelled == format!("{r:02x}{g:02x}{b:02x}") {
+                    return word;
+                }
+                let index = spellings.iter().position(|s| *s == spelled).unwrap_or_else(|| {
+                    spellings.push(spelled);
+                    spellings.len() - 1
+                });
+                word | (index as u64 + 1) << 48
+            };
+            let highlight = tagged(&c.highlight_color);
+            let rain: Vec<u64> = c.rain_color_gradient.iter().map(&mut tagged).collect();
+            let symbols: Vec<u64> = c
+                .rain_symbols
+                .iter()
+                .map(|s| {
+                    let bytes = s.as_bytes();
+                    let packed = bytes.iter().rev().fold(0u64, |acc, &b| acc << 8 | b as u64);
+                    packed | (bytes.len() as u64) << 32
+                })
+                .collect();
+            w.int(highlight as i64)
+                .array(rain)
+                .array(symbols)
+                .int(c.rain_fall_delay_range.0)
+                .int(c.rain_fall_delay_range.1)
+                .int(c.rain_column_delay_range.0)
+                .int(c.rain_column_delay_range.1)
+                .int(c.rain_time)
+                .float(c.symbol_swap_chance)
+                .float(c.color_swap_chance)
+                .int(c.resolve_delay)
                 .colors(&c.final_gradient_stops)
                 .ints(&c.final_gradient_steps)
                 .int(c.final_gradient_frames)
@@ -196,6 +242,8 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .ints(&c.final_gradient_steps)
                 .direction(c.final_gradient_direction);
             22
+        }
+            14
         }
         _ => return Err("this effect is not ported yet"),
     };

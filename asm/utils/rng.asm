@@ -202,6 +202,35 @@ rng_random:
     mulsd   xmm0, [two_pow_minus_53]
     ret
 
+; RNG_BITS53: rax = next >> 11, the integer behind rng_random (random() is
+; exactly rax * 2^-53), with the batch read inlined for hot loops. So
+; random() < c is exactly rax < ceil(c * 2^53); see rng_threshold.
+; Clobbers rcx, and rdx, r8-r11 when the batch refills.
+%macro RNG_BITS53 0
+    mov     rcx, [rng_pos]
+    cmp     rcx, RNG_BATCH
+    jae     %%refill
+    lea     rax, [rng_buf]
+    mov     rax, [rax + rcx * 8]
+    inc     rcx
+    mov     [rng_pos], rcx
+    jmp     %%done
+%%refill:
+    call    rng_next
+%%done:
+    shr     rax, 11
+%endmacro
+
+; rng_threshold(xmm0=c >= 0) -> rax: the T with random() < c exactly when
+; RNG_BITS53 < T, i.e. ceil(c * 2^53) capped at 2^53. Clobbers xmm0, xmm1.
+rng_threshold:
+    mulsd   xmm0, [two_pow_53]
+    movsd   xmm1, [two_pow_53]
+    minsd   xmm0, xmm1
+    roundsd xmm0, xmm0, 2               ; toward +inf
+    cvttsd2si rax, xmm0
+    ret
+
 ; rng_uniform(xmm0=a, xmm1=b) -> xmm0 = a + (b - a) * random().
 rng_uniform:
     sub     rsp, 24
@@ -261,6 +290,7 @@ rng_shuffle64:
 section .rodata
 align 8
 two_pow_minus_53:   dq 0x3CA0000000000000   ; 1.0 / (1 << 53)
+two_pow_53:         dq 0x4340000000000000   ; 1 << 53
 
 section .tstate
 alignb 64

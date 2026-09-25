@@ -1,0 +1,16 @@
+# matrix option sets (each also runs with every seed and input)
+# matrix reads the wall clock: compare with the virtual clock everywhere
+@global --virtual-clock
+--rain-time 1
+--rain-time 2 --rain-fall-delay-range 1-1 --rain-column-delay-range 1-2 --resolve-delay 1
+--rain-time 1 --rain-fall-delay-range 6-20 --rain-column-delay-range 10-15 --resolve-delay 7
+--rain-time 1 --symbol-swap-chance 0.5 --color-swap-chance 0.4 --rain-symbols A B ｦ ▓ 😀
+--rain-time 1 --symbol-swap-chance 1 --color-swap-chance 1 --rain-symbols x --rain-color-gradient 00ff00
+--rain-time 1 --highlight-color 196 --rain-color-gradient 22 46 82 --final-gradient-stops 45 201 --final-gradient-steps 4
+--rain-time 1 --highlight-color AABBCC --rain-color-gradient aabbcc --color-swap-chance 0.3
+--rain-time 1 --highlight-color aabbcc --rain-color-gradient AABBCC 102030 AaBbCc --color-swap-chance 0.3
+--rain-time 1 --highlight-color aabbcc --rain-color-gradient aabbcc 000000 --color-swap-chance 0.3
+--rain-time 1 --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal --final-gradient-frames 1
+--rain-time 1 --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction vertical --final-gradient-frames 5
+--rain-time 1 --final-gradient-stops ff0000 --final-gradient-direction diagonal
+--rain-time 1 --final-gradient-direction radial --rain-color-gradient 92be92 185318 ff00ff 0000ff

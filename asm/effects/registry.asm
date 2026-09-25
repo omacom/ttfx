@@ -21,6 +21,7 @@
 %include "effects/vhstape.asm"
 %include "effects/wipe.asm"
 %include "effects/rings.asm"
+%include "effects/matrix.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -47,6 +48,8 @@ effect_table:
     dq wipe_build, wipe_next_frame
   %elif id == EFFECT_RINGS
     dq rings_build, rings_next_frame
+  %elif id == EFFECT_MATRIX
+    dq matrix_build, matrix_next_frame
   %else
     dq 0, 0
   %endif
