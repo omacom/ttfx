@@ -8,7 +8,10 @@
 #
 # Effect-specific option sets live in tools/asm/cases/<effect>.txt, one
 # argument list per line (blank lines and # comments ignored); each runs with
-# several seeds and inputs in addition to the effect's defaults.
+# several seeds and inputs in addition to the effect's defaults. A line
+# "@global <args>" adds global arguments to every run (e.g. --virtual-clock
+# for effects that read the clock, whose real-clock output is not
+# reproducible).
 set -u
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
@@ -38,11 +41,12 @@ PY
 
 pass=0
 fail=0
+global=()
 check() {
     local name="$1"; shift
     local input="$1"; shift
-    TTFX_ASM=0 "$BIN" "$@" < "$input" > "$WORK/r.out" 2> "$WORK/r.err"; local rs=$?
-    TTFX_ASM=force "$BIN" "$@" < "$input" > "$WORK/a.out" 2> "$WORK/a.err"; local as=$?
+    TTFX_ASM=0 "$BIN" "${global[@]}" "$@" < "$input" > "$WORK/r.out" 2> "$WORK/r.err"; local rs=$?
+    TTFX_ASM=force "$BIN" "${global[@]}" "$@" < "$input" > "$WORK/a.out" 2> "$WORK/a.err"; local as=$?
     if [ $rs -eq $as ] && cmp -s "$WORK/r.out" "$WORK/a.out" && cmp -s "$WORK/r.err" "$WORK/a.err"; then
         pass=$((pass + 1))
     else
@@ -65,7 +69,7 @@ big_canvas=(--canvas-width 200 --canvas-height 50 --ignore-terminal-dimensions)
 options=("")
 if [ -f "$ROOT/tools/asm/cases/$EFFECT.txt" ]; then
     while IFS= read -r line; do
-        case "$line" in ''|'#'*) continue ;; esac
+        case "$line" in ''|'#'*) continue ;; '@global '*) read -ra global <<< "${line#@global }"; continue ;; esac
         options+=("$line")
     done < "$ROOT/tools/asm/cases/$EFFECT.txt"
 fi

@@ -198,3 +198,30 @@ ttfx_test_color_random_color:
     pop     r12
     pop     rbx
     ret
+
+; ttfx_test_rng_chance(rdi=state[4] in/out, xmm0=c) -> rax = 1 when
+; random() < c, decided as RNG_BITS53 < rng_threshold(c).
+global ttfx_test_rng_chance
+ttfx_test_rng_chance:
+    push    rbx
+    push    r12
+    push    r13
+    sub     rsp, 16
+    mov     rbx, rdi
+    movsd   [rsp], xmm0
+    call    rng_load
+    movsd   xmm0, [rsp]
+    call    rng_threshold
+    mov     r12, rax
+    RNG_BITS53
+    xor     r13d, r13d
+    cmp     rax, r12
+    setb    r13b
+    mov     rdi, rbx
+    call    rng_store
+    mov     rax, r13
+    add     rsp, 16
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret

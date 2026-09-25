@@ -1028,3 +1028,38 @@ fn random_color_matches_values_and_state() {
         }
     }
 }
+
+extern "C" {
+    fn ttfx_test_rng_chance(state: *mut [u64; 4], chance: f64) -> u64;
+}
+
+#[test]
+fn chance_threshold_matches_random_compare() {
+    let _engine = engine();
+    let mut cases = Cases::new(40);
+    let unit = 1.0 / (1u64 << 53) as f64;
+    for seed in 0..60u64 {
+        let mut rust = Rng::seeded(seed);
+        let mut state = rust.state();
+        for i in 0..2000 {
+            // Boundaries: exact multiples of 2^-53 and one ulp either side,
+            // subnormals, chances >= 1, infinity, and the ones effects use.
+            let k = cases.next_u64() >> 11;
+            let on_grid = k as f64 * unit;
+            let chance = match i % 7 {
+                0 => on_grid.max(f64::MIN_POSITIVE),
+                1 => f64::from_bits(on_grid.to_bits() + 1),
+                2 => f64::from_bits(on_grid.to_bits().saturating_sub(1)).max(f64::MIN_POSITIVE),
+                3 => f64::from_bits(cases.next_u64() % 0x0010_0000_0000_0000 + 1),
+                4 => [1.0, 1.0 - unit, 2.0, f64::INFINITY, 1e300][cases.range(0, 4) as usize],
+                5 => [0.005, 0.001, 0.08, 0.5][cases.range(0, 3) as usize],
+                _ => (cases.next_u64() >> 11) as f64 * unit * 1.5,
+            };
+            let expected = rust.random() < chance;
+            // SAFETY: four state words in and out.
+            let got = unsafe { ttfx_test_rng_chance(&mut state, chance) };
+            assert_eq!(got == 1, expected, "random() < {chance:e}");
+            assert_eq!(state, rust.state());
+        }
+    }
+}
