@@ -71,6 +71,14 @@ impl Words {
 pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
     let mut w = Words::default();
     let id = match effect {
+        EffectCommand::Blackhole(c) => {
+            w.color(&c.blackhole_color)
+                .colors(&c.star_colors)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            2
+        }
         EffectCommand::Decrypt(c) => {
             w.int(c.typing_speed)
                 .colors(&c.ciphertext_colors)
