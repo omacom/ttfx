@@ -1,0 +1,13 @@
+# fireworks option sets (each also runs with every seed and input)
+--explode-anywhere
+--firework-colors ff0000 00ff00 0000ff 196 --firework-symbol "*"
+--firework-symbol ▓ --firework-volume 0.3 --launch-delay 5
+--firework-volume 0 --launch-delay 0
+--firework-volume 1 --explode-distance 1
+--firework-volume 0.5 --launch-delay 1 --explode-distance 0
+--explode-distance 0.05 --launch-delay 100 --firework-volume 0.12
+--explode-anywhere --explode-distance 0.7 --firework-colors 9 --launch-delay 3
+--final-gradient-stops 45 201 --final-gradient-steps 5
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction vertical
+--final-gradient-stops ff00ff --final-gradient-direction diagonal --firework-colors ffffff
+--final-gradient-direction radial --firework-colors 000000 FFFFFF --launch-delay 12

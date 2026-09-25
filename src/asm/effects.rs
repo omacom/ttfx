@@ -135,6 +135,18 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             10
         }
+        EffectCommand::Fireworks(c) => {
+            w.flag(c.explode_anywhere)
+                .colors(&c.firework_colors)
+                .symbol(&c.firework_symbol)?
+                .float(c.firework_volume)
+                .int(c.launch_delay)
+                .float(c.explode_distance)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            11
+        }
         EffectCommand::Highlight(c) => {
             w.float(c.highlight_brightness)
                 .int(c.highlight_direction as i64)

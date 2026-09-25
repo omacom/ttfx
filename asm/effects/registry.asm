@@ -36,6 +36,7 @@
 %include "effects/crumble.asm"
 %include "effects/overflow.asm"
 %include "effects/waves.asm"
+%include "effects/fireworks.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -92,6 +93,8 @@ effect_table:
     dq overflow_build, overflow_next_frame
   %elif id == EFFECT_WAVES
     dq waves_build, waves_next_frame
+  %elif id == EFFECT_FIREWORKS
+    dq fireworks_build, fireworks_next_frame
   %else
     dq 0, 0
   %endif
