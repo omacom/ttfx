@@ -16,6 +16,7 @@
 %include "effects/highlight.asm"
 %include "effects/sweep.asm"
 %include "effects/randomsequence.asm"
+%include "effects/expand.asm"
 %include "effects/synthgrid.asm"
 %include "effects/vhstape.asm"
 %include "effects/wipe.asm"
@@ -36,6 +37,8 @@ effect_table:
     dq sweep_build, sweep_next_frame
   %elif id == EFFECT_RANDOMSEQUENCE
     dq randomsequence_build, randomsequence_next_frame
+  %elif id == EFFECT_EXPAND
+    dq expand_build, expand_next_frame
   %elif id == EFFECT_SYNTHGRID
     dq synthgrid_build, synthgrid_next_frame
   %elif id == EFFECT_VHSTAPE
