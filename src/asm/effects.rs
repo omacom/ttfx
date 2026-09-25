@@ -79,6 +79,18 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             8
         }
+        // glitch_wave_colors is never read by the effect
+        EffectCommand::Vhstape(c) => {
+            w.colors(&c.glitch_line_colors)
+                .colors(&c.noise_colors)
+                .float(c.glitch_line_chance)
+                .float(c.noise_chance)
+                .int(c.total_glitch_time)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            34
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
