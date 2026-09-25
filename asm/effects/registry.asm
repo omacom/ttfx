@@ -13,6 +13,7 @@
 
 %include "effects/blackhole.asm"
 %include "effects/decrypt.asm"
+%include "effects/randomsequence.asm"
 %include "effects/synthgrid.asm"
 %include "effects/vhstape.asm"
 
@@ -25,6 +26,8 @@ effect_table:
     dq blackhole_build, blackhole_next_frame
   %elif id == EFFECT_DECRYPT
     dq decrypt_build, decrypt_next_frame
+  %elif id == EFFECT_RANDOMSEQUENCE
+    dq randomsequence_build, randomsequence_next_frame
   %elif id == EFFECT_SYNTHGRID
     dq synthgrid_build, synthgrid_next_frame
   %elif id == EFFECT_VHSTAPE
