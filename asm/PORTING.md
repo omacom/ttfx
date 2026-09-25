@@ -65,7 +65,48 @@ budget:
   `andn`, `blsr`, `shlx`/`shrx`/`sarx`, `bzhi`, `pdep`/`pext` are TIER 3. Note that
   `tzcnt` silently runs as `bsf` on older CPUs, with a different result for zero.
 - Mixing VEX/EVEX with legacy SSE code needs `vzeroupper` before returning to SSE code
-  or calling C.
+  or calling C. Write `ZEROUPPER` (ttfx.inc), which is `vzeroupper` at TIER 3+ and
+  nothing below.
+- Shared helpers in `ttfx.inc`: `FLOORSD xmm, gpr, xmm_tmp` is `roundsd x, x, 1` at
+  TIER 2+ and an exact `cvttsd2si` floor at TIER 1.
+
+### How the tiers are built and chosen
+
+- `build.rs` assembles `asm/lib.asm` four times (`-DTIER=1..4`) in parallel. Each
+  object exports its SysV entry points with a `_v<TIER>` suffix: declare them with
+  `EXPORT name` instead of `global name`. Inside the source the plain name keeps
+  working, but `name.local` is a single token that does not expand, so jump to a
+  `..@label` instead (see `..@run_return`). Per-run state (`.tstate`, `.bss`) is
+  separate per object.
+- `asm/tier.asm` is assembled once at the baseline. It holds `ttfx_asm_tier`, the
+  CPUID/XGETBV detection (v2: SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CX16, LAHF; v3:
+  AVX, AVX2, BMI1, BMI2, LZCNT, MOVBE, F16C, FMA and OS-enabled YMM state; v4: AVX-512
+  F/DQ/CD/BW/VL and OS-enabled opmask/ZMM state), and the unsuffixed `ttfx_test_*`
+  thunks, which dispatch to one tier's copy of `tests.asm`.
+- Rust (`src/asm/ffi.rs`) runs the best linked tier the CPU supports.
+  `TTFX_ASM_TIER=1|2|3|4` forces a lower tier; a tier above the CPU's, or one the
+  build left out, is a decline (exit 3 under `TTFX_ASM=force`).
+  `TTFX_ASM_SHOW_TIER=1` prints the tier chosen on stderr. The same variable picks
+  the tier for `cargo test --release --test asm_diff`.
+- **Build-time checks.** At TIER 1 and 2, `ttfx.inc` sets NASM's `cpu x86-64` /
+  `cpu nehalem`. NASM's levels stop at Ivy Bridge and do not flag BMI, LZCNT or
+  TZCNT, so this only catches part of an overspend. The exact check is
+  `tools/asm/isa-audit.sh`, which classifies every instruction in each tier's
+  object by encoding (EVEX, VEX, opmask, the 0F 38/0F 3A maps), mnemonic and
+  register class, and prints each one above its tier as `file:line`. It also
+  rejects FMA at every tier. `build.rs` runs it on every object and leaves out, with a
+  warning, a tier that fails to assemble or to audit.
+- `TTFX_ASM_UNCHECKED_TIERS=1 cargo build --release --target-dir target/unchecked`
+  links every tier without either check. That only makes sense on a CPU that runs
+  everything, to compare a lower tier's output while other files are not clean yet.
+- **Verifying a tier:** `TTFX_ASM_TIER=n tools/asm/oracle.sh <effect>`, or
+  `tools/asm/oracle-tiers.sh [quick|full] [tiers]` for every effect at every tier
+  (4 jobs at a time). On older CPUs, run the binary under
+  `qemu-x86_64 -cpu <model>` (`qemu64` for v1, `Nehalem` for v2, `Haswell` for v3;
+  `pacman -S qemu-user`). Both engines then run on the emulated CPU and the tier is
+  detected automatically.
+- **Out of scope:** APX (REX2, which the audit rejects) and AVX10. No machine here
+  runs them and no emulator is available, so there is no tier for them.
 
 ## Conventions
 
@@ -79,7 +120,7 @@ budget:
   - **Never** write `[label + reg*scale]`. Instead `lea rax, [label]`, then `[rax + reg*8]`.
   - `mov eax, label` and absolute `dq label` data in read-only sections are also not
     allowed. Tables of pointers go in a `section .data.rel.ro progbits alloc write noexec`.
-  - After building, `readelf -rW target/release/build/ttfx-*/out/ttfx_asm.o | grep -E '32S|_32 '`
+  - After building, `readelf -rW target/release/build/ttfx-*/out/ttfx_asm_*.o | grep -E '32S|_32 '`
     must print nothing.
 - **State:**
   - All mutable per-run state goes in `section .tstate`, which is zeroed at the start of

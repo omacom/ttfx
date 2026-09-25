@@ -12,6 +12,10 @@
 # "@global <args>" adds global arguments to every run (e.g. --virtual-clock
 # for effects that read the clock, whose real-clock output is not
 # reproducible).
+#
+# TTFX_ASM_TIER=1|2|3|4 runs the assembly engine at that CPU tier (it only
+# reaches the asm runs; the Rust engine ignores it). tools/asm/oracle-tiers.sh
+# runs every effect at every tier.
 set -u
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
@@ -56,6 +60,16 @@ for f in "$WORK"/*; do
         exit 2
     fi
 done
+
+# A forced tier the binary cannot run would fail every case the same way.
+TIER_NOTE=""
+if [ -n "${TTFX_ASM_TIER:-}" ]; then
+    if ! TTFX_ASM=force "$BIN" --frame-rate 0 print < "$WORK/single" > /dev/null 2> "$WORK/tier.err"; then
+        echo "oracle: TTFX_ASM_TIER=$TTFX_ASM_TIER is not available: $(cat "$WORK/tier.err")" >&2
+        exit 2
+    fi
+    TIER_NOTE=" (tier $TTFX_ASM_TIER)"
+fi
 
 pass=0
 fail=0
@@ -137,5 +151,5 @@ check wrap-canvas "$WORK/ragged" --seed 17 --frame-rate 0 --wrap-text --canvas-w
 check wrap-ignore "$WORK/tabs" --seed 18 --frame-rate 0 --wrap-text --canvas-width 4 --ignore-terminal-dimensions "$EFFECT"
 check paced "$WORK/single" --seed 14 --frame-rate 2000 "$EFFECT"
 
-echo "oracle $EFFECT: $pass passed, $fail failed"
+echo "oracle $EFFECT$TIER_NOTE: $pass passed, $fail failed"
 [ $fail -eq 0 ]
