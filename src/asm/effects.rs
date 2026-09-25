@@ -107,6 +107,15 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             8
         }
+        EffectCommand::Highlight(c) => {
+            w.float(c.highlight_brightness)
+                .int(c.highlight_direction as i64)
+                .int(c.highlight_width)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            12
+        }
         EffectCommand::Synthgrid(c) => {
             w.colors(&c.grid_gradient_stops)
                 .ints(&c.grid_gradient_steps)
