@@ -189,6 +189,21 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             22
         }
+        EffectCommand::Slice(c) => {
+            let direction = match c.slice_direction.as_str() {
+                "vertical" => 0,
+                "horizontal" => 1,
+                "diagonal" => 2,
+                _ => return Err("unknown slice direction"),
+            };
+            w.int(direction)
+                .float(c.movement_speed)
+                .easing(c.movement_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            24
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))

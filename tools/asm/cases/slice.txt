@@ -1,0 +1,16 @@
+# slice option sets (each also runs with every seed and input)
+--slice-direction vertical
+--slice-direction horizontal
+--slice-direction diagonal
+--slice-direction vertical --movement-speed 1.5 --movement-easing linear
+--slice-direction horizontal --movement-speed 0.07 --movement-easing out_bounce
+--slice-direction diagonal --movement-speed 0.6 --movement-easing in_out_elastic
+--slice-direction horizontal --movement-easing in_back --final-gradient-direction radial
+--slice-direction vertical --movement-easing out_elastic --movement-speed 3
+--slice-direction diagonal --movement-easing in_out_back --movement-speed 100
+--slice-direction horizontal --movement-speed 0.5 --movement-easing in_out_sine
+--final-gradient-stops ff0000 00ff00 0000ff --final-gradient-steps 3 7 --final-gradient-direction horizontal
+--slice-direction horizontal --final-gradient-stops 45 201 --final-gradient-steps 5 --final-gradient-direction vertical
+--slice-direction diagonal --final-gradient-stops ffffff --final-gradient-steps 4 --final-gradient-direction radial
+--slice-direction vertical --final-gradient-stops ff00ff 00ffff 9 abcdef --final-gradient-steps 1 5 20 --final-gradient-direction diagonal
+--movement-speed 0.9 --movement-easing in_expo --final-gradient-steps 1
