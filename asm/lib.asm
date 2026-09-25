@@ -627,6 +627,7 @@ enforce_framerate:
 %include "engine/update.asm"
 %include "engine/particles.asm"
 %include "engine/render.asm"
+%include "utils/spanning_tree.asm"
 %include "effects/registry.asm"
 %include "tests.asm"
 

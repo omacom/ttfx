@@ -418,6 +418,16 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .float(c.active_binary_groups);
             1
         }
+        EffectCommand::Smoke(c) => {
+            w.color(&c.starting_color)
+                .symbols(&c.smoke_symbols)?
+                .colors(&c.smoke_gradient_stops)
+                .flag(c.use_whole_canvas)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            26
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
