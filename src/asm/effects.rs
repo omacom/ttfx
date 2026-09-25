@@ -496,6 +496,15 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             9
         }
+        EffectCommand::Print(c) => {
+            w.float(c.print_head_return_speed)
+                .int(c.print_speed)
+                .easing(c.print_head_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            19
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
