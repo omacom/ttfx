@@ -505,6 +505,24 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             19
         }
+        EffectCommand::Bubbles(c) => {
+            // movement_easing is never read upstream
+            let pop_condition = match c.pop_condition {
+                crate::effects::bubbles::PopCondition::Row => 0,
+                crate::effects::bubbles::PopCondition::Bottom => 1,
+                crate::effects::bubbles::PopCondition::Anywhere => 2,
+            };
+            w.flag(c.rainbow)
+                .colors(&c.bubble_colors)
+                .color(&c.pop_color)
+                .float(c.bubble_speed)
+                .int(c.bubble_delay)
+                .int(pop_condition)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            4
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))

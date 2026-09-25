@@ -1,0 +1,13 @@
+# bubbles option sets (each also runs with every seed and input)
+--rainbow
+--rainbow --bubble-delay 1 --bubble-speed 1.5
+--bubble-colors ff0000 00ff00 0000ff 123456 196 --pop-color 00ffff
+--pop-condition bottom --bubble-delay 3
+--pop-condition anywhere --bubble-speed 0.2
+--pop-condition anywhere --rainbow --bubble-delay 5
+--bubble-speed 0.05 --bubble-delay 40
+--bubble-speed 4.0 --bubble-delay 1 --pop-condition bottom
+--movement-easing out_bounce --pop-color 45 --bubble-colors 9
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--final-gradient-stops ff00ff --final-gradient-direction radial --bubble-delay 7
+--final-gradient-stops 45 201 --final-gradient-steps 5 --final-gradient-direction vertical --rainbow
