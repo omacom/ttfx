@@ -1,0 +1,14 @@
+# swarm option sets (each also runs with every seed and input). Every set
+# also runs on the 200x50 "big" input, where the frame count grows with the
+# number of swarms and areas, so tiny swarm sizes stay out of this file.
+--base-color ff0000 00ff00 0000ff 123456 196 --flash-color 45
+--flash-color ffffff --swarm-size 0.08 --swarm-area-count-range 1-2
+--swarm-size 1 --swarm-coordination 0
+--swarm-size 0.5 --swarm-coordination 1
+--swarm-size 0.33 --swarm-coordination 0.5 --swarm-area-count-range 1-1
+--swarm-size 0.4 --swarm-area-count-range 10-13 --swarm-coordination 0.95
+--swarm-size 0.25 --swarm-area-count-range 3-3 --base-color 9
+--final-gradient-stops 45 201 --final-gradient-steps 5
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction vertical
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction radial --swarm-size 0.15
+--final-gradient-stops ff00ff --final-gradient-direction diagonal --base-color ffffff 000000

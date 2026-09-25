@@ -265,6 +265,18 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             28
         }
+        EffectCommand::Swarm(c) => {
+            w.colors(&c.base_color)
+                .color(&c.flash_color)
+                .float(c.swarm_size)
+                .float(c.swarm_coordination)
+                .int(c.swarm_area_count_range.0)
+                .int(c.swarm_area_count_range.1)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            29
+        }
         EffectCommand::Sweep(c) => {
             w.symbols(&c.sweep_symbols)?
                 .int(c.first_sweep_direction as i64)
