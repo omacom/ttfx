@@ -14,6 +14,7 @@
 %include "effects/blackhole.asm"
 %include "effects/decrypt.asm"
 %include "effects/highlight.asm"
+%include "effects/pour.asm"
 %include "effects/sweep.asm"
 %include "effects/randomsequence.asm"
 %include "effects/synthgrid.asm"
@@ -32,6 +33,8 @@ effect_table:
     dq decrypt_build, decrypt_next_frame
   %elif id == EFFECT_HIGHLIGHT
     dq highlight_build, highlight_next_frame
+  %elif id == EFFECT_POUR
+    dq pour_build, pour_next_frame
   %elif id == EFFECT_SWEEP
     dq sweep_build, sweep_next_frame
   %elif id == EFFECT_RANDOMSEQUENCE
