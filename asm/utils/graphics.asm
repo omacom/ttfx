@@ -264,9 +264,11 @@ gradient_map:
     mov     rsi, [rsp + 24]
     mov     rdx, [rsp + 32]
     mov     rcx, [rsp + 40]
-    mov     r8, r13
-    mov     r9, r12
-    call    normalized_distance_from_center
+    mov     r8, r12
+    shl     r8, 32
+    mov     eax, r13d
+    or      r8, rax
+    call    find_normalized_distance_from_center
 .color:
     mov     rdi, [rsp]
     mov     rsi, [rsp + 8]
@@ -293,111 +295,4 @@ gradient_map:
     pop     rbx
     ret
 
-; normalized_distance_from_center(rdi=bottom, rsi=top, rdx=left, rcx=right,
-;   r8=column, r9=row) -> xmm0. geometry::find_normalized_distance_from_center
-; for a coordinate known to lie inside the rectangle. The oracle's compiler
-; lowered powf(x, 2.0) to x * x and powf(x, 0.5) to sqrt; so does this.
-normalized_distance_from_center:
-    lea     rax, [rdi - 1]              ; y_offset
-    lea     r10, [rdx - 1]              ; x_offset
-    sub     rcx, r10                    ; right
-    sub     rsi, rax                    ; top
-    cvtsi2sd xmm2, rcx
-    mulsd   xmm2, [half]                ; center_x
-    cvtsi2sd xmm3, rsi
-    mulsd   xmm3, [half]                ; center_y  (n / 2.0 == n * 0.5 exactly)
-    sub     r8, r10                     ; column
-    sub     r9, rax                     ; row
-    ; max_distance = sqrt(right^2 + (top * 2)^2)
-    cvtsi2sd xmm0, rcx
-    mulsd   xmm0, xmm0
-    lea     rax, [rsi * 2]
-    cvtsi2sd xmm1, rax
-    mulsd   xmm1, xmm1
-    addsd   xmm0, xmm1
-    sqrtsd  xmm4, xmm0
-    ; distance = sqrt((column - cx)^2 + ((row - cy) * 2)^2)
-    cvtsi2sd xmm0, r8
-    subsd   xmm0, xmm2
-    mulsd   xmm0, xmm0
-    cvtsi2sd xmm1, r9
-    subsd   xmm1, xmm3
-    addsd   xmm1, xmm1
-    mulsd   xmm1, xmm1
-    addsd   xmm0, xmm1
-    sqrtsd  xmm0, xmm0
-    ; distance / (max_distance / 2.0)
-    mulsd   xmm4, [half]
-    divsd   xmm0, xmm4
-    ret
 
-; utf8_pack(edi=codepoint) -> rax = packed symbol (bytes | length << 32).
-utf8_pack:
-    cmp     edi, 0x80
-    jb      .one
-    cmp     edi, 0x800
-    jb      .two
-    cmp     edi, 0x10000
-    jb      .three
-    mov     eax, edi
-    shr     eax, 18
-    or      eax, 0xF0
-    mov     ecx, edi
-    shr     ecx, 12
-    and     ecx, 0x3F
-    or      ecx, 0x80
-    shl     ecx, 8
-    or      eax, ecx
-    mov     ecx, edi
-    shr     ecx, 6
-    and     ecx, 0x3F
-    or      ecx, 0x80
-    shl     ecx, 16
-    or      eax, ecx
-    mov     ecx, edi
-    and     ecx, 0x3F
-    or      ecx, 0x80
-    shl     ecx, 24
-    or      eax, ecx
-    mov     rcx, 4 << 32
-    or      rax, rcx
-    ret
-.three:
-    mov     eax, edi
-    shr     eax, 12
-    or      eax, 0xE0
-    mov     ecx, edi
-    shr     ecx, 6
-    and     ecx, 0x3F
-    or      ecx, 0x80
-    shl     ecx, 8
-    or      eax, ecx
-    mov     ecx, edi
-    and     ecx, 0x3F
-    or      ecx, 0x80
-    shl     ecx, 16
-    or      eax, ecx
-    mov     rcx, 3 << 32
-    or      rax, rcx
-    ret
-.two:
-    mov     eax, edi
-    shr     eax, 6
-    or      eax, 0xC0
-    mov     ecx, edi
-    and     ecx, 0x3F
-    or      ecx, 0x80
-    shl     ecx, 8
-    or      eax, ecx
-    mov     rcx, 2 << 32
-    or      rax, rcx
-    ret
-.one:
-    mov     eax, edi
-    mov     rcx, 1 << 32
-    or      rax, rcx
-    ret
-
-section .rodata
-align 8
-half:   dq 0.5

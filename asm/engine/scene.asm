@@ -812,7 +812,7 @@ step_synced_scene:
     cvtsi2sd xmm1, r9
     mulsd   xmm1, xmm0
     movapd  xmm0, xmm1
-    call    round_half_even_i64
+    call    round_half_even
     cmp     rax, r9
     cmovg   rax, r9
     xor     ecx, ecx
@@ -849,7 +849,7 @@ step_eased_scene:
     mov     r9, rax
     cvtsi2sd xmm1, rax
     mulsd   xmm0, xmm1
-    call    round_half_even_i64
+    call    round_half_even
     cmp     rax, r9
     cmovg   rax, r9
     xor     ecx, ecx

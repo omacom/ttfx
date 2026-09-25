@@ -231,12 +231,12 @@ path_new_waypoint:
     mov     rsi, r13
     mov     edx, r14d
     mov     rcx, r12
-    call    bezier_length
+    call    find_length_of_bezier_curve
     jmp     .distance
 .line:
     mov     rsi, r12
     mov     edx, 1
-    call    line_length
+    call    find_length_of_line
 .distance:
     movsd   [rsp], xmm0
     PATH_PTR rbp, rbx
@@ -271,7 +271,7 @@ path_new_waypoint:
     ; max_steps = round(total_distance / speed)
     movsd   xmm0, [rbp + PA_TOTAL]
     divsd   xmm0, [rbp + PA_SPEED]
-    call    round_half_even_i64
+    call    round_half_even
     mov     [rbp + PA_MAX], rax
     mov     eax, [rbp + PA_WP_COUNT]
     dec     eax
@@ -369,13 +369,13 @@ path_activate:
     mov     rdi, r13
     mov     rsi, [rax + WP_BEZ]
     mov     rcx, [rax + WP_COORD]
-    call    bezier_length
+    call    find_length_of_bezier_curve
     jmp     .distance
 .line:
     mov     rdi, r13
     mov     rsi, [rax + WP_COORD]
     mov     edx, 1
-    call    line_length
+    call    find_length_of_line
 .distance:
     movsd   [rsp + 64], xmm0
     ; the origin segment's start waypoint
@@ -430,7 +430,7 @@ path_activate:
     mov     [rbp + PA_HOLD_LEFT], rax
     movsd   xmm0, [rbp + PA_TOTAL]
     divsd   xmm0, [rbp + PA_SPEED]
-    call    round_half_even_i64
+    call    round_half_even
     mov     [rbp + PA_MAX], rax
     ; every segment's events can fire again
     mov     ecx, [rbp + PA_SEG_COUNT]
@@ -693,11 +693,11 @@ path_step:
     mov     rsi, [r15 + SG_END + WP_BEZ]
     mov     edx, ecx
     mov     rcx, [r15 + SG_END + WP_COORD]
-    call    bezier_coord
+    call    find_coord_on_bezier_curve
     jmp     .done
 .line:
     mov     rsi, [r15 + SG_END + WP_COORD]
-    call    line_coord
+    call    find_coord_on_line
     jmp     .done
 .at_end:
     mov     eax, [rbp + PA_SEG_COUNT]
