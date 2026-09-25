@@ -1,0 +1,11 @@
+# overflow option sets (each also runs with every seed and input)
+--overflow-cycles-range 1-1
+--overflow-cycles-range 1-2 --overflow-speed 1
+--overflow-cycles-range 3-6 --overflow-speed 4
+--overflow-speed 9 --overflow-cycles-range 1-2
+--overflow-gradient-stops ff0000 --overflow-cycles-range 1-3
+--overflow-gradient-stops 196 46 21 ffffff --overflow-speed 5
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction radial --overflow-cycles-range 1-1
+--final-gradient-stops ff00ff 00ffff --final-gradient-steps 5 --final-gradient-direction diagonal
+--final-gradient-stops 45 201 --final-gradient-steps 2 --overflow-gradient-stops 22 82

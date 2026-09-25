@@ -34,6 +34,7 @@
 %include "effects/beams.asm"
 %include "effects/binarypath.asm"
 %include "effects/crumble.asm"
+%include "effects/overflow.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -86,6 +87,8 @@ effect_table:
     dq binarypath_build, binarypath_next_frame
   %elif id == EFFECT_CRUMBLE
     dq crumble_build, crumble_next_frame
+  %elif id == EFFECT_OVERFLOW
+    dq overflow_build, overflow_next_frame
   %else
     dq 0, 0
   %endif
