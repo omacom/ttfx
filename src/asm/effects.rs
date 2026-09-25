@@ -175,6 +175,15 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             14
         }
+        EffectCommand::Print(c) => {
+            w.float(c.print_head_return_speed)
+                .int(c.print_speed)
+                .easing(c.print_head_easing)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            19
+        }
         EffectCommand::Randomsequence(c) => {
             // frame durations are 32-bit in the engine
             let frames = i32::try_from(c.final_gradient_frames)
