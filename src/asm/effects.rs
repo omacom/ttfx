@@ -287,6 +287,17 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .float(c.max_active_blocks);
             31
         }
+        EffectCommand::Unstable(c) => {
+            w.color(&c.unstable_color)
+                .easing(c.explosion_ease)?
+                .float(c.explosion_speed)
+                .easing(c.reassembly_ease)?
+                .float(c.reassembly_speed)
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction);
+            33
+        }
         // glitch_wave_colors is never read by the effect
         EffectCommand::Vhstape(c) => {
             w.colors(&c.glitch_line_colors)
