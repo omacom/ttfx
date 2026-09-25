@@ -14,6 +14,7 @@ terminal_init:
     push    r15
     call    input_init
     call    compute_layout
+    call    assign_coordinates
     call    anchor_text
     call    build_coord_map
     call    make_fill_characters
@@ -68,6 +69,11 @@ compute_layout:
     mov     rax, [line_count]
     cmp     byte [cfg_ignore_dims], 0
     jne     .height_done
+    cmp     byte [cfg_wrap_text], 0
+    je      .clip_height
+    mov     rdi, rbx                    ; wrapped at the canvas width
+    call    wrapped_line_count
+.clip_height:
     cmp     rax, [term_height]
     cmovg   rax, [term_height]
     jmp     .height_done

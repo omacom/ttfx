@@ -6,7 +6,6 @@ use std::time::Instant;
 
 use super::effects::{self, Words};
 use super::Run;
-use crate::engine::animation::ExistingColorHandling;
 use crate::engine::effect::RunOutcome;
 use crate::engine::error::EngineError;
 use crate::engine::terminal::{self, TerminalConfig};
@@ -129,15 +128,6 @@ pub fn offer(run: Run<'_>) -> Result<Result<RunOutcome, EngineError>, &'static s
         return Err("this CPU lacks the instruction sets of every assembled tier");
     }
     let config = run.config;
-    if run.input.contains('\x1b') {
-        return Err("ANSI sequences in the input are not ported yet");
-    }
-    if config.wrap_text {
-        return Err("--wrap-text is not ported yet");
-    }
-    if config.existing_color_handling != ExistingColorHandling::Ignore {
-        return Err("--existing-color-handling is not ported yet");
-    }
     let (id, words): (u64, Words) = effects::marshal(run.effect)?;
     // SAFETY: a pure query of the engine's effect table.
     if unsafe { ttfx_asm_effect_supported(id) } == 0 {

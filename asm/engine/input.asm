@@ -932,38 +932,98 @@ finish_lines:
     mov     [rax + RQ_LINE_COUNT], r12
     mov     rcx, [line_len]
     mov     [rax + RQ_LINE_LENGTHS], rcx
-    ; the input character list, top row first
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+; wrapped_line_count(rdi=width) -> rax: formatted rows after wrapping every
+; line at width (wrapped_line_count / wrap_lines): a line longer than the
+; width splits into width-sized pieces; an empty line stays one row.
+wrapped_line_count:
+    xor     eax, eax
+    xor     ecx, ecx
+.line:
+    cmp     rcx, [line_count]
+    jae     .done
+    mov     rdx, [line_len]
+    mov     rdx, [rdx + rcx * 8]
+.split:
+    cmp     rdx, rdi
+    jle     .last
+    inc     rax
+    sub     rdx, rdi
+    jmp     .split
+.last:
+    inc     rax
+    inc     rcx
+    jmp     .line
+.done:
+    ret
+
+; assign_coordinates: Terminal._setup_input_characters - wrap the lines at
+; the canvas width under --wrap-text, give every character of the formatted
+; lines a bottom-up 1-based input coordinate, and collect the input
+; characters (anything but a plain space), top row first.
+assign_coordinates:
+    push    rbx
+    push    rbp
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    ; the formatted height
+    mov     r15, [line_count]
+    cmp     byte [cfg_wrap_text], 0
+    je      .height
+    mov     rdi, [canvas_right]
+    call    wrapped_line_count
+    mov     r15, rax
+.height:
     mov     edi, [char_count]
     lea     rdi, [rdi * 4 + 64]
     call    alloc
     mov     [input_chars], rax
-    xor     ebx, ebx
     xor     r14d, r14d                  ; input count
-.coord_rows:
-    cmp     rbx, r12
-    jae     .coords_done
+    xor     r12d, r12d                  ; formatted row index
+    xor     ebx, ebx                    ; line
+.line:
+    cmp     rbx, [line_count]
+    jae     .collected
     mov     rax, [row_start]
-    mov     r8, [rax + rbx * 8]
+    mov     rbp, [rax + rbx * 8]        ; first cell of the line
     mov     rax, [line_len]
-    mov     r9, [rax + rbx * 8]
+    mov     r13, [rax + rbx * 8]        ; cells left in the line
+.piece:
+    ; one formatted row: the whole rest, or a width-sized piece of it
+    mov     r9, r13
+    cmp     byte [cfg_wrap_text], 0
+    je      .row
+    cmp     r13, [canvas_right]
+    jle     .row
+    mov     r9, [canvas_right]
+.row:
     xor     esi, esi
-.coord_cols:
+.cell:
     cmp     rsi, r9
-    jae     .coord_next_row
-    lea     rax, [r8 + rsi]
+    jae     .row_done
+    lea     rax, [rbp + rsi]
     mov     rdx, [cells]
     mov     ecx, [rdx + rax * 4]
     push    rsi
+    push    r9
     call    is_plain_space
+    pop     r9
     pop     rsi
-    je      .coord_skip
+    je      .skip
     lea     edi, [esi + 1]
     mov     rax, [ch_col]
     mov     [rax + rcx * 4], edi
     mov     rax, [ch_icol]
     mov     [rax + rcx * 4], edi
-    mov     edi, r12d
-    sub     edi, ebx
+    mov     edi, r15d
+    sub     edi, r12d
     mov     rax, [ch_row]
     mov     [rax + rcx * 4], edi
     mov     rax, [ch_irow]
@@ -971,13 +1031,17 @@ finish_lines:
     mov     rax, [input_chars]
     mov     [rax + r14 * 4], ecx
     inc     r14
-.coord_skip:
+.skip:
     inc     rsi
-    jmp     .coord_cols
-.coord_next_row:
+    jmp     .cell
+.row_done:
+    inc     r12
+    add     rbp, r9
+    sub     r13, r9
+    jnz     .piece                      ; more of this line to wrap
     inc     rbx
-    jmp     .coord_rows
-.coords_done:
+    jmp     .line
+.collected:
     mov     [input_count], r14
     ; preexisting_colors_present: any input character with a color
     xor     ebx, ebx
@@ -997,9 +1061,11 @@ finish_lines:
 .colored:
     mov     byte [preexisting_colors_present], 1
 .done:
+    pop     r15
     pop     r14
     pop     r13
     pop     r12
+    pop     rbp
     pop     rbx
     ret
 
