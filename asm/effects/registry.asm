@@ -20,6 +20,7 @@
 %include "effects/expand.asm"
 %include "effects/spray.asm"
 %include "effects/scattered.asm"
+%include "effects/rain.asm"
 %include "effects/synthgrid.asm"
 %include "effects/vhstape.asm"
 %include "effects/wipe.asm"
@@ -49,6 +50,8 @@ effect_table:
     dq spray_build, spray_next_frame
   %elif id == EFFECT_SCATTERED
     dq scattered_build, scattered_next_frame
+  %elif id == EFFECT_RAIN
+    dq rain_build, rain_next_frame
   %elif id == EFFECT_SYNTHGRID
     dq synthgrid_build, synthgrid_next_frame
   %elif id == EFFECT_VHSTAPE

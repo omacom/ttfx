@@ -284,6 +284,17 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
                 .direction(c.final_gradient_direction);
             15
         }
+        EffectCommand::Rain(c) => {
+            w.colors(&c.rain_colors)
+                .float(c.movement_speed.0)
+                .float(c.movement_speed.1)
+                .symbols(&c.rain_symbols)?
+                .colors(&c.final_gradient_stops)
+                .ints(&c.final_gradient_steps)
+                .direction(c.final_gradient_direction)
+                .easing(c.movement_easing)?;
+            20
+        }
         _ => return Err("this effect is not ported yet"),
     };
     Ok((id, w))
