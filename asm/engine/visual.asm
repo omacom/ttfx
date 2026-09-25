@@ -9,7 +9,7 @@
 ; *is*, for effects that read it back (CharacterVisual.symbol, .colors):
 ;   -32 symbol (packed)   -24 fg color   -16 bg color   -8 attribute bits
 ; The colors are the logical ones even under --no-color, where the bytes
-; carry none. Header and bytes together are the interning key.
+; carry none. The header is the interning key: it determines the bytes.
 ;
 ; Every pooled visual is readable for 128 bytes from its start (the pool keeps
 ; that much slack), so copies may overrun their length without leaving it.
@@ -17,6 +17,7 @@
 %define VISUAL_MAX          128         ; longest visual the pool accepts
 %define VISUAL_HEADER       32
 %define POOL_RESERVE        (POOL_LIMIT + 4096)
+%define VISUAL_TABLE_INITIAL (1 << 12)  ; entries; the arena is lazily committed
 
 ; header fields, relative to the visual's bytes
 %define VH_SYMBOL           -32
@@ -41,7 +42,7 @@ visual_init:
     mov     rdi, POOL_RESERVE
     call    reserve
     mov     [pool_base], rax
-    mov     ecx, 4096
+    mov     ecx, VISUAL_TABLE_INITIAL
     call    visual_table_alloc
     mov     rdi, NONE
     mov     rsi, NONE
@@ -51,10 +52,12 @@ visual_init:
     mov     [space_handle], eax
     ret
 
-; visual_table_alloc(ecx=capacity): fresh zeroed table of ecx entries.
+; visual_table_alloc(ecx=capacity): fresh zeroed table of ecx entries. An
+; entry is the handle in the low half and its hash in the high half (0 =
+; empty; handles are never 0), so probes and growth rarely touch the pool.
 visual_table_alloc:
     push    rcx
-    lea     rdi, [rcx * 4]
+    lea     rdi, [rcx * 8]
     call    alloc
     pop     rcx
     mov     [table_base], rax
@@ -62,184 +65,23 @@ visual_table_alloc:
     mov     [table_mask], ecx
     ret
 
-; visual_hash(rdi=key, esi=key length) -> eax. Clobbers rcx, rdx.
-visual_hash:
-    mov     eax, esi
-    lea     edx, [esi + 7]
-    shr     edx, 3
-    xor     ecx, ecx
-.loop:
-    crc32   rax, qword [rdi + rcx * 8]
-    inc     ecx
-    cmp     ecx, edx
-    jb      .loop
-    ret
-
-; key_masks(esi=key length): k1/k2/k3 select the key's bytes in three zmm.
-; Clobbers rax, rcx.
-key_masks:
-    mov     ecx, esi
-    mov     rax, -1
-    kmovq   k1, rax
-    kmovq   k2, rax
-    cmp     ecx, 128
-    jae     .third
-    kxorq   k3, k3, k3
-    cmp     ecx, 64
-    jae     .second
-    bzhi    rax, rax, rcx
-    kmovq   k1, rax
-    kxorq   k2, k2, k2
-    ret
-.second:
-    sub     ecx, 64
-    bzhi    rax, rax, rcx
-    kmovq   k2, rax
-    ret
-.third:
-    sub     ecx, 128
-    bzhi    rax, rax, rcx
-    kmovq   k3, rax
-    ret
-
-; visual_intern(rdi=key: 32-byte header then the bytes, zero-padded to 192;
-;               esi=byte length) -> eax = handle.
-visual_intern:
-    push    rbx
-    push    r12
-    push    r13
-    push    r14
-    mov     r14, rdi
-    mov     r12d, esi                   ; byte length
-    lea     esi, [r12 + VISUAL_HEADER]
-    call    visual_hash
-    mov     ebx, eax
-    lea     esi, [r12 + VISUAL_HEADER]
-    call    key_masks
-    vmovdqu64 zmm0, [r14]
-    vmovdqu64 zmm1, [r14 + 64]
-    vmovdqu64 zmm2, [r14 + 128]
-    mov     r13, [table_base]
-    mov     rdx, [pool_base]
-.next:
-    and     ebx, [table_mask]
-    mov     eax, [r13 + rbx * 4]
-    test    eax, eax
-    jz      .insert
-    mov     ecx, eax
-    shr     ecx, HANDLE_LEN_SHIFT
-    cmp     ecx, r12d
-    jne     .skip
-    mov     ecx, eax
-    and     ecx, HANDLE_OFFSET_MASK
-    sub     ecx, VISUAL_HEADER
-    vpcmpb  k4{k1}, zmm0, [rdx + rcx], 4
-    vpcmpb  k5{k2}, zmm1, [rdx + rcx + 64], 4
-    vpcmpb  k6{k3}, zmm2, [rdx + rcx + 128], 4
-    korq    k4, k4, k5
-    kortestq k4, k6
-    jz      .found
-.skip:
-    inc     ebx
-    jmp     .next
-.found:
-    pop     r14
-    pop     r13
-    pop     r12
-    pop     rbx
-    vzeroupper
-    ret
-.insert:
-    mov     ecx, [pool_len]
-    vmovdqu64 [rdx + rcx], zmm0
-    vmovdqu64 [rdx + rcx + 64], zmm1
-    vmovdqu64 [rdx + rcx + 128], zmm2
-    lea     eax, [rcx + VISUAL_HEADER]
-    mov     esi, r12d
-    shl     esi, HANDLE_LEN_SHIFT
-    or      eax, esi
-    lea     ecx, [rcx + r12 + VISUAL_HEADER]
-    cmp     ecx, POOL_LIMIT
-    jae     .full
-    mov     [pool_len], ecx
-    mov     [r13 + rbx * 4], eax
-    inc     dword [table_count]
-    mov     ecx, [table_count]
-    add     ecx, ecx
-    cmp     ecx, [table_mask]
-    jbe     .found
-    push    rax
-    call    visual_table_grow
-    pop     rax
-    jmp     .found
-.full:
-    lea     rdi, [msg_pool_full]
-    mov     esi, msg_pool_full_len
-    jmp     fatal
-
-; visual_table_grow: double the table and reinsert every handle.
-visual_table_grow:
-    push    rbx
-    push    r12
-    push    r13
-    push    r14
-    push    r15
-    sub     rsp, 192
-    mov     r12, [table_base]
-    mov     r13d, [table_mask]
-    inc     r13d                        ; old capacity
-    lea     ecx, [r13 * 2]
-    call    visual_table_alloc
-    mov     r14, [table_base]
-    xor     ebx, ebx
-.each:
-    cmp     ebx, r13d
-    jae     .done
-    mov     r15d, [r12 + rbx * 4]
-    test    r15d, r15d
-    jz      .skip
-    ; rebuild the zero-padded key exactly as visual_intern hashed it
-    mov     esi, r15d
-    shr     esi, HANDLE_LEN_SHIFT
-    add     esi, VISUAL_HEADER
-    call    key_masks
-    mov     ecx, r15d
-    and     ecx, HANDLE_OFFSET_MASK
-    sub     ecx, VISUAL_HEADER
-    add     rcx, [pool_base]
-    vmovdqu8 zmm0{k1}{z}, [rcx]
-    vmovdqu8 zmm1{k2}{z}, [rcx + 64]
-    vmovdqu8 zmm2{k3}{z}, [rcx + 128]
-    vmovdqu64 [rsp], zmm0
-    vmovdqu64 [rsp + 64], zmm1
-    vmovdqu64 [rsp + 128], zmm2
-    mov     rdi, rsp
-    mov     esi, r15d
-    shr     esi, HANDLE_LEN_SHIFT
-    add     esi, VISUAL_HEADER
-    call    visual_hash
-.probe:
-    and     eax, [table_mask]
-    cmp     dword [r14 + rax * 4], 0
-    je      .put
-    inc     eax
-    jmp     .probe
-.put:
-    mov     [r14 + rax * 4], r15d
-.skip:
-    inc     ebx
-    jmp     .each
-.done:
-    add     rsp, 192
-    pop     r15
-    pop     r14
-    pop     r13
-    pop     r12
-    pop     rbx
-    vzeroupper
-    ret
-
-; ------------------------------------------------------------ formatting
+; VISUAL_HASH sym, fg, bg, attrs, out, tmp: a 32-bit hash of a visual's
+; header (four 64-bit registers, left intact) into the 64-bit register out.
+; Only the table's probe order depends on it, never a handle, so any mix
+; that is consistent within one build will do. Scalar, so every tier.
+%macro VISUAL_HASH 6
+    mov     %6, 0x9e3779b97f4a7c15
+    mov     %5, %2
+    imul    %5, %6
+    xor     %5, %1
+    ror     %5, 29
+    add     %5, %3
+    imul    %5, %6
+    xor     %5, %4
+    ror     %5, 31
+    imul    %5, %6
+    shr     %5, 32
+%endmacro
 
 ; visual_make(rdi=fg color or NONE, rsi=bg color or NONE, rdx=packed symbol,
 ;             ecx=ATTR_* bits) -> eax = handle.
@@ -248,28 +90,68 @@ visual_table_grow:
 ; preceded it. Colors are dropped from the bytes under --no-color
 ; (resolve_color_code) but kept in the header. Under --xterm-colors a color
 ; renders as its own code when it has one, else the nearest by hex_to_xterm.
-; Clobbers rax, rcx, rdx, rsi, rdi, r8-r11, zmm0-zmm7, k1-k6.
+;
+; The bytes are a function of the header (the color flags are fixed for a
+; run), so the header alone is the interning key: a visual seen before is
+; found without formatting it, and a new one is formatted straight into
+; the pool. Handles are pool offsets in first-seen order, as before.
+; Clobbers rax, rcx, rdx, rsi, rdi, r8-r11 (and zmm0-zmm7, k1-k2 when
+; hex_to_xterm runs).
 visual_make:
     push    rbx
     push    r12
     push    r13
     push    r14
     push    r15
-    sub     rsp, 200
+    push    rbp
     mov     r12, rdi
     mov     r13, rsi
     mov     r14, rdx
     mov     r15d, ecx
-    vpxorq  zmm0, zmm0, zmm0
-    vmovdqu64 [rsp], zmm0
-    vmovdqu64 [rsp + 64], zmm0
-    vmovdqu64 [rsp + 128], zmm0
-    ; header
-    mov     [rsp], r14
-    mov     [rsp + 8], r12
-    mov     [rsp + 16], r13
-    mov     [rsp + 24], r15
-    lea     rbx, [rsp + VISUAL_HEADER]  ; write cursor
+    VISUAL_HASH r14, r12, r13, r15, rbp, rax
+    mov     r10, [table_base]
+    mov     r11, [pool_base]
+    mov     r9d, [table_mask]
+    mov     r8, rbp
+    shl     r8, 32                      ; the entry's tag
+    mov     edx, ebp                    ; probe index
+.next:
+    and     edx, r9d
+    mov     rax, [r10 + rdx * 8]
+    test    rax, rax
+    jz      .new
+    mov     rcx, rax
+    xor     rcx, r8
+    shr     rcx, 32
+    jnz     .skip                       ; another hash
+    mov     ecx, eax
+    and     ecx, HANDLE_OFFSET_MASK
+    cmp     r14, [r11 + rcx + VH_SYMBOL]
+    jne     .skip
+    cmp     r12, [r11 + rcx + VH_FG]
+    jne     .skip
+    cmp     r13, [r11 + rcx + VH_BG]
+    jne     .skip
+    cmp     r15, [r11 + rcx + VH_ATTRS]
+    je      .found
+.skip:
+    inc     edx
+    jmp     .next
+.found:
+    mov     eax, eax
+    jmp     .done
+.new:
+    shl     rbp, 32
+    or      rbp, rdx                    ; hash << 32 | slot
+    ; format at the pool's end: the header, then the bytes. POOL_RESERVE's
+    ; slack past POOL_LIMIT covers a visual written before the limit check.
+    mov     ecx, [pool_len]
+    lea     rbx, [r11 + rcx]
+    mov     [rbx], r14
+    mov     [rbx + 8], r12
+    mov     [rbx + 16], r13
+    mov     [rbx + 24], r15
+    add     rbx, VISUAL_HEADER          ; write cursor
     cmp     byte [cfg_no_color], 0
     je      .attrs
     mov     r12, NONE
@@ -304,7 +186,9 @@ visual_make:
     shr     rax, 32
     movzx   ecx, al                     ; symbol byte length
     mov     [rbx], r14d
-    lea     rdx, [rsp + VISUAL_HEADER]
+    mov     edx, [pool_len]
+    add     rdx, [pool_base]
+    lea     rdx, [rdx + VISUAL_HEADER]  ; the bytes' start
     mov     rdi, rbx
     sub     rdi, rdx                    ; prefix length
     add     rbx, rcx
@@ -315,13 +199,36 @@ visual_make:
 .plain:
     mov     dword [rbx], 0              ; clear symbol bytes past its length
     mov     rsi, rbx
-    lea     rdx, [rsp + VISUAL_HEADER]
-    sub     rsi, rdx
+    sub     rsi, rdx                    ; byte length
     cmp     esi, VISUAL_MAX
     ja      .too_long
-    mov     rdi, rsp
-    call    visual_intern
-    add     rsp, 200
+    mov     ecx, [pool_len]
+    lea     eax, [rcx + VISUAL_HEADER]
+    lea     ecx, [rcx + rsi + VISUAL_HEADER]
+    cmp     ecx, POOL_LIMIT
+    jae     .full
+    mov     [pool_len], ecx
+    shl     esi, HANDLE_LEN_SHIFT
+    or      eax, esi
+    mov     rcx, rbp
+    shr     rcx, 32
+    shl     rcx, 32
+    or      rcx, rax
+    mov     rdx, [table_base]
+    mov     esi, ebp
+    mov     [rdx + rsi * 8], rcx
+    inc     dword [table_count]
+    mov     ecx, [table_count]
+    add     ecx, ecx
+    cmp     ecx, [table_mask]
+    jbe     .done
+    push    rax
+    push    rax
+    call    visual_table_grow
+    pop     rax
+    pop     rax
+.done:
+    pop     rbp
     pop     r15
     pop     r14
     pop     r13
@@ -332,6 +239,53 @@ visual_make:
     lea     rdi, [msg_visual_long]
     mov     esi, msg_visual_long_len
     jmp     fatal
+.full:
+    lea     rdi, [msg_pool_full]
+    mov     esi, msg_pool_full_len
+    jmp     fatal
+
+; visual_table_grow: double the table and reinsert every entry at its
+; stored hash. Clobbers rax, rcx, rdx, rsi, rdi, r8-r11.
+visual_table_grow:
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    mov     r12, [table_base]
+    mov     r13d, [table_mask]
+    inc     r13d                        ; old capacity
+    lea     ecx, [r13 * 2]
+    call    visual_table_alloc
+    mov     r14, [table_base]
+    mov     r10d, [table_mask]
+    xor     ebx, ebx
+.each:
+    cmp     ebx, r13d
+    jae     .finish
+    mov     r11, [r12 + rbx * 8]
+    test    r11, r11
+    jz      .skip
+    mov     rax, r11
+    shr     rax, 32
+.probe:
+    and     eax, r10d
+    cmp     qword [r14 + rax * 8], 0
+    je      .put
+    inc     eax
+    jmp     .probe
+.put:
+    mov     [r14 + rax * 8], r11
+.skip:
+    inc     ebx
+    jmp     .each
+.finish:
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
 
 ; visual_meta(eax=handle) -> rax = pointer to the visual's bytes; the header
 ; fields are at negative offsets (VH_*).
