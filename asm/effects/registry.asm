@@ -31,6 +31,7 @@
 %include "effects/matrix.asm"
 %include "effects/thunderstorm.asm"
 %include "effects/slice.asm"
+%include "effects/beams.asm"
 
 section .data.rel.ro progbits alloc write noexec align=8
 align 8
@@ -77,6 +78,8 @@ effect_table:
     dq thunderstorm_build, thunderstorm_next_frame
   %elif id == EFFECT_SLICE
     dq slice_build, slice_next_frame
+  %elif id == EFFECT_BEAMS
+    dq beams_build, beams_next_frame
   %else
     dq 0, 0
   %endif

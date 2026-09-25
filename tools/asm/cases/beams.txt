@@ -1,0 +1,8 @@
+# All symbols, speed ranges, timing controls, and uneven multi-stop gradients.
+--beam-row-symbols x ▓ 😀 --beam-column-symbols | / --beam-delay 1 --beam-row-speed-range 1-3 --beam-column-speed-range 1-4 --beam-gradient-stops ff8800 27 00ff33 --beam-gradient-steps 1 3 --beam-gradient-frames 1 --final-gradient-stops 196 003355 ffffff --final-gradient-steps 2 5 --final-gradient-frames 1 --final-gradient-direction horizontal --final-wipe-speed 1
+# Fast beams, one-color spectra, and symbols outnumbering colors.
+--beam-row-symbols a b c d e --beam-column-symbols ░ ▒ ▓ █ --beam-row-speed-range 1000-1000 --beam-column-speed-range 1000-1000 --beam-gradient-stops 46 --beam-gradient-steps 1 --final-gradient-stops 21 --final-gradient-steps 1 --final-gradient-direction radial --final-wipe-speed 1000
+# Fractional counters around the strict count > 1 boundary; long launch delay.
+--beam-delay 20 --beam-row-speed-range 10-10 --beam-column-speed-range 11-11 --beam-gradient-frames 3 --final-gradient-frames 2 --final-gradient-direction diagonal
+# Black/white endpoints and extra step counts; minimum positive speeds.
+--beam-row-symbols _ --beam-column-symbols ! --beam-row-speed-range 1-1 --beam-column-speed-range 1-1 --beam-gradient-stops 000000 ffffff --beam-gradient-steps 1 7 2 --final-gradient-stops ffffff 000000 --final-gradient-steps 1 --final-gradient-direction vertical --final-wipe-speed 2
