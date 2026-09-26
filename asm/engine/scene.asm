@@ -55,6 +55,11 @@ scenes_init:
     mov     [frame_region_end], rax
     lea     rax, [shapes]
     mov     [shape_last], rax
+    ; vhstape finds a character's scenes at fixed distances from its first
+    ; (they are created back to back), so it keeps one run of indices
+    mov     rax, [request]
+    cmp     qword [rax + RQ_EFFECT], EFFECT_VHSTAPE
+    sete    byte [scene_unbanked]
     ret
 
 ; scene_ptr(esi=scene) -> r8 = record. Clobbers nothing else.
@@ -126,10 +131,8 @@ scene_new:
     jne     .reuse
 .fresh:
     ; a new record, appended to the character's map
-    mov     r15d, [scene_count]
-    cmp     r15d, SCENE_LIMIT
-    jae     .full
-    inc     dword [scene_count]
+    call    scene_alloc
+    mov     r15d, eax
     SCENE_PTR r8, r15
     mov     dword [r8 + SC_NEXT], NONE
     mov     rax, [ch_scenes]
@@ -196,6 +199,48 @@ scene_new:
     pop     r13
     pop     r12
     pop     rbx
+    ret
+
+; scene_alloc(r12d=name) -> eax = a fresh scene index. Effects give every
+; character the same scenes (by name), and the characters tick in slot
+; order with, most of the time, the same scene active. So each name draws
+; its indices from its own chunks of SCENE_CHUNK consecutive records: the
+; active scenes of neighboring characters then share cache lines, instead
+; of one line per character holding its active record next to an idle one.
+; Names are spread over SCENE_BANKS cursors (a collision just shares a
+; chunk). Clobbers rax, rcx, rdx.
+%define SCENE_CHUNK         64
+%define SCENE_BANKS         64          ; 8-byte cursors: next index, chunk end
+scene_alloc:
+    cmp     byte [scene_unbanked], 0
+    jne     .next
+    imul    eax, r12d, 0x9E3779B1
+    shr     eax, 32 - 6                 ; log2(SCENE_BANKS)
+    lea     rdx, [scene_banks]
+    lea     rdx, [rdx + rax * 8]
+    mov     eax, [rdx]
+    cmp     eax, [rdx + 4]
+    jae     .chunk
+    lea     ecx, [rax + 1]
+    mov     [rdx], ecx
+    ret
+.chunk:
+    mov     eax, [scene_count]          ; records handed out in chunks
+    lea     ecx, [rax + SCENE_CHUNK]
+    cmp     ecx, SCENE_LIMIT
+    ja      .full
+    mov     [scene_count], ecx
+    mov     [rdx + 4], ecx
+    lea     ecx, [rax + 1]
+    mov     [rdx], ecx
+    ret
+.next:
+    ; one run of indices in creation order
+    mov     eax, [scene_count]
+    cmp     eax, SCENE_LIMIT
+    jae     .full
+    lea     ecx, [rax + 1]
+    mov     [scene_count], ecx
     ret
 .full:
     lea     rdi, [msg_scenes_full]
@@ -1513,7 +1558,10 @@ scenes:         resq 1
 scene_pre:      resq 1
 frame_region:   resq 1
 frame_region_end: resq 1
-scene_count:    resd 1
+scene_count:    resd 1              ; records handed out (in chunks)
+alignb 8
+scene_banks:    resq SCENE_BANKS    ; scene_alloc's cursors
+scene_unbanked: resb 1              ; indices in creation order (vhstape)
 alignb 8
 shape_last:     resq 1              ; the last shape found (initially shapes)
 shape_count:    resd 1
