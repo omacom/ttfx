@@ -11,7 +11,10 @@
 # several seeds and inputs in addition to the effect's defaults. A line
 # "@global <args>" adds global arguments to every run (e.g. --virtual-clock
 # for effects that read the clock, whose real-clock output is not
-# reproducible).
+# reproducible). A line starting with "!" is an option set that is meant to
+# fail (a validation error); every other option set must run to completion in
+# the Rust engine on the basic input, so a typo or a shell-quoting mistake
+# can't quietly turn it into a comparison of two identical error messages.
 #
 # TTFX_ASM_TIER=1|2|3|4 runs the assembly engine at that CPU tier (it only
 # reaches the asm runs; the Rust engine ignores it). tools/asm/oracle-tiers.sh
@@ -104,11 +107,26 @@ if [ "$MODE" = full ]; then
 fi
 big_canvas=(--canvas-width 200 --canvas-height 50 --ignore-terminal-dimensions)
 
+# option sets are split on spaces but never glob-expanded ("*" is a symbol)
+set -f
+
 # the effect's own option sets
 options=("")
 if [ -f "$ROOT/tools/asm/cases/$EFFECT.txt" ]; then
     while IFS= read -r line; do
         case "$line" in ''|'#'*) continue ;; '@global '*) read -ra global <<< "${line#@global }"; continue ;; esac
+        expect_error=0
+        case "$line" in '!'*) expect_error=1; line="${line#!}"; line="${line# }" ;; esac
+        # shellcheck disable=SC2086
+        TTFX_ASM=0 "$BIN" "${global[@]}" --seed 1 --frame-rate 0 "$EFFECT" $line < "$WORK/basic" > /dev/null 2> "$WORK/v.err"
+        vs=$?
+        if [ $expect_error -eq 0 ] && [ $vs -ne 0 ]; then
+            fail=$((fail + 1))
+            echo "FAIL [$line]: the Rust engine rejects this option set, so it tests nothing (mark it with ! if that is the point): $(head -c 160 "$WORK/v.err")"
+        elif [ $expect_error -eq 1 ] && [ $vs -eq 0 ]; then
+            fail=$((fail + 1))
+            echo "FAIL [$line]: marked as an expected error, but the Rust engine accepts it"
+        fi
         options+=("$line")
     done < "$ROOT/tools/asm/cases/$EFFECT.txt"
 fi
@@ -122,6 +140,11 @@ for opts in "${options[@]}"; do
             check "$input [$opts]" "$WORK/$input" --seed "$seed" --frame-rate 0 "${extra[@]}" "$EFFECT" $opts
             check "$input/dump [$opts]" "$WORK/$input" --seed "$seed" --parity-dump "${extra[@]}" "$EFFECT" $opts
         done
+    done
+    # the option set against input colors, where effects take their
+    # existing-color branches
+    for handling in always dynamic; do
+        check "ansi/$handling [$opts]" "$WORK/ansi" --seed 1 --frame-rate 0 --existing-color-handling "$handling" "$EFFECT" $opts
     done
 done
 

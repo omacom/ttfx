@@ -13,6 +13,6 @@
 --final-gradient-stops 45 201 --final-gradient-steps 5 --final-gradient-frames 2
 --final-gradient-stops ffffff --final-gradient-steps 4
 --final-gradient-stops ff00ff 00ffff 9 abcdef --final-gradient-steps 1 5 20 --final-gradient-frames 5
---final-gradient-frames 0
---final-gradient-frames=-3
+!--final-gradient-frames 0
+!--final-gradient-frames=-3
 --wipe-delay 5 --wipe-ease in_out_bounce --final-gradient-steps 1
