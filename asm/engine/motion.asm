@@ -14,6 +14,7 @@
 %define PA_INT_COUNT        120         ; u16 leading segments of whole-number distance
 %define PA_DONE             122         ; u16 leading segments with both events fired
 %define PA_CURSOR           124         ; u16 the segment the last step landed in
+%define PA_REACH            126         ; u16 min(PA_INT_COUNT, PA_DONE + 1)
 %define SG_PREFIX           76          ; u32 distance sum of segments 0..=i (the run above)
 ; Eased factor tables (path_ease_table), in PA_OWNER's slot (never read).
 %define PA_ETAB             PA_OWNER    ; u32 table offset / 8; 0 = not looked up
@@ -22,7 +23,7 @@
 %define ETAB_REGION         (1 << 28)
 %define ETAB_MAP_BITS       12
 %define ETAB_MAP_SIZE       (1 << ETAB_MAP_BITS)
-%if PA_WP_CAP + 4 > PA_INT_COUNT || PA_CURSOR + 2 > PATH_SIZE
+%if PA_WP_CAP + 4 > PA_INT_COUNT || PA_REACH + 2 > PATH_SIZE
 %error "path record layout overlaps the walk index"
 %endif
 %if SEGMENT_SIZE % 16 || WAYPOINT_SIZE != 32
@@ -370,6 +371,17 @@ grow_array:
     pop     rbx
     ret
 
+; PATH_REACH record: store PA_REACH after PA_INT_COUNT or PA_DONE changed.
+; Clobbers rax, rcx.
+%macro PATH_REACH 1
+    movzx   eax, word [%1 + PA_DONE]
+    inc     eax
+    movzx   ecx, word [%1 + PA_INT_COUNT]
+    cmp     ecx, eax
+    cmova   ecx, eax
+    mov     [%1 + PA_REACH], cx
+%endmacro
+
 ; path_extend_index(rbp=path record): extend the run of whole-number
 ; segment distances (PA_INT_COUNT) and its prefix sums (SG_PREFIX) over the
 ; segments after it. Distances are at most 2^20 and sums below 2^30, so
@@ -404,6 +416,7 @@ path_extend_index:
     mov     [rbp + PA_INT_COUNT], cx
     jmp     .next
 .done:
+    PATH_REACH rbp
     ret
 
 ; ------------------------------------------------------------ activation
@@ -695,40 +708,35 @@ path_ease_table:
 ; is the distance minus a prefix sum, bit for bit, and each `d <= distance`
 ; test is `d <= prefix sum`. Over the leading run of such segments whose
 ; events have all fired (PA_DONE), the walk is a cursor search over the
-; prefix sums (SG_PREFIX), which steps along with the character.
+; prefix sums (SG_PREFIX), which steps along with the character. The search
+; also covers the segment just after that run (PA_REACH): it may hold the
+; destination too.
+;
+; When the segment the walk would test next holds the destination and was
+; entered already - nearly every step - no event can fire, and the step
+; finishes without saving any register; only the rest of the walk (.slow)
+; keeps its state in callee-saved ones.
 path_step:
-    push    rbx
-    push    rbp
-    push    r12
-    push    r13
-    push    r14
-    push    r15
-    sub     rsp, 56
-    mov     ebx, edi
-    mov     r12d, esi
-    PATH_PTR rbp, r12                   ; records never move
-    mov     rax, [rbp + PA_MAX]
+    PATH_PTR r8, rsi                    ; records never move
+    mov     rax, [r8 + PA_MAX]
     test    rax, rax
     jz      .at_end
-    cmp     [rbp + PA_STEP], rax
+    cmp     [r8 + PA_STEP], rax
     jge     .at_end
     xorpd   xmm1, xmm1
-    ucomisd xmm1, [rbp + PA_TOTAL]
+    ucomisd xmm1, [r8 + PA_TOTAL]
     jne     .step
     jnp     .at_end
 .step:
-    mov     rax, [rbp + PA_STEP]
+    mov     rax, [r8 + PA_STEP]
     inc     rax
-    mov     [rbp + PA_STEP], rax
-    cmp     dword [rbp + PA_EASE], NONE
+    mov     [r8 + PA_STEP], rax
+    cmp     dword [r8 + PA_EASE], NONE
     je      .ratio_only
     ; eased: the factor for (easing, max_steps, step) from its table
-    mov     ecx, [rbp + PA_ETAB]
+    mov     ecx, [r8 + PA_ETAB]
     test    ecx, ecx
-    jnz     .have_table
-    call    path_ease_table             ; rbp = the path
-    mov     ecx, eax
-    mov     rax, [rbp + PA_STEP]
+    jz      .find_table
 .have_table:
     cmp     ecx, ETAB_NONE
     je      .ratio_only
@@ -739,77 +747,161 @@ path_step:
     test    rcx, rcx
     jnz     .factor                     ; 0 = not filled (or +0.0: recomputed)
     cvtsi2sd xmm0, rax
-    cvtsi2sd xmm1, qword [rbp + PA_MAX]
+    cvtsi2sd xmm1, qword [r8 + PA_MAX]
     divsd   xmm0, xmm1                  ; ratio
-    mov     edi, [rbp + PA_EASE]
+    push    rdi
+    push    r8
+    sub     rsp, 8
+    mov     edi, [r8 + PA_EASE]
     call    ease
-    mov     ecx, [rbp + PA_ETAB]
-    mov     rax, [rbp + PA_STEP]
+    add     rsp, 8
+    pop     r8
+    pop     rdi
+    mov     ecx, [r8 + PA_ETAB]
+    mov     rax, [r8 + PA_STEP]
     mov     rdx, [etab_base]
     lea     rdx, [rdx + rcx * 8]
     movsd   [rdx + rax * 8], xmm0
     jmp     .factor
+.find_table:
+    push    rbp
+    push    rdi
+    push    r8
+    mov     rbp, r8
+    call    path_ease_table
+    pop     r8
+    pop     rdi
+    pop     rbp
+    mov     ecx, eax
+    mov     rax, [r8 + PA_STEP]
+    jmp     .have_table
 .ratio_only:
     cvtsi2sd xmm0, rax
-    cvtsi2sd xmm1, qword [rbp + PA_MAX]
+    cvtsi2sd xmm1, qword [r8 + PA_MAX]
     divsd   xmm0, xmm1                  ; ratio
-    mov     edi, [rbp + PA_EASE]
-    cmp     edi, NONE
+    mov     eax, [r8 + PA_EASE]
+    cmp     eax, NONE
     je      .factor
+    push    rdi
+    push    r8
+    sub     rsp, 8
+    mov     edi, eax
     call    ease
+    add     rsp, 8
+    pop     r8
+    pop     rdi
 .factor:
-    mulsd   xmm0, [rbp + PA_TOTAL]
-    movsd   [rbp + PA_LAST], xmm0       ; distance_to_travel
-    mov     r13d, NONE                  ; active segment
-    xor     r14d, r14d                  ; i
-    ; the exact prefix: L = min(PA_INT_COUNT, PA_DONE) segments
-    movzx   edx, word [rbp + PA_INT_COUNT]
-    movzx   eax, word [rbp + PA_DONE]
-    cmp     edx, eax
-    cmova   edx, eax
+    mulsd   xmm0, [r8 + PA_TOTAL]
+    movsd   [r8 + PA_LAST], xmm0        ; distance_to_travel
+    ; the exact prefix: the walk skips the first L = min(PA_INT_COUNT,
+    ; PA_DONE) segments, and the one after them may hold the destination
+    ; too (L2 = min(PA_INT_COUNT, PA_DONE + 1))
+    xor     ecx, ecx
+    movzx   edx, word [r8 + PA_REACH]   ; L2
     test    edx, edx
-    jz      .slow
+    jz      .try
     movsd   xmm1, [path_two_p52]
     ucomisd xmm1, xmm0
-    jbe     .slow                       ; too large, or NaN
-    mov     r15, [rbp + PA_SEGS]
-    movzx   ecx, word [rbp + PA_CURSOR]
+    jbe     .try                        ; too large, or NaN
+    mov     r9, [r8 + PA_SEGS]
+    movzx   ecx, word [r8 + PA_CURSOR]
     cmp     ecx, edx
     cmova   ecx, edx
 .back:
-    ; the first segment c with prefix(c + 1) >= d, else L
+    ; the first segment c with prefix(c + 1) >= d, else L2
     test    ecx, ecx
     jz      .forward
     imul    eax, ecx, SEGMENT_SIZE
-    cvtsi2sd xmm1, dword [r15 + rax - SEGMENT_SIZE + SG_PREFIX]
+    cvtsi2sd xmm1, dword [r9 + rax - SEGMENT_SIZE + SG_PREFIX]
     ucomisd xmm1, xmm0
     jb      .forward
     dec     ecx
     jmp     .back
 .forward:
     cmp     ecx, edx
-    jae     .found
+    jae     .past
     imul    eax, ecx, SEGMENT_SIZE
-    cvtsi2sd xmm1, dword [r15 + rax + SG_PREFIX]
+    cvtsi2sd xmm1, dword [r9 + rax + SG_PREFIX]
     ucomisd xmm1, xmm0
     jae     .found
     inc     ecx
     jmp     .forward
 .found:
-    mov     [rbp + PA_CURSOR], cx
-    mov     r14d, ecx
+    ; segments[c] holds the destination
+    mov     [r8 + PA_CURSOR], cx
     imul    eax, ecx, SEGMENT_SIZE
     test    ecx, ecx
-    jz      .skipped
-    cvtsi2sd xmm1, dword [r15 + rax - SEGMENT_SIZE + SG_PREFIX]
+    jz      .entered
+    cvtsi2sd xmm1, dword [r9 + rax - SEGMENT_SIZE + SG_PREFIX]
     subsd   xmm0, xmm1
-.skipped:
-    movsd   [rsp], xmm0
+    jmp     .entered
+.past:
+    ; the walk goes on from segment L
+    movzx   ecx, word [r8 + PA_DONE]
     cmp     ecx, edx
-    jae     .walk
-    add     r15, rax                    ; segments[c] holds the destination
-    jmp     .holds
+    cmova   ecx, edx
+    mov     [r8 + PA_CURSOR], cx
+    test    ecx, ecx
+    jz      .try
+    imul    eax, ecx, SEGMENT_SIZE
+    cvtsi2sd xmm1, dword [r9 + rax - SEGMENT_SIZE + SG_PREFIX]
+    subsd   xmm0, xmm1
+.try:
+    ; the walk's test of segment c with xmm0 left to travel: when it holds
+    ; the destination and was entered already, no event fires, and no
+    ; callee-saved register is needed
+    cmp     ecx, [r8 + PA_SEG_COUNT]
+    jae     .slow
+    imul    eax, ecx, SEGMENT_SIZE
+    mov     r9, [r8 + PA_SEGS]
+    ucomisd xmm0, [r9 + rax + SG_DISTANCE]
+    ja      .slow
+.entered:
+    cmp     byte [r9 + rax + SG_ENTERED], 0
+    je      .slow                       ; its enter event is due
+    add     r9, rax
+    movsd   xmm1, [r9 + SG_DISTANCE]
+    xorpd   xmm2, xmm2
+    ucomisd xmm1, xmm2
+    jne     .fast_ratio
+    jp      .fast_ratio
+    xorpd   xmm0, xmm0                  ; zero-length segment: t = 0
+    jmp     .fast_position
+.fast_ratio:
+    divsd   xmm0, xmm1
+    cmp     dword [r8 + PA_EASE], NONE
+    jne     .fast_position              ; eased: unclamped, overshoot allowed
+    minsd   xmm0, [path_one]            ; f64::min(x, 1.0)
+.fast_position:
+    mov     rdi, [r9 + SG_START + WP_COORD]
+    mov     rsi, [r9 + SG_END + WP_COORD]
+    mov     edx, [r9 + SG_END + WP_BEZ_COUNT]
+    test    edx, edx
+    jz      find_coord_on_line
+    mov     rcx, rsi
+    mov     rsi, [r9 + SG_END + WP_BEZ]
+    jmp     find_coord_on_bezier_curve
+.at_end:
+    mov     eax, [r8 + PA_SEG_COUNT]
+    dec     eax
+    imul    rax, rax, SEGMENT_SIZE
+    add     rax, [r8 + PA_SEGS]
+    mov     rax, [rax + SG_END + WP_COORD]
+    ret
 .slow:
+    ; the walk from segment ecx with xmm0 still to travel, which may fire
+    ; segment events
+    push    rbx
+    push    rbp
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    sub     rsp, 56
+    mov     ebx, edi
+    mov     rbp, r8
+    mov     r13d, NONE                  ; active segment
+    mov     r14d, ecx                   ; i
     movsd   [rsp], xmm0
 .walk:
     cmp     r14d, [rbp + PA_SEG_COUNT]
@@ -891,6 +983,7 @@ path_step:
     ja      .next_segment
     inc     eax
     mov     [rbp + PA_DONE], ax
+    PATH_REACH rbp
 .next_segment:
     inc     r14d
     jmp     .walk
@@ -944,20 +1037,6 @@ path_step:
     pop     rbp
     pop     rbx
     jmp     find_coord_on_bezier_curve
-.at_end:
-    mov     eax, [rbp + PA_SEG_COUNT]
-    dec     eax
-    imul    rax, rax, SEGMENT_SIZE
-    add     rax, [rbp + PA_SEGS]
-    mov     rax, [rax + SG_END + WP_COORD]
-    add     rsp, 56
-    pop     r15
-    pop     r14
-    pop     r13
-    pop     r12
-    pop     rbp
-    pop     rbx
-    ret
 
 ; motion_move(edi=slot): Motion.move - step the active path, then holds,
 ; loops, completion and their events.
