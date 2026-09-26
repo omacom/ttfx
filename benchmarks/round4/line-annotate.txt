@@ -1,0 +1,66 @@
+ Percent |	Source code & Disassembly of ttfx-bolt-input for cycles:u (1139 samples, percent: local period)
+---------------------------------------------------------------------------------------------------------------
+         :
+         :
+         :
+         : 3      Disassembly of section .text:
+         :
+         : 5      0000000000284da2 <find_coord_on_line>:
+    0.00 :   284da2: movq   %rdi,%xmm3
+    4.30 :   284da7: cvtdq2pd %xmm3,%xmm3
+    0.09 :   284dab: movq   %rsi,%xmm4
+    1.32 :   284db0: cvtdq2pd %xmm4,%xmm4
+    0.09 :   284db4: movsd  -0x23cdc4(%rip),%xmm1        # 47ff8 <geo_one>
+    1.14 :   284dbc: subsd  %xmm0,%xmm1
+   12.73 :   284dc0: unpcklpd %xmm1,%xmm1
+    5.09 :   284dc4: mulpd  %xmm1,%xmm3
+   19.84 :   284dc8: movapd %xmm0,%xmm2
+    0.26 :   284dcc: unpcklpd %xmm2,%xmm2
+    0.70 :   284dd0: mulpd  %xmm2,%xmm4
+    0.09 :   284dd4: addpd  %xmm4,%xmm3
+    4.92 :   284dd8: cvtpd2dq %xmm3,%xmm4
+   18.35 :   284ddc: movq   %xmm4,%rax
+    4.21 :   284de1: movdqa %xmm4,%xmm2
+    0.09 :   284de5: pcmpeqd -0x23ce0d(%rip),%xmm2        # 47fe0 <geo_int_min>
+    5.53 :   284ded: pmovmskb %xmm2,%ecx
+    0.09 :   284df1: test   $0xff,%ecx
+   21.07 :   284df7: jne    284dfa <find_coord_on_line.scalar>
+    0.09 :   284df9: ret
+         :
+         : 27     0000000000284dfa <find_coord_on_line.scalar>:
+    0.00 :   284dfa: movsd  -0x23ce0a(%rip),%xmm1        # 47ff8 <geo_one>
+    0.00 :   284e02: subsd  %xmm0,%xmm1
+    0.00 :   284e06: movslq %edi,%rax
+    0.00 :   284e09: cvtsi2sd %rax,%xmm3
+    0.00 :   284e0e: mulsd  %xmm1,%xmm3
+    0.00 :   284e12: mov    %rdi,%rax
+    0.00 :   284e15: sar    $0x20,%rax
+    0.00 :   284e19: cvtsi2sd %rax,%xmm4
+    0.00 :   284e1e: mulsd  %xmm1,%xmm4
+    0.00 :   284e22: movslq %esi,%rax
+    0.00 :   284e25: cvtsi2sd %rax,%xmm1
+    0.00 :   284e2a: mulsd  %xmm0,%xmm1
+    0.00 :   284e2e: addsd  %xmm1,%xmm3
+    0.00 :   284e32: mov    %rsi,%rax
+    0.00 :   284e35: sar    $0x20,%rax
+    0.00 :   284e39: cvtsi2sd %rax,%xmm1
+    0.00 :   284e3e: mulsd  %xmm0,%xmm1
+    0.00 :   284e42: addsd  %xmm1,%xmm4
+    0.00 :   284e46: movapd %xmm3,%xmm0
+    0.00 :   284e4a: cvtsd2si %xmm0,%rax
+    0.00 :   284e4f: cmp    $0x1,%rax
+    0.00 :   284e53: jno    284e5a <..@61.done>
+    0.00 :   284e55: call   2846e1 <round_half_even>
+         :
+         : 52     0000000000284e5a <..@61.done>:
+    0.00 :   284e5a: mov    %eax,%edx
+    0.00 :   284e5c: movapd %xmm4,%xmm0
+    0.00 :   284e60: cvtsd2si %xmm0,%rax
+    0.00 :   284e65: cmp    $0x1,%rax
+    0.00 :   284e69: jno    284e70 <..@62.done>
+    0.00 :   284e6b: call   2846e1 <round_half_even>
+         :
+         : 60     0000000000284e70 <..@62.done>:
+    0.00 :   284e70: shl    $0x20,%rax
+    0.00 :   284e74: or     %rdx,%rax
+    0.00 :   284e77: ret

@@ -1,0 +1,67 @@
+[
+  {
+    "name": "pr35-189840b",
+    "sha256": "51e05003fc119e86f39f744d36db52e71e669cd8d1c43272770c17bd97d4d0b0",
+    "bytes": 2813256
+  },
+  {
+    "name": "pr36-before",
+    "sha256": "7cd3c7289c07154e4c1ad0251480efc2cee151bc7461197cf5ec0371e6caf89d",
+    "bytes": 2421232
+  },
+  {
+    "name": "integrated",
+    "sha256": "1f10ea13dc8e73f99e47dbcc6740f53b05e4fa1e96fd6a55752efd21e570d365",
+    "bytes": 2813016
+  },
+  {
+    "name": "leaf",
+    "sha256": "733d85b4fa0449fa5f2c937d51f8c47aafc18a4bc6653b5b45c971641c4d4fd1",
+    "bytes": 2813000
+  },
+  {
+    "name": "crc",
+    "sha256": "a58eb9c7489b5dac36a7cd96f86ca14da07df62afc0297ef4f1e1fc217fa0e44",
+    "bytes": 2812952
+  },
+  {
+    "name": "doze",
+    "sha256": "87b35e1f602a724da6118f223b93906f9c61e5e2cfdcb51c0fa280c82dc95509",
+    "bytes": 2812952
+  },
+  {
+    "name": "ratio",
+    "sha256": "59d3e768daa6a2f5b83b3b8388a7871073d2b4ce226be25bdc6c7996c839c2a9",
+    "bytes": 2813048
+  },
+  {
+    "name": "split",
+    "sha256": "aab9bbf1e732c2ce84bfd7b88cbc9837792386612ad337b129b6186687c944e9",
+    "bytes": 2813848
+  },
+  {
+    "name": "final",
+    "sha256": "aab9bbf1e732c2ce84bfd7b88cbc9837792386612ad337b129b6186687c944e9",
+    "bytes": 2813848
+  },
+  {
+    "name": "ttfx-bolt-input",
+    "sha256": "bce7304c4647c16d378e854aa2ca3d9e866bc5aebd65409661bc19185f461d02",
+    "bytes": 15660032
+  },
+  {
+    "name": "ttfx-instrumented",
+    "sha256": "4e03f4f2ef17d1213a1661778209e38092ec20124a52b2d9cf9babd078c0b405",
+    "bytes": 17616304
+  },
+  {
+    "name": "ttfx-bolt",
+    "sha256": "55af42505c4691562cdf17c472e7e666e6e49aa933b735b2c297dcb7491498bd",
+    "bytes": 9706752
+  },
+  {
+    "name": "ttfx-bolt-conservative",
+    "sha256": "954a63fa1d04f434bcc9546c258e1b65314042309902329cd70aa0b626f87d9d",
+    "bytes": 9619312
+  }
+]

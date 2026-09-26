@@ -1,0 +1,27 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 2K of event 'cycles:u'
+# Event count (approx.): 204506135
+#
+# Overhead  Command          Shared Object         Symbol
+# ........  ...............  ....................  .............................................................................................................................................................................................................................................................................................................................................................
+#
+    32.37%  ttfx-bolt-input  ttfx-bolt-input       [.] rng_next.generate
+     9.34%  ttfx-bolt-input  ttfx-bolt-input       [.] row_rebuild
+     7.78%  ttfx-bolt-input  ttfx-bolt-input       [.] column_tick.skip_vec
+     5.48%  ttfx-bolt-input  ttfx-bolt-input       [.] column_tick
+     4.35%  ttfx-bolt-input  ttfx-bolt-input       [.] visual_make
+     3.47%  ttfx-bolt-input  ttfx-bolt-input       [.] column_tick.skip
+     2.93%  ttfx-bolt-input  ttfx-bolt-input       [.] emit_blocks.quad
+     2.15%  ttfx-bolt-input  ttfx-bolt-input       [.] scene_load_head
+     1.86%  ttfx-bolt-input  ttfx-bolt-input       [.] matrix_next_frame.active
+     1.71%  ttfx-bolt-input  ttfx-bolt-input       [.] column_tick.compare
+     1.52%  ttfx-bolt-input  ttfx-bolt-input       [.] column_tick.each
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

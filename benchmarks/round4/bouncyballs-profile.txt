@@ -1,0 +1,38 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 2K of event 'cycles:u'
+# Event count (approx.): 222606678
+#
+# Overhead  Command          Shared Object         Symbol
+# ........  ...............  ....................  ....................................................................................................................................................
+#
+    12.44%  ttfx-bolt-input  ttfx-bolt-input       [.] row_rebuild
+     7.82%  ttfx-bolt-input  ttfx-bolt-input       [.] find_coord_on_line
+     7.01%  ttfx-bolt-input  ttfx-bolt-input       [.] emit_blocks.quad
+     5.57%  ttfx-bolt-input  ttfx-bolt-input       [.] update
+     4.22%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move
+     3.82%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.have_table
+     2.70%  ttfx-bolt-input  ttfx-bolt-input       [.] row_dirty.any
+     2.65%  ttfx-bolt-input  ttfx-bolt-input       [.] set_coordinate
+     2.52%  ttfx-bolt-input  ttfx-bolt-input       [.] next_set
+     2.47%  ttfx-bolt-input  ttfx-bolt-input       [.] coordinate_changed
+     2.47%  ttfx-bolt-input  ttfx-bolt-input       [.] scene_load_head
+     2.29%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step
+     2.29%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.factor
+     2.29%  ttfx-bolt-input  ttfx-bolt-input       [.] row_dirty.chunk
+     2.20%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move.placed
+     2.07%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.fast_ratio
+     1.84%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move.moved
+     1.80%  ttfx-bolt-input  ttfx-bolt-input       [.] cell_unlink.fix_next
+     1.75%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.forward
+     1.75%  ttfx-bolt-input  ttfx-bolt-input       [.] step_animation_awake
+     1.71%  ttfx-bolt-input  ttfx-bolt-input       [.] next_clear
+     1.53%  ttfx-bolt-input  ttfx-bolt-input       [.] row_rebuild.extended
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

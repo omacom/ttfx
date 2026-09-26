@@ -1,0 +1,271 @@
+{
+  "binary": "/home/gardnmi/Projects/ttfx/target/ttfx-round2",
+  "sha256": "7cd3c7289c07154e4c1ad0251480efc2cee151bc7461197cf5ec0371e6caf89d",
+  "mode": "full",
+  "comparison": "stdout/stderr byte counts and SHA-256; exit status",
+  "wrapper_source": "tools/asm/hash-output.c",
+  "wrapper_sha256": "07a7f8cd5a2fc20ab41cbd7f05e6047d27c91c3208a39741a9786b000befa81b",
+  "effects": {
+    "waves": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 326.066,
+      "passed": 3141,
+      "failed": 0
+    },
+    "blackhole": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 365.555,
+      "passed": 2181,
+      "failed": 0
+    },
+    "beams": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 103.074,
+      "passed": 1029,
+      "failed": 0
+    },
+    "bouncyballs": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 528.412,
+      "passed": 3141,
+      "failed": 0
+    },
+    "binarypath": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 533.773,
+      "passed": 837,
+      "failed": 0
+    },
+    "bubbles": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 543.097,
+      "passed": 2565,
+      "failed": 0
+    },
+    "burn": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 208.733,
+      "passed": 1413,
+      "failed": 0
+    },
+    "swarm": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 607.611,
+      "passed": 2373,
+      "failed": 0
+    },
+    "colorshift": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 188.331,
+      "passed": 4101,
+      "failed": 0
+    },
+    "highlight": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 60.65,
+      "passed": 2373,
+      "failed": 0
+    },
+    "expand": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 118.351,
+      "passed": 2757,
+      "failed": 0
+    },
+    "crumble": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 181.972,
+      "passed": 1797,
+      "failed": 0
+    },
+    "errorcorrect": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 222.307,
+      "passed": 1029,
+      "failed": 0
+    },
+    "decrypt": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 241.395,
+      "passed": 1413,
+      "failed": 0
+    },
+    "middleout": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 83.602,
+      "passed": 2373,
+      "failed": 0
+    },
+    "overflow": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 70.179,
+      "passed": 2181,
+      "failed": 0
+    },
+    "orbittingvolley": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 115.604,
+      "passed": 3141,
+      "failed": 0
+    },
+    "fireworks": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 334.722,
+      "passed": 2565,
+      "failed": 0
+    },
+    "randomsequence": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 51.219,
+      "passed": 2373,
+      "failed": 0
+    },
+    "matrix": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 332.517,
+      "passed": 2757,
+      "failed": 0
+    },
+    "rain": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 304.908,
+      "passed": 2949,
+      "failed": 0
+    },
+    "laseretch": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 529.67,
+      "passed": 2181,
+      "failed": 0
+    },
+    "scattered": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 243.236,
+      "passed": 2949,
+      "failed": 0
+    },
+    "pour": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 498.94,
+      "passed": 4101,
+      "failed": 0
+    },
+    "slice": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 107.232,
+      "passed": 3141,
+      "failed": 0
+    },
+    "smoke": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 98.362,
+      "passed": 1413,
+      "failed": 0
+    },
+    "print": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 537.948,
+      "passed": 2565,
+      "failed": 0
+    },
+    "rings": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 392.113,
+      "passed": 2373,
+      "failed": 0
+    },
+    "spotlights": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 129.816,
+      "passed": 2181,
+      "failed": 0
+    },
+    "sweep": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 66.32,
+      "passed": 2181,
+      "failed": 0
+    },
+    "slide": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 231.756,
+      "passed": 5445,
+      "failed": 0
+    },
+    "spray": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 173.392,
+      "passed": 2949,
+      "failed": 0
+    },
+    "synthgrid": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 88.245,
+      "passed": 1797,
+      "failed": 0
+    },
+    "thunderstorm": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 117.107,
+      "passed": 1797,
+      "failed": 0
+    },
+    "wipe": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 67.859,
+      "passed": 3525,
+      "failed": 0
+    },
+    "vhstape": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 99.977,
+      "passed": 1989,
+      "failed": 0
+    },
+    "unstable": {
+      "mode": "full",
+      "exit_code": 0,
+      "seconds": 204.384,
+      "passed": 2565,
+      "failed": 0
+    }
+  },
+  "passed": 91641,
+  "failed": 0
+}

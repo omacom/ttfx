@@ -1,0 +1,62 @@
+[
+  {
+    "seed": 42,
+    "args": [
+      "--seed",
+      "42",
+      "--parity-dump",
+      "--max-frames",
+      "400",
+      "--existing-color-handling",
+      "dynamic",
+      "decrypt"
+    ],
+    "outputs": [
+      {
+        "binary": "target/refresh/pr35-189840b",
+        "status": 0,
+        "stdout_bytes": 201792,
+        "stdout_sha256": "1a82f0d6bedb296cd43f36e4fd625cde9e42e6455acad5ee6ed69cbb1b7f703f",
+        "stderr_sha256": "6a3e9fb19dfbcd3a03244919de3b8062832c8e9eb38e651d889faa00f94a7959"
+      },
+      {
+        "binary": "target/refresh/final",
+        "binary_sha256": "aab9bbf1e732c2ce84bfd7b88cbc9837792386612ad337b129b6186687c944e9",
+        "status": 0,
+        "stdout_bytes": 201792,
+        "stdout_sha256": "1a82f0d6bedb296cd43f36e4fd625cde9e42e6455acad5ee6ed69cbb1b7f703f",
+        "stderr_sha256": "6a3e9fb19dfbcd3a03244919de3b8062832c8e9eb38e651d889faa00f94a7959"
+      }
+    ]
+  },
+  {
+    "seed": 1337,
+    "args": [
+      "--seed",
+      "1337",
+      "--parity-dump",
+      "--max-frames",
+      "400",
+      "--existing-color-handling",
+      "dynamic",
+      "decrypt"
+    ],
+    "outputs": [
+      {
+        "binary": "target/refresh/pr35-189840b",
+        "status": 0,
+        "stdout_bytes": 203972,
+        "stdout_sha256": "a80e4b934df2b373de035b2aaa82c3267b7de58913f828f7a8e9f97ed52a8b75",
+        "stderr_sha256": "6a3e9fb19dfbcd3a03244919de3b8062832c8e9eb38e651d889faa00f94a7959"
+      },
+      {
+        "binary": "target/refresh/final",
+        "binary_sha256": "aab9bbf1e732c2ce84bfd7b88cbc9837792386612ad337b129b6186687c944e9",
+        "status": 0,
+        "stdout_bytes": 203972,
+        "stdout_sha256": "a80e4b934df2b373de035b2aaa82c3267b7de58913f828f7a8e9f97ed52a8b75",
+        "stderr_sha256": "6a3e9fb19dfbcd3a03244919de3b8062832c8e9eb38e651d889faa00f94a7959"
+      }
+    ]
+  }
+]

@@ -1,0 +1,40 @@
+diff --git i/asm/engine/render.asm w/asm/engine/render.asm
+index 4d6e692..2accf59 100644
+--- i/asm/engine/render.asm
++++ w/asm/engine/render.asm
+@@ -1022,6 +1022,12 @@ row_rebuild:
+ emit_blocks:
+     push    r12
+     push    r13
++%if TIER >= 3
++    vpbroadcastd xmm8, [space_handle]
++%else
++    movd    xmm8, [space_handle]
++    pshufd  xmm8, xmm8, 0
++%endif
+ .quad:
+     ; a block per iteration; one test covers all four lengths (< 32 bytes
+     ; leaves bits 5-7 of every length clear, so their OR stays below 32)
+@@ -1030,6 +1036,22 @@ emit_blocks:
+     ja      .tail
+     mov     [r9], edi
+     add     r9, 4
++%if TIER >= 3
++    vmovdqu xmm0, [rsi]
++    vpcmpeqd xmm0, xmm0, xmm8
++    vpmovmskb eax, xmm0
++%else
++    movdqu  xmm0, [rsi]
++    pcmpeqd xmm0, xmm8
++    pmovmskb eax, xmm0
++%endif
++    cmp     eax, 0xffff
++    jne     .mixed
++    mov     dword [rdi], 0x20202020
++    add     rdi, 4
++    add     rsi, 16
++    jmp     .quad
++.mixed:
+     mov     eax, [rsi]
+     mov     ecx, [rsi + 4]
+     mov     r8d, [rsi + 8]

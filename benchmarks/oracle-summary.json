@@ -1,0 +1,196 @@
+{
+  "binary": "/home/gardnmi/Projects/ttfx/target/ttfx-optimized",
+  "sha256": "dc21e15157a7f2863a8eaa31f6bf2bee1b77b884817eac97edfe48bddda5d80b",
+  "comparison": "stdout/stderr byte counts and SHA-256; exit status",
+  "waves": "full",
+  "other_effects": "quick",
+  "effects": {
+    "beams": {
+      "mode": "quick",
+      "passed": 189,
+      "failed": 0
+    },
+    "binarypath": {
+      "mode": "quick",
+      "passed": 165,
+      "failed": 0
+    },
+    "blackhole": {
+      "mode": "quick",
+      "passed": 333,
+      "failed": 0
+    },
+    "bouncyballs": {
+      "mode": "quick",
+      "passed": 453,
+      "failed": 0
+    },
+    "bubbles": {
+      "mode": "quick",
+      "passed": 381,
+      "failed": 0
+    },
+    "burn": {
+      "mode": "quick",
+      "passed": 237,
+      "failed": 0
+    },
+    "colorshift": {
+      "mode": "quick",
+      "passed": 573,
+      "failed": 0
+    },
+    "crumble": {
+      "mode": "quick",
+      "passed": 285,
+      "failed": 0
+    },
+    "decrypt": {
+      "mode": "quick",
+      "passed": 237,
+      "failed": 0
+    },
+    "errorcorrect": {
+      "mode": "quick",
+      "passed": 189,
+      "failed": 0
+    },
+    "expand": {
+      "mode": "quick",
+      "passed": 405,
+      "failed": 0
+    },
+    "fireworks": {
+      "mode": "quick",
+      "passed": 381,
+      "failed": 0
+    },
+    "highlight": {
+      "mode": "quick",
+      "passed": 357,
+      "failed": 0
+    },
+    "laseretch": {
+      "mode": "quick",
+      "passed": 333,
+      "failed": 0
+    },
+    "matrix": {
+      "mode": "quick",
+      "passed": 405,
+      "failed": 0
+    },
+    "middleout": {
+      "mode": "quick",
+      "passed": 357,
+      "failed": 0
+    },
+    "orbittingvolley": {
+      "mode": "quick",
+      "passed": 453,
+      "failed": 0
+    },
+    "overflow": {
+      "mode": "quick",
+      "passed": 333,
+      "failed": 0
+    },
+    "pour": {
+      "mode": "quick",
+      "passed": 573,
+      "failed": 0
+    },
+    "print": {
+      "mode": "quick",
+      "passed": 381,
+      "failed": 0
+    },
+    "rain": {
+      "mode": "quick",
+      "passed": 429,
+      "failed": 0
+    },
+    "randomsequence": {
+      "mode": "quick",
+      "passed": 357,
+      "failed": 0
+    },
+    "rings": {
+      "mode": "quick",
+      "passed": 357,
+      "failed": 0
+    },
+    "scattered": {
+      "mode": "quick",
+      "passed": 429,
+      "failed": 0
+    },
+    "slice": {
+      "mode": "quick",
+      "passed": 453,
+      "failed": 0
+    },
+    "slide": {
+      "mode": "quick",
+      "passed": 741,
+      "failed": 0
+    },
+    "smoke": {
+      "mode": "quick",
+      "passed": 237,
+      "failed": 0
+    },
+    "spotlights": {
+      "mode": "quick",
+      "passed": 333,
+      "failed": 0
+    },
+    "spray": {
+      "mode": "quick",
+      "passed": 429,
+      "failed": 0
+    },
+    "swarm": {
+      "mode": "quick",
+      "passed": 357,
+      "failed": 0
+    },
+    "sweep": {
+      "mode": "quick",
+      "passed": 333,
+      "failed": 0
+    },
+    "synthgrid": {
+      "mode": "quick",
+      "passed": 285,
+      "failed": 0
+    },
+    "thunderstorm": {
+      "mode": "quick",
+      "passed": 285,
+      "failed": 0
+    },
+    "unstable": {
+      "mode": "quick",
+      "passed": 381,
+      "failed": 0
+    },
+    "vhstape": {
+      "mode": "quick",
+      "passed": 309,
+      "failed": 0
+    },
+    "waves": {
+      "mode": "full",
+      "passed": 3141,
+      "failed": 0
+    },
+    "wipe": {
+      "mode": "quick",
+      "passed": 501,
+      "failed": 0
+    }
+  },
+  "passed": 16377,
+  "failed": 0
+}

@@ -1,0 +1,25 @@
+{
+  "method": "os.wait4 ru_maxrss; same 190x46 waves input, 200x50 canvas, seed 1, CPU 4; three runs; TTFX_ASM=force",
+  "baseline": {
+    "max_rss_kib": [
+      85820,
+      85792,
+      85904
+    ],
+    "median_kib": 85820
+  },
+  "candidate": {
+    "max_rss_kib": [
+      75648,
+      75808,
+      75696
+    ],
+    "median_kib": 75696
+  },
+  "binary_sha256": {
+    "baseline": "61709d1c647a4b76bcc25644712fe1d89db0b8863006b0c0c893212fe764052e",
+    "candidate": "dc21e15157a7f2863a8eaa31f6bf2bee1b77b884817eac97edfe48bddda5d80b"
+  },
+  "input_sha256": "5520772cb3e4a78263b258c2020280ce291135615cbc193e89added6c41d732b",
+  "transparent_hugepages": "always"
+}

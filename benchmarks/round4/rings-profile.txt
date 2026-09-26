@@ -1,0 +1,36 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 7K of event 'cycles:u'
+# Event count (approx.): 759222776
+#
+# Overhead  Command          Shared Object         Symbol
+# ........  ...............  ....................  .............................................................................................................................................................................................................................................................................................................................................................
+#
+     8.06%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move
+     7.90%  ttfx-bolt-input  ttfx-bolt-input       [.] find_coord_on_line
+     5.39%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.try
+     4.79%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.have_table
+     3.83%  ttfx-bolt-input  ttfx-bolt-input       [.] update
+     3.45%  ttfx-bolt-input  ttfx-bolt-input       [.] emit_blocks.quad
+     3.04%  ttfx-bolt-input  ttfx-bolt-input       [.] entry_matches
+     2.74%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step
+     2.61%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.fast_ratio
+     2.28%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.ratio_only
+     2.27%  ttfx-bolt-input  ttfx-bolt-input       [.] cell_link.head
+     2.20%  ttfx-bolt-input  libm.so.6             [.] hypot
+     2.08%  ttfx-bolt-input  ttfx-bolt-input       [.] step_animation_awake
+     1.99%  ttfx-bolt-input  ttfx-bolt-input       [.] coordinate_changed
+     1.95%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move.placed
+     1.83%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.walk
+     1.67%  ttfx-bolt-input  ttfx-bolt-input       [.] row_rebuild
+     1.61%  ttfx-bolt-input  ttfx-bolt-input       [.] handle_event.action
+     1.51%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.forward
+     1.50%  ttfx-bolt-input  ttfx-bolt-input       [.] paint_rec
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

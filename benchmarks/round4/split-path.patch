@@ -1,0 +1,185 @@
+diff --git i/asm/effects/blackhole.asm w/asm/effects/blackhole.asm
+index 20f4a67..78f92fe 100644
+--- i/asm/effects/blackhole.asm
++++ w/asm/effects/blackhole.asm
+@@ -545,7 +545,7 @@ bh_final_color_map:
+
+ ; bh_path_name(eax=path index) -> eax = its name.
+ bh_path_name:
+-    shl     rax, 7                      ; PATH_SIZE
++    shl     rax, PATH_SHIFT                      ; PATH_SIZE
+     add     rax, [paths]
+     mov     eax, [rax + PA_NAME]
+     ret
+diff --git i/asm/effects/expand.asm w/asm/effects/expand.asm
+index bb6cbd9..410a07c 100644
+--- i/asm/effects/expand.asm
++++ w/asm/effects/expand.asm
+@@ -73,7 +73,7 @@ expand_build:
+     call    active_insert
+     ; the path's (auto) name for the events
+     mov     r13, rbp
+-    shl     r13, 7                      ; PATH_SIZE
++    shl     r13, PATH_SHIFT                      ; PATH_SIZE
+     add     r13, [paths]
+     mov     r13d, [r13 + PA_NAME]
+     push    0
+diff --git i/asm/effects/spray.asm w/asm/effects/spray.asm
+index 9c77692..f7ecf33 100644
+--- i/asm/effects/spray.asm
++++ w/asm/effects/spray.asm
+@@ -84,7 +84,7 @@ spray_build:
+     call    path_new_waypoint
+     ; activated -> layer 1, complete -> layer 0
+     mov     rax, rbp
+-    shl     rax, 7                      ; PATH_SIZE
++    shl     rax, PATH_SHIFT                      ; PATH_SIZE
+     add     rax, [paths]
+     mov     eax, [rax + PA_NAME]
+     mov     [rsp + 4], eax
+diff --git i/asm/effects/vhstape.asm w/asm/effects/vhstape.asm
+index 1329400..cb04984 100644
+--- i/asm/effects/vhstape.asm
++++ w/asm/effects/vhstape.asm
+@@ -593,7 +593,7 @@ vhs_line_set_hold:
+     dec     rdx
+     mov     edi, [rax + rdx * 4]
+     mov     edi, [rcx + rdi * 8]        ; glitch path
+-    shl     rdi, 7                      ; PATH_SIZE
++    shl     rdi, PATH_SHIFT                      ; PATH_SIZE
+     add     rdi, [paths]
+     mov     [rdi + PA_HOLD], rsi
+     jmp     .next
+@@ -612,7 +612,7 @@ vhs_line_set_hold:
+     mov     rax, [ch_user0]
+     mov     eax, [rax + rbp * 8]
+     add     eax, %1
+-    shl     rax, 7
++    shl     rax, PATH_SHIFT
+     add     rax, [paths]
+     movsd   [rax + PA_SPEED], xmm0
+ %endmacro
+diff --git i/asm/engine/motion.asm w/asm/engine/motion.asm
+index 9b99ff3..094a8df 100644
+--- i/asm/engine/motion.asm
++++ w/asm/engine/motion.asm
+@@ -11,10 +11,10 @@
+ %define ORIGIN_NAME         0x7fffffff  ; the synthetic origin waypoint ("origin")
+
+ ; Walk index (see path_step), in the path and segment records' spare bytes.
+-%define PA_INT_COUNT        120         ; u16 leading segments of whole-number distance
+-%define PA_DONE             122         ; u16 leading segments with both events fired
+-%define PA_CURSOR           124         ; u16 the segment the last step landed in
+-%define PA_REACH            126         ; u16 min(PA_INT_COUNT, PA_DONE + 1)
++%define PA_INT_COUNT        56         ; u16 leading segments of whole-number distance
++%define PA_DONE             58         ; u16 leading segments with both events fired
++%define PA_CURSOR           60         ; u16 the segment the last step landed in
++%define PA_REACH            62         ; u16 min(PA_INT_COUNT, PA_DONE + 1)
+ %define SG_PREFIX           76          ; u32 distance sum of segments 0..=i (the run above)
+ ; Eased factor tables (path_ease_table), in PA_OWNER's slot (never read).
+ %define PA_ETAB             PA_OWNER    ; u32 table offset / 8; 0 = not looked up
+@@ -28,7 +28,10 @@
+ %define SEGSHARE_BITS       14
+ %define SEGSHARE_SIZE       (1 << SEGSHARE_BITS)    ; 16-byte entries: list, count, tag
+ %define SEGSHARE_PROBATION  256
+-%if PA_WP_CAP + 4 > PA_INT_COUNT || PA_REACH + 2 > PATH_SIZE
++%if PA_SEG_CAP != PA_SEG_COUNT + 4 || PA_WP_CAP != PA_WP_COUNT + 4
++%error "grow_array requires count and capacity to be adjacent"
++%endif
++%if PA_WP_CAP + 4 > PATH_COLD + PATH_SIZE || PA_REACH + 2 > PATH_SIZE
+ %error "path record layout overlaps the walk index"
+ %endif
+ %if SEGMENT_SIZE % 16 || WAYPOINT_SIZE != 32
+@@ -41,14 +44,14 @@
+ section .text
+
+ paths_init:
+-    mov     rdi, PATH_LIMIT * PATH_SIZE
++    mov     rdi, PATH_COLD + PATH_LIMIT * PATH_SIZE
+     call    reserve
+     mov     [paths], rax
+     ret
+
+ %macro PATH_PTR 2                       ; dest, index register
+     mov     %1, %2
+-    shl     %1, 7                       ; PATH_SIZE
++    shl     %1, PATH_SHIFT                       ; PATH_SIZE
+     add     %1, [paths]
+ %endmacro
+
+@@ -126,6 +129,7 @@ path_new:
+ %assign pz_off 0
+ %rep PATH_SIZE / 16
+     movdqu  [r8 + pz_off], xmm0
++    movdqu  [r8 + PATH_COLD + pz_off], xmm0
+ %assign pz_off pz_off + 16
+ %endrep
+     mov     [r8 + PA_NAME], r15d
+diff --git i/asm/engine/scene.asm w/asm/engine/scene.asm
+index d263720..a6c14f5 100644
+--- i/asm/engine/scene.asm
++++ w/asm/engine/scene.asm
+@@ -964,7 +964,7 @@ step_synced_scene:
+     ret
+ .path:
+     mov     rdx, rax
+-    shl     rdx, 7                      ; PATH_SIZE
++    shl     rdx, PATH_SHIFT                      ; PATH_SIZE
+     add     rdx, [paths]
+     mov     ecx, [r8 + SC_COUNT]
+     sub     ecx, [r8 + SC_HEAD]
+diff --git i/asm/ttfx.inc w/asm/ttfx.inc
+index 0c81758..4cf9b8c 100644
+--- i/asm/ttfx.inc
++++ w/asm/ttfx.inc
+@@ -234,27 +234,29 @@ global %1
+ %define FR_DURATION         4           ; u32 ticks
+
+ ; path record (PATH_SIZE bytes; index into [paths])
+-%define PATH_SIZE           128
+-%define PA_NAME             0           ; u32
+-%define PA_NEXT             4           ; i32 next path of the same character
+-%define PA_SPEED            8           ; f64
+-%define PA_EASE             16          ; i32 easing id or NONE
+-%define PA_LAYER            20          ; i32 (PAF_LAYER)
+-%define PA_FLAGS            24          ; u32 PAF_*
+-%define PA_OWNER            28          ; u32 character slot
+-%define PA_HOLD             32          ; i64 hold_time
+-%define PA_HOLD_LEFT        40          ; i64 hold_time_remaining
+-%define PA_TOTAL            48          ; f64 total_distance
+-%define PA_STEP             56          ; i64 current_step
+-%define PA_MAX              64          ; i64 max_steps
+-%define PA_LAST             72          ; f64 last_distance_reached
+-%define PA_ORIGIN_DIST      80          ; f64 origin segment distance (PAF_ORIGIN)
+-%define PA_SEGS             88          ; u64 pointer to segments
+-%define PA_SEG_COUNT        96          ; u32
+-%define PA_SEG_CAP          100         ; u32
+-%define PA_WPS              104         ; u64 pointer to waypoints
+-%define PA_WP_COUNT         112         ; u32
+-%define PA_WP_CAP           116         ; u32
++%define PATH_SIZE           64
++%define PATH_SHIFT          6
++%define PATH_COLD           ((1 << 24) * PATH_SIZE + 2080)
++%define PA_NAME             (PATH_COLD + 0)           ; u32
++%define PA_NEXT             (PATH_COLD + 4)           ; i32 next path of the same character
++%define PA_SPEED            (PATH_COLD + 8)           ; f64
++%define PA_EASE             52          ; i32 easing id or NONE
++%define PA_LAYER            (PATH_COLD + 16)          ; i32 (PAF_LAYER)
++%define PA_FLAGS            (PATH_COLD + 20)          ; u32 PAF_*
++%define PA_OWNER            48          ; u32 character slot
++%define PA_HOLD             (PATH_COLD + 24)          ; i64 hold_time
++%define PA_HOLD_LEFT        (PATH_COLD + 32)          ; i64 hold_time_remaining
++%define PA_TOTAL            0          ; f64 total_distance
++%define PA_STEP             8          ; i64 current_step
++%define PA_MAX              16          ; i64 max_steps
++%define PA_LAST             24          ; f64 last_distance_reached
++%define PA_ORIGIN_DIST      (PATH_COLD + 40)          ; f64 origin segment distance (PAF_ORIGIN)
++%define PA_SEGS             32          ; u64 pointer to segments
++%define PA_SEG_COUNT        40          ; u32
++%define PA_SEG_CAP          44         ; u32
++%define PA_WPS              (PATH_COLD + 48)         ; u64 pointer to waypoints
++%define PA_WP_COUNT         (PATH_COLD + 56)         ; u32
++%define PA_WP_CAP           (PATH_COLD + 60)         ; u32
+
+ %define PAF_LAYER           1
+ %define PAF_LOOP            2

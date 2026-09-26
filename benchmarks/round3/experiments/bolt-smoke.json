@@ -1,0 +1,66 @@
+[
+  {
+    "mode": "0",
+    "effect": "print",
+    "original_status": 0,
+    "bolt_status": 0,
+    "stdout_equal": true,
+    "stderr": ""
+  },
+  {
+    "mode": "0",
+    "effect": "waves",
+    "original_status": 0,
+    "bolt_status": 0,
+    "stdout_equal": true,
+    "stderr": ""
+  },
+  {
+    "mode": "0",
+    "effect": "binarypath",
+    "original_status": 0,
+    "bolt_status": 0,
+    "stdout_equal": true,
+    "stderr": ""
+  },
+  {
+    "mode": "0",
+    "effect": "matrix",
+    "original_status": 0,
+    "bolt_status": 0,
+    "stdout_equal": true,
+    "stderr": ""
+  },
+  {
+    "mode": "force",
+    "effect": "print",
+    "original_status": 0,
+    "bolt_status": 0,
+    "stdout_equal": true,
+    "stderr": ""
+  },
+  {
+    "mode": "force",
+    "effect": "waves",
+    "original_status": 0,
+    "bolt_status": 0,
+    "stdout_equal": true,
+    "stderr": ""
+  },
+  {
+    "mode": "force",
+    "effect": "binarypath",
+    "original_status": 0,
+    "bolt_status": 0,
+    "stdout_equal": true,
+    "stderr": ""
+  },
+  {
+    "mode": "force",
+    "effect": "matrix",
+    "original_status": 0,
+    "bolt_status": 0,
+    "stdout_equal": true,
+    "stderr": ""
+  }
+]

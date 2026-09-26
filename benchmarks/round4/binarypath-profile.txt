@@ -1,0 +1,44 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 13K of event 'cycles:u'
+# Event count (approx.): 1342640278
+#
+# Overhead  Command          Shared Object         Symbol
+# ........  ...............  ....................  .....................................................................................................................
+#
+     8.87%  ttfx-bolt-input  ttfx-bolt-input       [.] update
+     8.48%  ttfx-bolt-input  ttfx-bolt-input       [.] find_coord_on_line
+     7.49%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move
+     4.48%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.ratio_only
+     3.72%  ttfx-bolt-input  ttfx-bolt-input       [.] emit_blocks.quad
+     3.57%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.fast_ratio
+     3.55%  ttfx-bolt-input  ttfx-bolt-input       [.] paint_rec
+     3.53%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.factor
+     3.28%  ttfx-bolt-input  ttfx-bolt-input       [.] cell_rewin
+     3.05%  ttfx-bolt-input  ttfx-bolt-input       [.] coordinate_changed
+     2.88%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step
+     2.84%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move.placed
+     2.56%  ttfx-bolt-input  ttfx-bolt-input       [.] coordinate_changed.unlink
+     2.41%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.back
+     2.40%  ttfx-bolt-input  ttfx-bolt-input       [.] cell_link.head
+     2.39%  ttfx-bolt-input  ttfx-bolt-input       [.] cell_unlink.owner
+     2.09%  ttfx-bolt-input  ttfx-bolt-input       [.] step_animation_awake
+     1.98%  ttfx-bolt-input  ttfx-bolt-input       [.] cell_link
+     1.73%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.forward
+     1.48%  ttfx-bolt-input  ttfx-bolt-input       [.] char_coord
+     1.33%  ttfx-bolt-input  ttfx-bolt-input       [.] cell_unlink
+     1.30%  ttfx-bolt-input  ttfx-bolt-input       [.] row_rebuild
+     1.11%  ttfx-bolt-input  ttfx-bolt-input       [.] set_coordinate
+     1.03%  ttfx-bolt-input  ttfx-bolt-input       [.] cell_rewin.chosen
+     1.02%  ttfx-bolt-input  ttfx-bolt-input       [.] path_extend_index
+     0.95%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.found
+     0.82%  ttfx-bolt-input  ttfx-bolt-input       [.] ..@336.done
+     0.80%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.finish
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

@@ -1,0 +1,39 @@
+{
+  "binary_sha256": "7cd3c7289c07154e4c1ad0251480efc2cee151bc7461197cf5ec0371e6caf89d",
+  "official_entrypoint": {
+    "command": "NASM=/path/to/nasm ./bin/test",
+    "exit_code": 1,
+    "stopped_at": "tools/parity/run_suite.sh",
+    "reason": "Two preexisting decrypt-dynamic failures in original PR #35 assembly; see upstream-parity.json"
+  },
+  "release_tests": {
+    "passed": 57,
+    "failed": 0
+  },
+  "cli_corpus": {
+    "passed": 19,
+    "failed": 0
+  },
+  "sigterm_behavior": "all checks passed",
+  "terminal_close_behavior": "all checks passed",
+  "python_frame_parity_assembly": {
+    "passed": 352,
+    "failed": 2,
+    "failures": [
+      "decrypt-dynamic seed=42",
+      "decrypt-dynamic seed=1337"
+    ]
+  },
+  "python_frame_parity_forced_rust": {
+    "passed": 354,
+    "failed": 0
+  },
+  "remaining_checks_run_separately_with_forced_assembly": {
+    "tty_stream_parity": {
+      "passed": 41,
+      "failed": 0
+    },
+    "resize_behavior": "all checks passed"
+  },
+  "macos_and_musl": "not tested locally"
+}

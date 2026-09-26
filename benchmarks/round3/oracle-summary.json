@@ -1,0 +1,1344 @@
+{
+  "mode": "quick",
+  "binary_sha256": "aab9bbf1e732c2ce84bfd7b88cbc9837792386612ad337b129b6186687c944e9",
+  "comparison": "stdout/stderr byte counts and SHA-256, plus exit status, versus same-binary Rust engine",
+  "wrapper_source": "tools/asm/hash-output.c",
+  "jobs": 4,
+  "results": [
+    {
+      "tier": 4,
+      "effect": "beams",
+      "exit_code": 0,
+      "seconds": 23.664,
+      "passed": 189,
+      "failed": 0,
+      "log_sha256": "73feb8f868b428f0ad3321aeeea051cc03e0d2bc619ca7d8e37868117f1ba5e3"
+    },
+    {
+      "tier": 4,
+      "effect": "blackhole",
+      "exit_code": 0,
+      "seconds": 74.61,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "5dbe92dbecdcf57b672022d2103cc6cc7467855222ff5f9d4e15c0e4d180dc71"
+    },
+    {
+      "tier": 4,
+      "effect": "binarypath",
+      "exit_code": 0,
+      "seconds": 120.722,
+      "passed": 165,
+      "failed": 0,
+      "log_sha256": "3226e6ac54ca4a3a5c2e13a43fa3e614f9bce1c15c08581885c68e55eb32216e"
+    },
+    {
+      "tier": 4,
+      "effect": "burn",
+      "exit_code": 0,
+      "seconds": 57.896,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "9d98474e5eea122c46b44f853a53a14321b9282112bfeb13849ab722ddbfee6a"
+    },
+    {
+      "tier": 4,
+      "effect": "bouncyballs",
+      "exit_code": 0,
+      "seconds": 138.356,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "aaf0c4c897bf87139ec5fa4dc81f064720709612c7f8f8b8368c91eaf30e476f"
+    },
+    {
+      "tier": 4,
+      "effect": "colorshift",
+      "exit_code": 0,
+      "seconds": 43.844,
+      "passed": 573,
+      "failed": 0,
+      "log_sha256": "e34720dd15aab48a8e7706af6a6764784f24400be053efd0b9d0c678b6a1c7f1"
+    },
+    {
+      "tier": 4,
+      "effect": "bubbles",
+      "exit_code": 0,
+      "seconds": 143.458,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "4b15b8b5cbf5940c939602aca6ba7af177344a16be8ec187170a631e08b5e3d0"
+    },
+    {
+      "tier": 4,
+      "effect": "crumble",
+      "exit_code": 0,
+      "seconds": 39.537,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "fea490f74309167509ebbe2d7ef8a3234f3373480429ba92d82db5476401a9b5"
+    },
+    {
+      "tier": 4,
+      "effect": "expand",
+      "exit_code": 0,
+      "seconds": 29.117,
+      "passed": 405,
+      "failed": 0,
+      "log_sha256": "c7d9f6140cc06689befb828c1c7573858e82403302125ee64081b026819ef63a"
+    },
+    {
+      "tier": 4,
+      "effect": "decrypt",
+      "exit_code": 0,
+      "seconds": 58.018,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "7b34385fa2c544c315653bfa2ff6273db92f1756cffe0e222850d39a3bb1f11c"
+    },
+    {
+      "tier": 4,
+      "effect": "highlight",
+      "exit_code": 0,
+      "seconds": 12.634,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "d1dc9d852f31e7328dea6acf19ed5e878f46f70a735157a9701129ac3574d70e"
+    },
+    {
+      "tier": 4,
+      "effect": "errorcorrect",
+      "exit_code": 0,
+      "seconds": 55.164,
+      "passed": 189,
+      "failed": 0,
+      "log_sha256": "3320f13db9e43f21f4926fca141fbaa69225b79ffb82751856e817fb1ca2baa9"
+    },
+    {
+      "tier": 4,
+      "effect": "middleout",
+      "exit_code": 0,
+      "seconds": 17.245,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "2626113b1541928c1d33891ffbe26d5d5f5d4dcd45a656ccb32d3abc369de2dc"
+    },
+    {
+      "tier": 4,
+      "effect": "fireworks",
+      "exit_code": 0,
+      "seconds": 79.71,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "2a4e67ddbb00511ab653f274046892a0c76b4023ae30c08bcbe2f7e09cf5ec59"
+    },
+    {
+      "tier": 4,
+      "effect": "orbittingvolley",
+      "exit_code": 0,
+      "seconds": 24.307,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "c60fb3c16369d3ddf975f9fb2d5bb67bef4367d51459fe48aa2a05d58d6801ea"
+    },
+    {
+      "tier": 4,
+      "effect": "overflow",
+      "exit_code": 0,
+      "seconds": 14.192,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "7b34987c692317ed1ada4434f03db24ef923ebac218b5fb6c6018ed66b856f91"
+    },
+    {
+      "tier": 4,
+      "effect": "matrix",
+      "exit_code": 0,
+      "seconds": 66.986,
+      "passed": 405,
+      "failed": 0,
+      "log_sha256": "99b30aebef4ff0ff04052874b351f316c094598b80661915d71713ef56d74832"
+    },
+    {
+      "tier": 4,
+      "effect": "laseretch",
+      "exit_code": 0,
+      "seconds": 122.631,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "7cdcdd3c516b45680cb0e99bc3ce16436c649872420928470e29cc4ef05cc882"
+    },
+    {
+      "tier": 4,
+      "effect": "randomsequence",
+      "exit_code": 0,
+      "seconds": 9.783,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "a27a3f96510952deb773466020aad561e1532f8f66614b3beeddcf98cafd6f00"
+    },
+    {
+      "tier": 4,
+      "effect": "rain",
+      "exit_code": 0,
+      "seconds": 70.698,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "643029b704a581892e748f798177bb0342c3a5cd8417a7da715442791bdfcf87"
+    },
+    {
+      "tier": 4,
+      "effect": "pour",
+      "exit_code": 0,
+      "seconds": 116.434,
+      "passed": 573,
+      "failed": 0,
+      "log_sha256": "9317f01a9ce0c91e45513ae6bfa1e7a5d8083e1f25d3a0ea4bd7a5e1d4cbdcb0"
+    },
+    {
+      "tier": 4,
+      "effect": "scattered",
+      "exit_code": 0,
+      "seconds": 42.791,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "ec4bbd49505aeeaaef160cb6c39d6f2c4dc5ca5ad11f00c68afaa3ade2eed692"
+    },
+    {
+      "tier": 4,
+      "effect": "print",
+      "exit_code": 0,
+      "seconds": 129.049,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "4bf730644b72b191d129ce5bb4fc5e736c99952f78431fb7b08977cd7ff7b14d"
+    },
+    {
+      "tier": 4,
+      "effect": "slice",
+      "exit_code": 0,
+      "seconds": 19.147,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "5df1b074bf8255b62ebf3f84993fe1e635f2b991f0efe82ba84edacc6e78e2fe"
+    },
+    {
+      "tier": 4,
+      "effect": "rings",
+      "exit_code": 0,
+      "seconds": 80.911,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "897c86e51ecaaf40ce4af9eb8f507fc014a8b0deed259984c996218e80e5eaee"
+    },
+    {
+      "tier": 4,
+      "effect": "smoke",
+      "exit_code": 0,
+      "seconds": 21.353,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "c89fa95e2faa31a948efd6fda44d6babdbf3ec27177464725f8f2d7f4fe0e2b2"
+    },
+    {
+      "tier": 4,
+      "effect": "spotlights",
+      "exit_code": 0,
+      "seconds": 25.562,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "a6253a90e72d96cdc4354701f82260eabd2a2d6b1b3d574ab21f3addeb3d4df6"
+    },
+    {
+      "tier": 4,
+      "effect": "slide",
+      "exit_code": 0,
+      "seconds": 43.796,
+      "passed": 741,
+      "failed": 0,
+      "log_sha256": "f4af7b143cdef697a1959dbd44e181f99781515a7b16fe9150787ec9e4e986f3"
+    },
+    {
+      "tier": 4,
+      "effect": "sweep",
+      "exit_code": 0,
+      "seconds": 13.137,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "cd729f1b03e3d9f852d546a19f5c9f6e00b2e2a6ca5b9143e3a5af850888cf77"
+    },
+    {
+      "tier": 4,
+      "effect": "spray",
+      "exit_code": 0,
+      "seconds": 34.728,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "b0e3e66832f02888bfe05471490ddd6bb1c92f7cc2c0652e2d5522dad69ce68d"
+    },
+    {
+      "tier": 4,
+      "effect": "synthgrid",
+      "exit_code": 0,
+      "seconds": 18.296,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "afc547ea62094fa5a9295666ac28c6a8b44b431ec7cff380864fe8e65ab10fb3"
+    },
+    {
+      "tier": 4,
+      "effect": "thunderstorm",
+      "exit_code": 0,
+      "seconds": 21.102,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "a2f61bff147fea36dc0d31196e6842858e70da403ae0b0147c1f151796574c6c"
+    },
+    {
+      "tier": 4,
+      "effect": "vhstape",
+      "exit_code": 0,
+      "seconds": 24.507,
+      "passed": 309,
+      "failed": 0,
+      "log_sha256": "3ddccc1e2600c53ac144ef25155d55a42082bd095243a60be823425ac52d31a4"
+    },
+    {
+      "tier": 4,
+      "effect": "wipe",
+      "exit_code": 0,
+      "seconds": 13.487,
+      "passed": 501,
+      "failed": 0,
+      "log_sha256": "ee88ef58de4c3455216dc38414184a906df1c15f8cac1027ea40a90c1d4c051c"
+    },
+    {
+      "tier": 4,
+      "effect": "unstable",
+      "exit_code": 0,
+      "seconds": 53.66,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "62a3a5ea2723bef9c96256ee88c388d7f13f2d5a8204ce7badacd4867bc3f664"
+    },
+    {
+      "tier": 1,
+      "effect": "beams",
+      "exit_code": 0,
+      "seconds": 29.098,
+      "passed": 189,
+      "failed": 0,
+      "log_sha256": "37d7245fc5696b94c8396719ac6237bf6a23b1950ecae90ef17afffa83260cb0"
+    },
+    {
+      "tier": 4,
+      "effect": "waves",
+      "exit_code": 0,
+      "seconds": 82.62,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "682f452bac8e247daaf2b35e3a65c548f1bfd5a6f1bdb51565bdcc91066f5663"
+    },
+    {
+      "tier": 4,
+      "effect": "swarm",
+      "exit_code": 0,
+      "seconds": 149.693,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "49e5b9008589749747800ca5460f42fa766bb2196aeb4590e1909b78c23b55c1"
+    },
+    {
+      "tier": 1,
+      "effect": "blackhole",
+      "exit_code": 0,
+      "seconds": 91.541,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "987450adeb6d0f4be55ef7200705d6b02da00ba397fef1319918f119b0cef952"
+    },
+    {
+      "tier": 1,
+      "effect": "binarypath",
+      "exit_code": 0,
+      "seconds": 136.565,
+      "passed": 165,
+      "failed": 0,
+      "log_sha256": "e415075949971b5ec18acebe823fff7da8cf65905e7afa42b8ee3432f8110945"
+    },
+    {
+      "tier": 1,
+      "effect": "burn",
+      "exit_code": 0,
+      "seconds": 51.719,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "5de450118b4f15fe806eb71ed967550eb9fa73f5acdaa47c0a839ed7b0264e09"
+    },
+    {
+      "tier": 1,
+      "effect": "colorshift",
+      "exit_code": 0,
+      "seconds": 40.337,
+      "passed": 573,
+      "failed": 0,
+      "log_sha256": "4f270bf91bcddc435893527eb439dfc43e25319505f17825f169e1ba2e86b2b1"
+    },
+    {
+      "tier": 1,
+      "effect": "bouncyballs",
+      "exit_code": 0,
+      "seconds": 140.904,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "d2ea5faa7558546349ec9aa3a880affb24ddfbcc97585968820be757121e1dfe"
+    },
+    {
+      "tier": 1,
+      "effect": "crumble",
+      "exit_code": 0,
+      "seconds": 38.281,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "9f79b8020daf742fe698f758270d418f30843b5bdeaf654f6cd1d7003e550332"
+    },
+    {
+      "tier": 1,
+      "effect": "bubbles",
+      "exit_code": 0,
+      "seconds": 145.054,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "c4a78fe67eb61a50f15ae871327328323893601d990d9baca3115a01100718df"
+    },
+    {
+      "tier": 1,
+      "effect": "expand",
+      "exit_code": 0,
+      "seconds": 25.661,
+      "passed": 405,
+      "failed": 0,
+      "log_sha256": "a2ccb17d593372176b4ecc8405c8491c95d1f9f9084c47fffc9efa3beb3f1729"
+    },
+    {
+      "tier": 1,
+      "effect": "decrypt",
+      "exit_code": 0,
+      "seconds": 54.612,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "05d94344c793354aad10020f2fb7b0116dd1c3cebd618c513bba066f1ca05e91"
+    },
+    {
+      "tier": 1,
+      "effect": "errorcorrect",
+      "exit_code": 0,
+      "seconds": 54.115,
+      "passed": 189,
+      "failed": 0,
+      "log_sha256": "a0e279072d50f60ea7352b7cf72bc0198fc4beec49c8e463192ca12ff0504207"
+    },
+    {
+      "tier": 1,
+      "effect": "highlight",
+      "exit_code": 0,
+      "seconds": 12.687,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "2ad2d35b537dc35d96734956f5f5691d83efd69da983b4e237bed96c746fcf07"
+    },
+    {
+      "tier": 1,
+      "effect": "middleout",
+      "exit_code": 0,
+      "seconds": 17.043,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "4406f898166c2d73218605d26acc73b86403beebc8af4185d51dee33661164d6"
+    },
+    {
+      "tier": 1,
+      "effect": "orbittingvolley",
+      "exit_code": 0,
+      "seconds": 23.759,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "c6c805225401f5747a3c00649364f4dd080de78dcafeb47dfdb7aa7ec9aab056"
+    },
+    {
+      "tier": 1,
+      "effect": "fireworks",
+      "exit_code": 0,
+      "seconds": 71.947,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "b952bf66b1ed1a2d3a677a05915471e1e08a1e9a11d31f27aa66adb643889afe"
+    },
+    {
+      "tier": 1,
+      "effect": "overflow",
+      "exit_code": 0,
+      "seconds": 14.191,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "f5f32bf256e6facba8b83447778cd8b3308c09f1f0b63da59efcf6447e5a0d7c"
+    },
+    {
+      "tier": 1,
+      "effect": "matrix",
+      "exit_code": 0,
+      "seconds": 65.683,
+      "passed": 405,
+      "failed": 0,
+      "log_sha256": "f6c82430793e4bfdbdc9650881a03075897e292ed5ae1143756ac987d0985af2"
+    },
+    {
+      "tier": 1,
+      "effect": "laseretch",
+      "exit_code": 0,
+      "seconds": 120.78,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "a50de35d2f52d3edbef6879e872d67501bd9b114384cd5953d58cc7c24e1fa25"
+    },
+    {
+      "tier": 1,
+      "effect": "randomsequence",
+      "exit_code": 0,
+      "seconds": 9.882,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "82cd0f8971d58101ab88bcae26805d4e7f19aa9cf959515ef6b6c683222e3e4c"
+    },
+    {
+      "tier": 1,
+      "effect": "rain",
+      "exit_code": 0,
+      "seconds": 71.093,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "a1af26fa8673d6f37a434c21f127077ff0a6041d51148383b82e6752fbc64fc3"
+    },
+    {
+      "tier": 1,
+      "effect": "pour",
+      "exit_code": 0,
+      "seconds": 116.727,
+      "passed": 573,
+      "failed": 0,
+      "log_sha256": "7b306264b12e4f7a5d991fa6148150e94537da43947bba60f4cb8a6d64b61a47"
+    },
+    {
+      "tier": 1,
+      "effect": "scattered",
+      "exit_code": 0,
+      "seconds": 46.499,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "822392a8a9002db56869f9a767f66bf739293ccae8f528cb652337e6675f937c"
+    },
+    {
+      "tier": 1,
+      "effect": "slice",
+      "exit_code": 0,
+      "seconds": 19.449,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "df4916bd7287c784e369389a1d7413601d6f529b73f74e336f801a92cc30f1cb"
+    },
+    {
+      "tier": 1,
+      "effect": "print",
+      "exit_code": 0,
+      "seconds": 129.443,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "1e352f78f23bbe2f94f4553ffce2fa39ccb11819a98c5cb0256ed6b7cd47357f"
+    },
+    {
+      "tier": 1,
+      "effect": "smoke",
+      "exit_code": 0,
+      "seconds": 21.554,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "9b0e1ca458b5cb6c3f79a731ce01b4ff6a07fa6c32f6b552a95172dfc0a658fc"
+    },
+    {
+      "tier": 1,
+      "effect": "rings",
+      "exit_code": 0,
+      "seconds": 83.613,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "f4d4cb1a25f4b6713a2784f54784bf69a86433be4f11c0dbc64d4b6683168193"
+    },
+    {
+      "tier": 1,
+      "effect": "spotlights",
+      "exit_code": 0,
+      "seconds": 25.662,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "35435d08dfeef04a4357f16f4913f6c8b7e9eefce9e2664adcd945cf7664120a"
+    },
+    {
+      "tier": 1,
+      "effect": "slide",
+      "exit_code": 0,
+      "seconds": 45.452,
+      "passed": 741,
+      "failed": 0,
+      "log_sha256": "23b2a0e4dbb88be483588ee8b9d2331e7109da5308c7eb4859061531f4890027"
+    },
+    {
+      "tier": 1,
+      "effect": "sweep",
+      "exit_code": 0,
+      "seconds": 14.554,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "19201bbdb34b4363b4d9d2d2e6cbfff30fb2148c4248cb26357962f82cfe3553"
+    },
+    {
+      "tier": 1,
+      "effect": "spray",
+      "exit_code": 0,
+      "seconds": 40.896,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "8adcafdd218199287dbca28e25b5949b0f5c446c7863afe1a7d6fffd7e189c98"
+    },
+    {
+      "tier": 1,
+      "effect": "synthgrid",
+      "exit_code": 0,
+      "seconds": 21.359,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "25417ab373291aa8a2a65c9b2a9cff80e8e8434fa2407cd7e07cdd7083c66111"
+    },
+    {
+      "tier": 1,
+      "effect": "thunderstorm",
+      "exit_code": 0,
+      "seconds": 23.663,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "a063a81f5c3aa58b7eab0f80132fd1d2c8701137bed397656db9da7bf6230126"
+    },
+    {
+      "tier": 1,
+      "effect": "vhstape",
+      "exit_code": 0,
+      "seconds": 25.609,
+      "passed": 309,
+      "failed": 0,
+      "log_sha256": "cbf9d4896c9a62b0336b29d559faab1e95f4cdb714733910901071b5caa38cb2"
+    },
+    {
+      "tier": 1,
+      "effect": "wipe",
+      "exit_code": 0,
+      "seconds": 13.037,
+      "passed": 501,
+      "failed": 0,
+      "log_sha256": "44952270727403ed08cd1886b3544d051bd55e14b69ae4c7307b3206aa378182"
+    },
+    {
+      "tier": 1,
+      "effect": "unstable",
+      "exit_code": 0,
+      "seconds": 58.475,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "73934a7e94d8283f03c22b640184c4360a283f152edd022764d16ecf06d6708e"
+    },
+    {
+      "tier": 2,
+      "effect": "beams",
+      "exit_code": 0,
+      "seconds": 25.82,
+      "passed": 189,
+      "failed": 0,
+      "log_sha256": "17a54f7c0b3db3feb75735c35baf1595c950b947c83af24f3b90f43b6ab734c2"
+    },
+    {
+      "tier": 1,
+      "effect": "waves",
+      "exit_code": 0,
+      "seconds": 78.715,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "b2f6dcef92027e81a93505477f98aa4cd80e8cb1edc01ad746aacc8e07586cf3"
+    },
+    {
+      "tier": 1,
+      "effect": "swarm",
+      "exit_code": 0,
+      "seconds": 157.263,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "ff54c8b2cee5b02c5c43ddeacddde328a2a3c4f11c5d513366d7cf16560c1445"
+    },
+    {
+      "tier": 2,
+      "effect": "blackhole",
+      "exit_code": 0,
+      "seconds": 88.143,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "f6035aa21f0b1c79b8de35f4ebfd82fbe1740c5b04625286534e18ccd10d8f1c"
+    },
+    {
+      "tier": 2,
+      "effect": "binarypath",
+      "exit_code": 0,
+      "seconds": 124.51,
+      "passed": 165,
+      "failed": 0,
+      "log_sha256": "b15b59b2ab1827a783c3dd24e02f15d8633aef2c7c67d5a010a53c95bb0dceea"
+    },
+    {
+      "tier": 2,
+      "effect": "burn",
+      "exit_code": 0,
+      "seconds": 50.264,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "764ab8c76e09b2e4ecb59502a3de00e4ece34fced875d33b01946a71fdd0d1f8"
+    },
+    {
+      "tier": 2,
+      "effect": "bouncyballs",
+      "exit_code": 0,
+      "seconds": 132.129,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "c94224d4499848425390b336f8cbc1b0d59b2191acf007ffc9f7764015efc6ed"
+    },
+    {
+      "tier": 2,
+      "effect": "colorshift",
+      "exit_code": 0,
+      "seconds": 43.362,
+      "passed": 573,
+      "failed": 0,
+      "log_sha256": "973b2ea723640edc404ae3208d34a648e00e0dbe77b687d5692152ad8196b72e"
+    },
+    {
+      "tier": 2,
+      "effect": "crumble",
+      "exit_code": 0,
+      "seconds": 47.232,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "196ad19ae694131eba0f7beafc83e4ea0ead41d1d7db730d3575408524c5a29f"
+    },
+    {
+      "tier": 2,
+      "effect": "bubbles",
+      "exit_code": 0,
+      "seconds": 145.846,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "07cbca95a71e84a6c59890931f4159e89c2ddc960533dc8f8188ee72d8c7da47"
+    },
+    {
+      "tier": 2,
+      "effect": "decrypt",
+      "exit_code": 0,
+      "seconds": 71.762,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "9e244df4eaf8ff2643f6925633239ad66fbd935d73529e3559b4414ca6e66c80"
+    },
+    {
+      "tier": 2,
+      "effect": "errorcorrect",
+      "exit_code": 0,
+      "seconds": 63.737,
+      "passed": 189,
+      "failed": 0,
+      "log_sha256": "b3579febd2a5130037e8d8866df50cc6e2dc019501ac52182fcd4edbb46f7f01"
+    },
+    {
+      "tier": 2,
+      "effect": "expand",
+      "exit_code": 0,
+      "seconds": 37.913,
+      "passed": 405,
+      "failed": 0,
+      "log_sha256": "fde38d5d7b1094b370d6bfc7b5c9389eb7e7ea6388817c88f7d87c8ea2cbe288"
+    },
+    {
+      "tier": 2,
+      "effect": "highlight",
+      "exit_code": 0,
+      "seconds": 14.396,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "c16addf6e744987e7371e59fe1ac9a73bfb033dcedc9932818df811ca3ae9615"
+    },
+    {
+      "tier": 2,
+      "effect": "middleout",
+      "exit_code": 0,
+      "seconds": 25.631,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "f3bc39b62c8fd3c74ad0a0499dcc891ca1231a80efd563a0e37c0e0dd2340da4"
+    },
+    {
+      "tier": 2,
+      "effect": "orbittingvolley",
+      "exit_code": 0,
+      "seconds": 31.401,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "3bc7426c53531588bde8074b0fe205639b40eb3434f8c80b13e6ead7b8df67e7"
+    },
+    {
+      "tier": 2,
+      "effect": "fireworks",
+      "exit_code": 0,
+      "seconds": 106.804,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "1f3668723a8411680c10a106aa491bc4171a23ba090734c5733ba89b57810901"
+    },
+    {
+      "tier": 2,
+      "effect": "overflow",
+      "exit_code": 0,
+      "seconds": 18.95,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "1e45e676d89cfa5cf154c8e3f467aeb4614c8693852969958455ce4507f535fc"
+    },
+    {
+      "tier": 2,
+      "effect": "matrix",
+      "exit_code": 0,
+      "seconds": 90.885,
+      "passed": 405,
+      "failed": 0,
+      "log_sha256": "65ac3f543b5cb09895d8c309dcf24ddd7f9d7e1588bf0be32597fca1a15d0c0f"
+    },
+    {
+      "tier": 2,
+      "effect": "laseretch",
+      "exit_code": 0,
+      "seconds": 146.6,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "7b9d0c86478a562bcbbf403c233a2a2440e77645a90aaee454b3d1f1e9921838"
+    },
+    {
+      "tier": 2,
+      "effect": "randomsequence",
+      "exit_code": 0,
+      "seconds": 11.039,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "befc9c1a50a0ad112f943030ad36210dbf578a0ba0479bdefc7fad0928944612"
+    },
+    {
+      "tier": 2,
+      "effect": "rain",
+      "exit_code": 0,
+      "seconds": 76.48,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "6bcfabebf4ec1303d9b9fc4522a3aadebe56cd0d56e065846c219b2a95f862c6"
+    },
+    {
+      "tier": 2,
+      "effect": "pour",
+      "exit_code": 0,
+      "seconds": 122.861,
+      "passed": 573,
+      "failed": 0,
+      "log_sha256": "00ae6ac0864ef271b26b02adca59eae904cd470f4b34a1b90b26f199687770cd"
+    },
+    {
+      "tier": 2,
+      "effect": "scattered",
+      "exit_code": 0,
+      "seconds": 43.29,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "6420ec0a0f95e2814d969f119a5a4188d070a61077468979db443cc7376a90d0"
+    },
+    {
+      "tier": 2,
+      "effect": "print",
+      "exit_code": 0,
+      "seconds": 134.324,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "129356027d18a37d1cbc987ff421d831cb7f534d9cb0a1e1f8afefd039bf08c3"
+    },
+    {
+      "tier": 2,
+      "effect": "slice",
+      "exit_code": 0,
+      "seconds": 18.6,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "0d1d040059902ac3430cdead783e2820cb178cc9c4510478a607a6e8ac42d319"
+    },
+    {
+      "tier": 2,
+      "effect": "rings",
+      "exit_code": 0,
+      "seconds": 80.217,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "868473d9b1d85688753c8f676a15a6062340ff0d5d09e01e71859caf0899dee8"
+    },
+    {
+      "tier": 2,
+      "effect": "smoke",
+      "exit_code": 0,
+      "seconds": 20.954,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "0915c402757233c6fb27f19de54ec83a709be9cd2eb1313bec3876b9fa04b225"
+    },
+    {
+      "tier": 2,
+      "effect": "spotlights",
+      "exit_code": 0,
+      "seconds": 24.21,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "0cc00f4ecaf434487932d5d598d128631ab2a27687c51855f0c581ebecde1fd1"
+    },
+    {
+      "tier": 2,
+      "effect": "slide",
+      "exit_code": 0,
+      "seconds": 42.793,
+      "passed": 741,
+      "failed": 0,
+      "log_sha256": "14db8acc6f51c4eb8169de691e21fcbe99b0fad10ef1872dd07f60f70c5c612e"
+    },
+    {
+      "tier": 2,
+      "effect": "sweep",
+      "exit_code": 0,
+      "seconds": 12.738,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "51549919598b80f859603e79f98a6f9e0ff0260e46fe0935c5f2a658291ab04c"
+    },
+    {
+      "tier": 2,
+      "effect": "spray",
+      "exit_code": 0,
+      "seconds": 33.227,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "772646e982b07e8d94cf83bbfa49855de247c847ca2e2008b0fc75ae47ad6ea1"
+    },
+    {
+      "tier": 2,
+      "effect": "synthgrid",
+      "exit_code": 0,
+      "seconds": 17.747,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "d4166ec4afb9809e9a6fe69bdd16896ceb6b94649cde50367205f8f90a39b897"
+    },
+    {
+      "tier": 2,
+      "effect": "thunderstorm",
+      "exit_code": 0,
+      "seconds": 20.605,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "7e37060d73ceeafc607f072b0157966ad23918105e00d5d6c88c2d8ebae89142"
+    },
+    {
+      "tier": 2,
+      "effect": "vhstape",
+      "exit_code": 0,
+      "seconds": 23.458,
+      "passed": 309,
+      "failed": 0,
+      "log_sha256": "4c5d6c76b6a353b26b4a687d56c5ca9d360b041986bea15d6dfcf83e9cd07666"
+    },
+    {
+      "tier": 2,
+      "effect": "wipe",
+      "exit_code": 0,
+      "seconds": 13.186,
+      "passed": 501,
+      "failed": 0,
+      "log_sha256": "14c452466f64342f79a4429fa1de01a1b580b28a88fd62f0efd0b2fc75f6107c"
+    },
+    {
+      "tier": 2,
+      "effect": "unstable",
+      "exit_code": 0,
+      "seconds": 53.816,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "2456b807ab1b9f0393384e87bc856fc97b00f7f90aaf0563bef8aa4229131196"
+    },
+    {
+      "tier": 3,
+      "effect": "beams",
+      "exit_code": 0,
+      "seconds": 26.469,
+      "passed": 189,
+      "failed": 0,
+      "log_sha256": "8dd4f02a71d4b57d9ee79817b5bbf487000f7a32339fa716356fff2c9c9c2878"
+    },
+    {
+      "tier": 2,
+      "effect": "waves",
+      "exit_code": 0,
+      "seconds": 78.911,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "c7cb4b221477a124773147d03fd99227a4efbad27f26c468aae48b391a24d87d"
+    },
+    {
+      "tier": 2,
+      "effect": "swarm",
+      "exit_code": 0,
+      "seconds": 141.482,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "111046975b6bbe274d31040057338fd26be38469dc9b7f122af2aaf0b0725907"
+    },
+    {
+      "tier": 3,
+      "effect": "blackhole",
+      "exit_code": 0,
+      "seconds": 85.127,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "123aa41d6228f0a09752c4312e4fa871420e0acde69c064f0029fb9127b3ccd8"
+    },
+    {
+      "tier": 3,
+      "effect": "binarypath",
+      "exit_code": 0,
+      "seconds": 127.362,
+      "passed": 165,
+      "failed": 0,
+      "log_sha256": "e6c13976968d9061d3cf5785f2a918c23f91c1196a8cc52aef5ca31a7596f70c"
+    },
+    {
+      "tier": 3,
+      "effect": "burn",
+      "exit_code": 0,
+      "seconds": 54.542,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "7e35aad271c034573c706dbb7ce8de40528d49687e40b219f4b33384129fcec3"
+    },
+    {
+      "tier": 3,
+      "effect": "colorshift",
+      "exit_code": 0,
+      "seconds": 42.309,
+      "passed": 573,
+      "failed": 0,
+      "log_sha256": "9bb0eb3b69d31a1927e4704028eb0efcd36a7d4a2889d5a2e789208297037c4e"
+    },
+    {
+      "tier": 3,
+      "effect": "bouncyballs",
+      "exit_code": 0,
+      "seconds": 136.045,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "f032d5912b8559adbcb251248d0f9e8440c90d2323bb1c2051444db9cec6b260"
+    },
+    {
+      "tier": 3,
+      "effect": "crumble",
+      "exit_code": 0,
+      "seconds": 38.837,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "de343617032e6ecd3fa3821b71e12cda7d5f5b73e5a70a934a921cb937bb5027"
+    },
+    {
+      "tier": 3,
+      "effect": "bubbles",
+      "exit_code": 0,
+      "seconds": 142.768,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "7f6cd5a345cabec9b2427df24a9e7e9accc75d51ba0b4b750ff8379219f0ddbd"
+    },
+    {
+      "tier": 3,
+      "effect": "expand",
+      "exit_code": 0,
+      "seconds": 28.321,
+      "passed": 405,
+      "failed": 0,
+      "log_sha256": "f48b33414f76aaebac9a999b06725c70e3c338750555b47d1551d3de18b0be57"
+    },
+    {
+      "tier": 3,
+      "effect": "errorcorrect",
+      "exit_code": 0,
+      "seconds": 56.675,
+      "passed": 189,
+      "failed": 0,
+      "log_sha256": "76107c4867c743a71a42fa197bfd16264654605969600a072c5727fbd5d29d46"
+    },
+    {
+      "tier": 3,
+      "effect": "decrypt",
+      "exit_code": 0,
+      "seconds": 59.28,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "2d1c21c1e5cb4db96b84b27168acce0c6c14a141255c14b7ad43e46ae92f4d9c"
+    },
+    {
+      "tier": 3,
+      "effect": "highlight",
+      "exit_code": 0,
+      "seconds": 13.341,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "561be23713189f463fc8d60d3a0ec84e7d043ac496ff5e21255fc2301f2c333e"
+    },
+    {
+      "tier": 3,
+      "effect": "middleout",
+      "exit_code": 0,
+      "seconds": 18.498,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "0b5d9e1e76f4aa310768ad21fb3e29359d1f22204578263cf3747f4fd9e3643e"
+    },
+    {
+      "tier": 3,
+      "effect": "orbittingvolley",
+      "exit_code": 0,
+      "seconds": 24.305,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "553aa291ca570dc75f1b6120861f1216d3320b5558f53cd7f8d2bb3e23030a33"
+    },
+    {
+      "tier": 3,
+      "effect": "fireworks",
+      "exit_code": 0,
+      "seconds": 78.758,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "d9bea12a30fee97bf141306da6675b2821f01aa391bfb30e60e89335f85ef17b"
+    },
+    {
+      "tier": 3,
+      "effect": "overflow",
+      "exit_code": 0,
+      "seconds": 14.191,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "2529f18ea3ae187eae715c3b6767e0e9b94304f8d17c5be56e81abf7ea137980"
+    },
+    {
+      "tier": 3,
+      "effect": "matrix",
+      "exit_code": 0,
+      "seconds": 68.038,
+      "passed": 405,
+      "failed": 0,
+      "log_sha256": "555e8fa9b010e5f2a3be65d20e8e417de71c4312b6e999e25a6e8857560cabfd"
+    },
+    {
+      "tier": 3,
+      "effect": "laseretch",
+      "exit_code": 0,
+      "seconds": 125.416,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "89c385bfebdc825b38b147a5ca444b392d78de35aa9fef23570f7f65637137d2"
+    },
+    {
+      "tier": 3,
+      "effect": "randomsequence",
+      "exit_code": 0,
+      "seconds": 10.836,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "48d8bd48e3bc33516ae3bfda5568d3286fcf8a857a625e14016f3f00a924fc16"
+    },
+    {
+      "tier": 3,
+      "effect": "rain",
+      "exit_code": 0,
+      "seconds": 75.366,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "5ca226238bf790fe30347111a1a4570f31c2a7325193a42ae038f6caba284e79"
+    },
+    {
+      "tier": 3,
+      "effect": "pour",
+      "exit_code": 0,
+      "seconds": 120.652,
+      "passed": 573,
+      "failed": 0,
+      "log_sha256": "e61446abd5e7286e94a8770e079e49a4735e5ec4fdcfc5356d600834c833f0a0"
+    },
+    {
+      "tier": 3,
+      "effect": "scattered",
+      "exit_code": 0,
+      "seconds": 42.546,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "5cd4ae1867a0518157fcd27661ed5c09a6974ecb531a783a23d168c8a6680ea0"
+    },
+    {
+      "tier": 3,
+      "effect": "print",
+      "exit_code": 0,
+      "seconds": 134.524,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "ed7d8e672574c897b03f4b0c81df4c01b053868dcf89c7e17c053eaaa758649d"
+    },
+    {
+      "tier": 3,
+      "effect": "slice",
+      "exit_code": 0,
+      "seconds": 20.305,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "fa2fc93f9c5bdfe9e322a493a3c0d6688fb34dedc32e802538c7249c2696e292"
+    },
+    {
+      "tier": 3,
+      "effect": "smoke",
+      "exit_code": 0,
+      "seconds": 22.457,
+      "passed": 237,
+      "failed": 0,
+      "log_sha256": "66e5400abf7788509241712d117d6d90e4890b75ddb69040b26145450ba1641b"
+    },
+    {
+      "tier": 3,
+      "effect": "rings",
+      "exit_code": 0,
+      "seconds": 82.476,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "acbdd4c38636e1af6226c727eedb369e7654156bfd71d263d8e8e8866197b642"
+    },
+    {
+      "tier": 3,
+      "effect": "spotlights",
+      "exit_code": 0,
+      "seconds": 27.265,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "fd82cab0f29e1a209c4cd9539155160844d0b3832766fadc39d1034e1662b45f"
+    },
+    {
+      "tier": 3,
+      "effect": "slide",
+      "exit_code": 0,
+      "seconds": 46.104,
+      "passed": 741,
+      "failed": 0,
+      "log_sha256": "7ab56fb66221f2cb797614d83b4786f4ce6b3d162bdb198867a3c04a02e71b4d"
+    },
+    {
+      "tier": 3,
+      "effect": "sweep",
+      "exit_code": 0,
+      "seconds": 13.89,
+      "passed": 333,
+      "failed": 0,
+      "log_sha256": "895cd3071ea25c5286d60787c2d2ca3e63f5d7c034f09a637d4cf1efea8b989b"
+    },
+    {
+      "tier": 3,
+      "effect": "synthgrid",
+      "exit_code": 0,
+      "seconds": 18.247,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "c9e0a9b69269fb2b535f8c510f4440f720f0624f8f65a1cfbea17b5b68e1c53c"
+    },
+    {
+      "tier": 3,
+      "effect": "spray",
+      "exit_code": 0,
+      "seconds": 35.179,
+      "passed": 429,
+      "failed": 0,
+      "log_sha256": "ab53579b0649a2672638c79e65eae63597a19c24ce1381e4fe91a6af28cd2b11"
+    },
+    {
+      "tier": 3,
+      "effect": "thunderstorm",
+      "exit_code": 0,
+      "seconds": 20.803,
+      "passed": 285,
+      "failed": 0,
+      "log_sha256": "09906640b497619d7f85e19628805d31865b0aff5ff515c550504b173e0a6cc6"
+    },
+    {
+      "tier": 3,
+      "effect": "vhstape",
+      "exit_code": 0,
+      "seconds": 23.258,
+      "passed": 309,
+      "failed": 0,
+      "log_sha256": "a865f148f4bfecc4bb892c4db0100ba2ae551ad61e05e0574d9c291db0ec8a5e"
+    },
+    {
+      "tier": 3,
+      "effect": "wipe",
+      "exit_code": 0,
+      "seconds": 13.238,
+      "passed": 501,
+      "failed": 0,
+      "log_sha256": "44b53f1186746d96900caefc1148888410445d5dde69ee68bd778168b81838d8"
+    },
+    {
+      "tier": 3,
+      "effect": "unstable",
+      "exit_code": 0,
+      "seconds": 49.606,
+      "passed": 381,
+      "failed": 0,
+      "log_sha256": "465e839160c4cabf90e82c3031f34b7fa55fa8222bc941df450a8e6f19c6acaa"
+    },
+    {
+      "tier": 3,
+      "effect": "waves",
+      "exit_code": 0,
+      "seconds": 64.029,
+      "passed": 453,
+      "failed": 0,
+      "log_sha256": "3d91595f9c3a491f6864ed7fb399e660dab9015977267415840df8ed9474da98"
+    },
+    {
+      "tier": 3,
+      "effect": "swarm",
+      "exit_code": 0,
+      "seconds": 122.28,
+      "passed": 357,
+      "failed": 0,
+      "log_sha256": "ae2580f546dcedee660d35334809d309d53c326891e2271c38b5f60ddb4529bc"
+    }
+  ],
+  "passed": 54756,
+  "failed": 0,
+  "successful_effect_tiers": 148
+}

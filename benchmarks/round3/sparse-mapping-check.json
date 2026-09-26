@@ -1,0 +1,14 @@
+[
+  {
+    "binary": "integrated",
+    "nohuge_mappings": 34,
+    "rss_kib": 21644,
+    "anon_huge_kib": 16384
+  },
+  {
+    "binary": "pr35-189840b",
+    "nohuge_mappings": 2,
+    "rss_kib": 70456,
+    "anon_huge_kib": 65536
+  }
+]

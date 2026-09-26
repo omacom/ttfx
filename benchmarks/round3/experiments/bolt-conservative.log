@@ -1,0 +1,69 @@
+BOLT-INFO: shared object or position-independent executable detected
+BOLT-INFO: Target architecture: x86_64
+BOLT-INFO: BOLT version: <unknown>
+BOLT-INFO: first alloc address is 0x0
+BOLT-INFO: creating new program header table at address 0x400000, offset 0x400000
+BOLT-WARNING: debug info will be stripped from the binary. Use -update-debug-sections to keep it.
+BOLT-INFO: enabling relocation mode
+BOLT-INFO: enabling lite mode
+BOLT-INFO: pre-processing profile using branch profile reader
+BOLT-INFO: forcing -jump-tables=move as PIC jump table was detected in function _RINvNtCscNqnBmBaIcL_4core3ptr9drop_glueNtNtCslIlEcarTKkh_4ttfx7effects13EffectCommandECs2OiFiygPeZ8_4ttfx/1(*2)
+BOLT-INFO: 938 out of 4135 functions in the binary (22.7%) have non-empty execution profile
+BOLT-INFO: 8 functions with profile could not be optimized
+BOLT-INFO: profile for 1 objects was ignored
+BOLT-INFO: among the hottest 938 functions top 5% function CFG discontinuity is 0.00%
+BOLT-WARNING: internal call detected in function bezier_easing/4(*2)
+BOLT-WARNING: internal call detected in function bezier_easing/4(*2)
+BOLT-WARNING: internal call detected in function collect_characters/4(*2)
+BOLT-WARNING: internal call detected in function collect_characters/4(*2)
+BOLT-WARNING: internal call detected in function collect_characters/4(*2)
+BOLT-WARNING: internal call detected in function collect_characters/4(*2)
+BOLT-WARNING: internal call detected in function get_characters/4(*2)
+BOLT-WARNING: internal call detected in function get_characters/4(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/4(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/4(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/4(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/4(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/4(*2)
+BOLT-WARNING: will skip the following function(s) as unsupported internal calls were detected:
+              scene_apply_gradient/4(*2)
+BOLT-INFO: 8664 instructions were shortened
+BOLT-INFO: removed 581 empty blocks
+BOLT-INFO: UCE removed 1 blocks and 7 bytes of code
+BOLT-INFO: SCTC: patched 13 tail calls (13 forward) tail calls (0 backward) from a total of 13 while removing 0 double jumps and removing 13 basic blocks totalling 65 bytes of code. CTCs total execution count is 381123 and the number of times CTCs are taken is 185245
+BOLT-WARNING: failed to patch entries in ttfx_asm_run_v4. The function will not be optimized.
+BOLT-WARNING: failed to patch entries in gradient_new/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in find_coords_on_circle/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in extrapolate_along_ray/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in visual_make/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in get_characters/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in group_key/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in scene_activate/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_animation_awake/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in set_appearance/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in event_register/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in path_seg_share/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in chain_paths/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in path_step/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in update_init/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in particle_reset/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in cell_rewin/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in set_visible/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in coordinate_changed/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in row_dirty/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in row_rebuild/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in emit_blocks/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in st_neighbors/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bh_explode/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in cs_rotation/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in rings_initial_disperse/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in beams_scenes/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in wv_final_frames/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in pr_make_row/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bub_make/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bub_pop/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swm_build_char/4(*2). The function will not be optimized.
+BOLT-INFO: padding code to 0x800000 to accommodate hot text
+BOLT-INFO: patched build-id (flipped last bit)
+BOLT-INFO: setting __hot_start to 0x600000
+BOLT-INFO: setting __hot_end to 0x6ffbc1

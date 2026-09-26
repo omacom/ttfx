@@ -1,0 +1,424 @@
+BOLT-INFO: shared object or position-independent executable detected
+BOLT-INFO: Target architecture: x86_64
+BOLT-INFO: BOLT version: <unknown>
+BOLT-INFO: first alloc address is 0x0
+BOLT-INFO: creating new program header table at address 0x400000, offset 0x400000
+BOLT-WARNING: debug info will be stripped from the binary. Use -update-debug-sections to keep it.
+BOLT-INFO: enabling relocation mode
+BOLT-INFO: forcing -jump-tables=move for instrumentation
+BOLT-INFO: enabling lite mode
+BOLT-INFO: 0 out of 4135 functions in the binary (0.0%) have non-empty execution profile
+BOLT-WARNING: internal call detected in function bezier_easing/1(*2)
+BOLT-WARNING: internal call detected in function bezier_easing/1(*2)
+BOLT-WARNING: internal call detected in function sgr_rgb/1(*2)
+BOLT-WARNING: internal call detected in function parse_parameters/1(*2)
+BOLT-WARNING: internal call detected in function parse_parameters/1(*2)
+BOLT-WARNING: internal call detected in function collect_characters/1(*2)
+BOLT-WARNING: internal call detected in function collect_characters/1(*2)
+BOLT-WARNING: internal call detected in function collect_characters/1(*2)
+BOLT-WARNING: internal call detected in function collect_characters/1(*2)
+BOLT-WARNING: internal call detected in function get_characters/1(*2)
+BOLT-WARNING: internal call detected in function get_characters/1(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/1(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/1(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/1(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/1(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/1(*2)
+BOLT-WARNING: internal call detected in function spl_dimmed/1(*2)
+BOLT-WARNING: internal call detected in function bezier_easing/2(*2)
+BOLT-WARNING: internal call detected in function bezier_easing/2(*2)
+BOLT-WARNING: internal call detected in function sgr_rgb/2(*2)
+BOLT-WARNING: internal call detected in function parse_parameters/2(*2)
+BOLT-WARNING: internal call detected in function parse_parameters/2(*2)
+BOLT-WARNING: internal call detected in function collect_characters/2(*2)
+BOLT-WARNING: internal call detected in function collect_characters/2(*2)
+BOLT-WARNING: internal call detected in function collect_characters/2(*2)
+BOLT-WARNING: internal call detected in function collect_characters/2(*2)
+BOLT-WARNING: internal call detected in function get_characters/2(*2)
+BOLT-WARNING: internal call detected in function get_characters/2(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/2(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/2(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/2(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/2(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/2(*2)
+BOLT-WARNING: internal call detected in function spl_dimmed/2(*2)
+BOLT-WARNING: internal call detected in function bezier_easing/3(*2)
+BOLT-WARNING: internal call detected in function bezier_easing/3(*2)
+BOLT-WARNING: internal call detected in function sgr_rgb/3(*2)
+BOLT-WARNING: internal call detected in function parse_parameters/3(*2)
+BOLT-WARNING: internal call detected in function parse_parameters/3(*2)
+BOLT-WARNING: internal call detected in function collect_characters/3(*2)
+BOLT-WARNING: internal call detected in function collect_characters/3(*2)
+BOLT-WARNING: internal call detected in function collect_characters/3(*2)
+BOLT-WARNING: internal call detected in function collect_characters/3(*2)
+BOLT-WARNING: internal call detected in function get_characters/3(*2)
+BOLT-WARNING: internal call detected in function get_characters/3(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/3(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/3(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/3(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/3(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/3(*2)
+BOLT-WARNING: internal call detected in function spl_dimmed/3(*2)
+BOLT-WARNING: internal call detected in function bezier_easing/4(*2)
+BOLT-WARNING: internal call detected in function bezier_easing/4(*2)
+BOLT-WARNING: internal call detected in function sgr_rgb/4(*2)
+BOLT-WARNING: internal call detected in function parse_parameters/4(*2)
+BOLT-WARNING: internal call detected in function parse_parameters/4(*2)
+BOLT-WARNING: internal call detected in function collect_characters/4(*2)
+BOLT-WARNING: internal call detected in function collect_characters/4(*2)
+BOLT-WARNING: internal call detected in function collect_characters/4(*2)
+BOLT-WARNING: internal call detected in function collect_characters/4(*2)
+BOLT-WARNING: internal call detected in function get_characters/4(*2)
+BOLT-WARNING: internal call detected in function get_characters/4(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/4(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/4(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/4(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/4(*2)
+BOLT-WARNING: internal call detected in function scene_apply_gradient/4(*2)
+BOLT-WARNING: internal call detected in function spl_dimmed/4(*2)
+BOLT-WARNING: will skip the following function(s) as unsupported internal calls were detected:
+              scene_apply_gradient/1(*2)
+              scene_apply_gradient/2(*2)
+              scene_apply_gradient/3(*2)
+              scene_apply_gradient/4(*2)
+BOLT-INSTRUMENTER: Number of indirect call site descriptors: 8121
+BOLT-INSTRUMENTER: Number of indirect call target descriptors: 12893
+BOLT-INSTRUMENTER: Number of function descriptors: 4072
+BOLT-INSTRUMENTER: Number of branch counters: 40345
+BOLT-INSTRUMENTER: Number of ST leaf node counters: 21432
+BOLT-INSTRUMENTER: Number of direct call counters: 1103
+BOLT-INSTRUMENTER: Total number of counters: 62880
+BOLT-INSTRUMENTER: Total size of counters: 503040 bytes (static alloc memory)
+BOLT-INSTRUMENTER: Total size of string table emitted: 292126 bytes in file
+BOLT-INSTRUMENTER: Total size of descriptors: 4547204 bytes in file
+BOLT-INSTRUMENTER: Profile will be saved to file /home/gardnmi/Projects/ttfx/target/refresh/bolt-profile
+BOLT-INFO: 23275 instructions were shortened
+BOLT-INFO: removed 234 empty blocks
+BOLT-INFO: UCE removed 1604 blocks and 96876 bytes of code
+BOLT-WARNING: failed to patch entries in ttfx_asm_run_v1. The function will not be optimized.
+BOLT-WARNING: failed to patch entries in run_effect/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in gradient_new/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in find_coords_on_circle/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in find_coords_on_rect/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in extrapolate_along_ray/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in shift_color_towards/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in visual_make/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in escape_sequence/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in parse_parameters/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in apply_sgr/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in apply_cursor/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in assign_coordinates/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in get_characters/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in group_key/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in scene_activate/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in scene_share/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_animation_awake/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_synced_scene/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in shape_find/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_eased_scene/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in set_appearance/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in event_register/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in path_seg_share/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in chain_paths/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in path_step/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in update_init/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in update/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in particle_reset/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in cell_rewin/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in set_visible/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in coordinate_changed/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in row_dirty/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in row_rebuild/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in emit_blocks/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in st_neighbors/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bh_explode/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in cs_rotation/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in decrypt_build/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in highlight_build/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in highlight_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in pour_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in sweep_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spray_build/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in synthgrid_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in vhs_glitch_wave/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in vhstape_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in wipe_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in rings_initial_disperse/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in column_tick/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in matrix_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in thunderstorm_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slice_build/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in beams_scenes/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in beams_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in binarypath_build/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bp_make_coords/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in binarypath_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in overflow_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in of_set_color/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in wv_final_frames/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in errorcorrect_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in unstable_build/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in un_cache_find/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in unstable_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in pr_make_row/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in print_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bub_make/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bub_pop/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swm_build_char/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swm_landing_frames/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swarm_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slide_build/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in sld_place_group/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slide_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in orbittingvolley_build/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spotlights_build/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spl_illuminate/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spl_shine/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spotlights_next_frame/1(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in ttfx_asm_run_v2. The function will not be optimized.
+BOLT-WARNING: failed to patch entries in run_effect/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in gradient_new/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in find_coords_on_circle/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in find_coords_on_rect/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in extrapolate_along_ray/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in shift_color_towards/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in visual_make/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in escape_sequence/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in parse_parameters/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in apply_sgr/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in apply_cursor/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in assign_coordinates/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in get_characters/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in group_key/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in scene_activate/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in scene_share/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_animation_awake/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_synced_scene/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in shape_find/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_eased_scene/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in set_appearance/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in event_register/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in path_seg_share/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in chain_paths/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in path_step/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in update_init/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in update/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in particle_reset/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in cell_rewin/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in set_visible/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in coordinate_changed/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in row_dirty/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in row_rebuild/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in emit_blocks/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in st_neighbors/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bh_explode/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in cs_rotation/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in decrypt_build/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in highlight_build/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in highlight_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in pour_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in sweep_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spray_build/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in synthgrid_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in vhs_glitch_wave/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in vhstape_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in wipe_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in rings_initial_disperse/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in column_tick/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in matrix_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in thunderstorm_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slice_build/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in beams_scenes/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in beams_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in binarypath_build/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bp_make_coords/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in binarypath_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in overflow_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in of_set_color/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in wv_final_frames/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in errorcorrect_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in unstable_build/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in un_cache_find/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in unstable_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in pr_make_row/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in print_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bub_make/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bub_pop/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swm_build_char/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swm_landing_frames/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swarm_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slide_build/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in sld_place_group/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slide_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in orbittingvolley_build/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spotlights_build/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spl_illuminate/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spl_shine/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spotlights_next_frame/2(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in ttfx_asm_run_v3. The function will not be optimized.
+BOLT-WARNING: failed to patch entries in run_effect/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in gradient_new/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in find_coords_on_circle/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in find_coords_on_rect/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in extrapolate_along_ray/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in shift_color_towards/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in visual_make/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in escape_sequence/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in parse_parameters/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in apply_sgr/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in apply_cursor/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in assign_coordinates/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in get_characters/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in group_key/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in scene_activate/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in scene_share/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_animation_awake/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_synced_scene/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in shape_find/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_eased_scene/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in set_appearance/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in event_register/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in path_seg_share/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in chain_paths/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in path_step/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in update_init/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in update/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in particle_reset/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in cell_rewin/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in set_visible/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in coordinate_changed/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in row_dirty/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in row_rebuild/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in emit_blocks/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in st_neighbors/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bh_explode/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in cs_rotation/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in decrypt_build/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in highlight_build/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in highlight_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in pour_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in sweep_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spray_build/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in synthgrid_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in vhs_glitch_wave/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in vhstape_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in wipe_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in rings_initial_disperse/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in column_tick/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in matrix_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in thunderstorm_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slice_build/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in beams_scenes/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in beams_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in binarypath_build/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bp_make_coords/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in binarypath_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in overflow_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in of_set_color/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in wv_final_frames/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in errorcorrect_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in unstable_build/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in un_cache_find/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in unstable_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in pr_make_row/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in print_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bub_make/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bub_pop/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swm_build_char/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swm_landing_frames/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swarm_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slide_build/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in sld_place_group/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slide_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in orbittingvolley_build/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spotlights_build/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spl_illuminate/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spl_shine/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spotlights_next_frame/3(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in ttfx_asm_run_v4. The function will not be optimized.
+BOLT-WARNING: failed to patch entries in run_effect/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in gradient_new/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in find_coords_on_circle/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in find_coords_on_rect/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in extrapolate_along_ray/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in shift_color_towards/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in visual_make/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in escape_sequence/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in parse_parameters/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in apply_sgr/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in apply_cursor/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in assign_coordinates/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in get_characters/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in group_key/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in scene_activate/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in scene_share/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_animation_awake/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_synced_scene/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in shape_find/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in step_eased_scene/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in set_appearance/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in event_register/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in path_seg_share/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in chain_paths/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in path_step/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in update_init/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in particle_reset/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in cell_rewin/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in set_visible/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in coordinate_changed/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in row_dirty/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in row_rebuild/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in emit_blocks/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in st_neighbors/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bh_explode/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in cs_rotation/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in decrypt_build/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in highlight_build/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in highlight_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in pour_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in sweep_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spray_build/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in synthgrid_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in vhs_glitch_wave/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in vhstape_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in wipe_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in rings_initial_disperse/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in column_tick/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in matrix_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in thunderstorm_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slice_build/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in beams_scenes/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in beams_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in binarypath_build/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bp_make_coords/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in binarypath_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in overflow_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in of_set_color/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in wv_final_frames/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in errorcorrect_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in unstable_build/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in un_cache_find/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in unstable_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in pr_make_row/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in print_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bub_make/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in bub_pop/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swm_build_char/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swm_landing_frames/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in swarm_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slide_build/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in sld_place_group/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in slide_next_frame/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in orbittingvolley_build/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spotlights_build/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spl_illuminate/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spl_shine/4(*2). The function will not be optimized.
+BOLT-WARNING: failed to patch entries in spotlights_next_frame/4(*2). The function will not be optimized.
+BOLT-INFO: padding code to 0xa00000 to accommodate hot text
+BOLT-INFO: output linked against instrumentation runtime library, lib entry point is 0xacc870
+BOLT-INFO: clear procedure is 0xac8370
+BOLT-INFO: patched build-id (flipped last bit)
+BOLT-INFO: setting __bolt_runtime_start to 0xacc830
+BOLT-INFO: setting __bolt_runtime_fini to 0xacc870
+BOLT-INFO: setting __hot_start to 0x600000
+BOLT-INFO: setting __hot_end to 0x9fe638

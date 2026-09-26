@@ -1,0 +1,82 @@
+diff --git i/asm/engine/motion.asm w/asm/engine/motion.asm
+index 9b99ff3..6800ffc 100644
+--- i/asm/engine/motion.asm
++++ w/asm/engine/motion.asm
+@@ -11,10 +11,10 @@
+ %define ORIGIN_NAME         0x7fffffff  ; the synthetic origin waypoint ("origin")
+
+ ; Walk index (see path_step), in the path and segment records' spare bytes.
+-%define PA_INT_COUNT        120         ; u16 leading segments of whole-number distance
+-%define PA_DONE             122         ; u16 leading segments with both events fired
+-%define PA_CURSOR           124         ; u16 the segment the last step landed in
+-%define PA_REACH            126         ; u16 min(PA_INT_COUNT, PA_DONE + 1)
++%define PA_INT_COUNT        56         ; u16 leading segments of whole-number distance
++%define PA_DONE             58         ; u16 leading segments with both events fired
++%define PA_CURSOR           60         ; u16 the segment the last step landed in
++%define PA_REACH            62         ; u16 min(PA_INT_COUNT, PA_DONE + 1)
+ %define SG_PREFIX           76          ; u32 distance sum of segments 0..=i (the run above)
+ ; Eased factor tables (path_ease_table), in PA_OWNER's slot (never read).
+ %define PA_ETAB             PA_OWNER    ; u32 table offset / 8; 0 = not looked up
+@@ -28,7 +28,10 @@
+ %define SEGSHARE_BITS       14
+ %define SEGSHARE_SIZE       (1 << SEGSHARE_BITS)    ; 16-byte entries: list, count, tag
+ %define SEGSHARE_PROBATION  256
+-%if PA_WP_CAP + 4 > PA_INT_COUNT || PA_REACH + 2 > PATH_SIZE
++%if PA_SEG_CAP != PA_SEG_COUNT + 4 || PA_WP_CAP != PA_WP_COUNT + 4
++%error "grow_array requires count and capacity to be adjacent"
++%endif
++%if PA_WP_CAP + 4 > PATH_SIZE || PA_REACH + 2 > PA_NAME
+ %error "path record layout overlaps the walk index"
+ %endif
+ %if SEGMENT_SIZE % 16 || WAYPOINT_SIZE != 32
+diff --git i/asm/ttfx.inc w/asm/ttfx.inc
+index 0c81758..059e27d 100644
+--- i/asm/ttfx.inc
++++ w/asm/ttfx.inc
+@@ -235,26 +235,26 @@ global %1
+
+ ; path record (PATH_SIZE bytes; index into [paths])
+ %define PATH_SIZE           128
+-%define PA_NAME             0           ; u32
+-%define PA_NEXT             4           ; i32 next path of the same character
+-%define PA_SPEED            8           ; f64
+-%define PA_EASE             16          ; i32 easing id or NONE
+-%define PA_LAYER            20          ; i32 (PAF_LAYER)
+-%define PA_FLAGS            24          ; u32 PAF_*
+-%define PA_OWNER            28          ; u32 character slot
+-%define PA_HOLD             32          ; i64 hold_time
+-%define PA_HOLD_LEFT        40          ; i64 hold_time_remaining
+-%define PA_TOTAL            48          ; f64 total_distance
+-%define PA_STEP             56          ; i64 current_step
+-%define PA_MAX              64          ; i64 max_steps
+-%define PA_LAST             72          ; f64 last_distance_reached
+-%define PA_ORIGIN_DIST      80          ; f64 origin segment distance (PAF_ORIGIN)
+-%define PA_SEGS             88          ; u64 pointer to segments
+-%define PA_SEG_COUNT        96          ; u32
+-%define PA_SEG_CAP          100         ; u32
+-%define PA_WPS              104         ; u64 pointer to waypoints
+-%define PA_WP_COUNT         112         ; u32
+-%define PA_WP_CAP           116         ; u32
++%define PA_NAME             64           ; u32
++%define PA_NEXT             68           ; i32 next path of the same character
++%define PA_SPEED            72           ; f64
++%define PA_EASE             52          ; i32 easing id or NONE
++%define PA_LAYER            80          ; i32 (PAF_LAYER)
++%define PA_FLAGS            84          ; u32 PAF_*
++%define PA_OWNER            48          ; u32 character slot
++%define PA_HOLD             88          ; i64 hold_time
++%define PA_HOLD_LEFT        96          ; i64 hold_time_remaining
++%define PA_TOTAL            0          ; f64 total_distance
++%define PA_STEP             8          ; i64 current_step
++%define PA_MAX              16          ; i64 max_steps
++%define PA_LAST             24          ; f64 last_distance_reached
++%define PA_ORIGIN_DIST      104          ; f64 origin segment distance (PAF_ORIGIN)
++%define PA_SEGS             32          ; u64 pointer to segments
++%define PA_SEG_COUNT        40          ; u32
++%define PA_SEG_CAP          44         ; u32
++%define PA_WPS              112         ; u64 pointer to waypoints
++%define PA_WP_COUNT         120         ; u32
++%define PA_WP_CAP           124         ; u32
+
+ %define PAF_LAYER           1
+ %define PAF_LOOP            2

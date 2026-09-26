@@ -1,0 +1,37 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 179  of event 'cycles:u'
+# Event count (approx.): 17900537
+#
+# Overhead  Command          Shared Object         Symbol
+# ........  ...............  ....................  ...........................................................................................
+#
+    12.85%  ttfx-bolt-input  ttfx-bolt-input       [.] visual_make
+    11.17%  ttfx-bolt-input  ttfx-bolt-input       [.] scene_load_head
+     6.15%  ttfx-bolt-input  ttfx-bolt-input       [.] update
+     5.03%  ttfx-bolt-input  ttfx-bolt-input       [.] row_rebuild
+     5.03%  ttfx-bolt-input  ttfx-bolt-input       [.] sort_pairs.put
+     3.91%  ttfx-bolt-input  ttfx-bolt-input       [.] doze_try
+     3.91%  ttfx-bolt-input  ttfx-bolt-input       [.] sort_pairs.pick
+     2.79%  ttfx-bolt-input  ttfx-bolt-input       [.] highlight_build.frame
+     2.79%  ttfx-bolt-input  ttfx-bolt-input       [.] step_animation_awake
+     2.23%  ttfx-bolt-input  ttfx-bolt-input       [.] doze_retire
+     2.23%  ttfx-bolt-input  ttfx-bolt-input       [.] emit_blocks.quad
+     2.23%  ttfx-bolt-input  ttfx-bolt-input       [.] scene_add_frame
+     2.23%  ttfx-bolt-input  ttfx-bolt-input       [.] scene_append_frame
+     2.23%  ttfx-bolt-input  ttfx-bolt-input       [.] step_animation_awake.ticked
+     1.68%  ttfx-bolt-input  ttfx-bolt-input       [.] char_at_input_coord
+     1.68%  ttfx-bolt-input  ttfx-bolt-input       [.] coord_map_index
+     1.68%  ttfx-bolt-input  ttfx-bolt-input       [.] new_char
+     1.68%  ttfx-bolt-input  ttfx-bolt-input       [.] scene_add_frame.visual
+     1.68%  ttfx-bolt-input  ttfx-bolt-input       [.] scene_append_frame.append
+     1.68%  ttfx-bolt-input  ttfx-bolt-input       [.] sort_slots_stable
+     1.68%  ttfx-bolt-input  ttfx-bolt-input       [.] step_animation_awake.check
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

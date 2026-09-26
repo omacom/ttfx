@@ -1,0 +1,22 @@
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.archlinux.org>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000555555a02fba in sort_slots_stable ()
+=> 0x555555a02fba <sort_slots_stable+46>:	mov    (%r12,%rbx,4),%edi
+   0x555555a02fbe <sort_slots_stable+50>:	call   *%r14
+   0x555555a02fc1 <sort_slots_stable+53>:	mov    %rbx,%rcx
+   0x555555a02fc4 <sort_slots_stable+56>:	shl    $0x4,%rcx
+   0x555555a02fc8 <sort_slots_stable+60>:	mov    %rax,(%r15,%rcx,1)
+#0  0x0000555555a02fba in sort_slots_stable ()
+#1  0x0000555555a02fc1 in sort_slots_stable ()
+#2  0x0000555555a050bf in get_characters_grouped ()
+#3  0x0000555555a91a52 in print_build ()
+#4  0x000055555568361c in ttfx_asm_run_v4 ()
+#5  0x0000555555a14d04 in ttfx::main ()

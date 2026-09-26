@@ -1,0 +1,133 @@
+diff --git i/asm/engine/render.asm w/asm/engine/render.asm
+index 4d6e692..9455395 100644
+--- i/asm/engine/render.asm
++++ w/asm/engine/render.asm
+@@ -30,6 +30,7 @@
+ %define CR_HEAD         0
+ %define CR_OWNER        4
+ %define CR_LAYER        8
++%define CR_PENDING      12
+ ; cells per dirty block (one emission quad)
+ %define BLOCK           4
+ %define BLOCK_SHIFT     2
+@@ -180,6 +181,9 @@ render_init:
+     mov     rdi, rbx
+     call    alloc
+     mov     [handle_grid], rax
++    mov     rdi, rbx
++    call    alloc
++    mov     [pending_cells], rax
+     mov     rdi, CHAR_LIMIT * 4
+     call    reserve_sparse
+     mov     [ch_cnext], rax
+@@ -311,7 +315,7 @@ cell_link:
+     mov     [rcx + rdx * 4], edi
+ .head:
+     mov     [r8 + CR_HEAD], edi
+-    jmp     paint_rec
++    jmp     cell_defer_rec
+
+ ; cell_unlink(edi=slot): take a character out of its cell; if it owned the
+ ; cell, the best remaining character (or nobody) takes over.
+@@ -343,10 +347,52 @@ cell_unlink:
+     cmp     [r8 + CR_OWNER], edi
+     jne     .done
+     mov     eax, r9d
+-    jmp     cell_rewin
++    jmp     cell_defer_rec
+ .done:
+     ret
+
++; Queue each changed cell once, resolving its final owner at render time.
++; Clobbers rcx, rdx, rsi, r8. r8 is the cell record at cell_defer_rec.
++cell_defer:
++    mov     r8, rax
++    shl     r8, 4
++    add     r8, [cell_rec]
++cell_defer_rec:
++    cmp     dword [r8 + CR_PENDING], 0
++    jne     .done
++    mov     dword [r8 + CR_PENDING], 1
++    mov     ecx, [pending_count]
++    mov     rdx, [pending_cells]
++    mov     [rdx + rcx * 4], eax
++    inc     dword [pending_count]
++.done:
++    ret
++
++cells_flush:
++    push    rbx
++    push    r12
++    push    r13
++    mov     r12, [pending_cells]
++    mov     r13d, [pending_count]
++    xor     ebx, ebx
++.next:
++    cmp     ebx, r13d
++    jae     .done
++    mov     eax, [r12 + rbx * 4]
++    mov     rcx, rax
++    shl     rcx, 4
++    add     rcx, [cell_rec]
++    mov     dword [rcx + CR_PENDING], 0
++    call    cell_rewin
++    inc     ebx
++    jmp     .next
++.done:
++    mov     dword [pending_count], 0
++    pop     r13
++    pop     r12
++    pop     rbx
++    ret
++
+ ; cell_rewin(eax=cell): the cell's owner is the best of its list, or nobody.
+ ; Clobbers rcx, rdx, rsi, r8, r9.
+ cell_rewin:
+@@ -385,16 +431,19 @@ cell_rewin:
+     mov     [rsi + rax * 4], ebx
+     mov     rsi, [ch_handle]
+     mov     ecx, [rsi + rbx * 4]
+-    mov     [rdx + rax * 4], ecx
+-    jmp     .dirty
++    jmp     .store
+ .empty:
+     mov     rsi, [slot_grid]
+     mov     dword [rsi + rax * 4], EMPTY_SLOT
+     mov     ecx, [space_handle]
++ .store:
++    cmp     [rdx + rax * 4], ecx
++    je      .done
+     mov     [rdx + rax * 4], ecx
+ .dirty:
+     mov     rsi, [dirty_cells]
+     mov     byte [rsi + rax], 1
++.done:
+     pop     rbx
+     ret
+
+@@ -484,7 +533,7 @@ layer_changed:
+     mov     eax, [rax + rdi * 4]
+     cmp     eax, NONE
+     je      .done
+-    jmp     cell_rewin
++    jmp     cell_defer
+ .done:
+     ret
+
+@@ -758,6 +807,7 @@ render_frame:
+     jne     .rows
+     call    repaint
+ .rows:
++    call    cells_flush
+     mov     r13, [handle_grid]
+     mov     r14, [grid_width]
+     mov     rbp, [grid_height]
+@@ -1134,3 +1184,8 @@ dirty_cells:    resq 1
+ dirty_bits:     resq 1
+ full_blocks:    resq 1
+ row_blocks:     resq 1
++
++section .tstate
++alignb 8
++pending_cells: resq 1
++pending_count: resd 1

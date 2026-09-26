@@ -53,7 +53,7 @@ update_init:
     ; would share its address's low 12 bits, and a load then waits on a
     ; store to the other (4K aliasing)
     mov     rdi, 4 * (CHAR_LIMIT / 8) + CHAR_LIMIT + 5 * UPD_STAGGER
-    call    reserve
+    call    reserve_small
     mov     [active_bits], rax
     add     rax, CHAR_LIMIT / 8 + UPD_STAGGER
     mov     [snapshot_bits], rax

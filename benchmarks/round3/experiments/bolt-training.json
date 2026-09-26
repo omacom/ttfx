@@ -1,0 +1,631 @@
+[
+  {
+    "effect": "beams",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "beams"
+    ]
+  },
+  {
+    "effect": "binarypath",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "binarypath"
+    ]
+  },
+  {
+    "effect": "blackhole",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "blackhole"
+    ]
+  },
+  {
+    "effect": "bouncyballs",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "bouncyballs"
+    ]
+  },
+  {
+    "effect": "bubbles",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "bubbles"
+    ]
+  },
+  {
+    "effect": "burn",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "burn"
+    ]
+  },
+  {
+    "effect": "colorshift",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "colorshift"
+    ]
+  },
+  {
+    "effect": "crumble",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "crumble"
+    ]
+  },
+  {
+    "effect": "decrypt",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "decrypt"
+    ]
+  },
+  {
+    "effect": "errorcorrect",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "errorcorrect"
+    ]
+  },
+  {
+    "effect": "expand",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "expand"
+    ]
+  },
+  {
+    "effect": "fireworks",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "fireworks"
+    ]
+  },
+  {
+    "effect": "highlight",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "highlight"
+    ]
+  },
+  {
+    "effect": "laseretch",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "laseretch"
+    ]
+  },
+  {
+    "effect": "matrix",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "matrix"
+    ]
+  },
+  {
+    "effect": "middleout",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "middleout"
+    ]
+  },
+  {
+    "effect": "orbittingvolley",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "orbittingvolley"
+    ]
+  },
+  {
+    "effect": "overflow",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "overflow"
+    ]
+  },
+  {
+    "effect": "pour",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "pour"
+    ]
+  },
+  {
+    "effect": "print",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "print"
+    ]
+  },
+  {
+    "effect": "rain",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "rain"
+    ]
+  },
+  {
+    "effect": "randomsequence",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "randomsequence"
+    ]
+  },
+  {
+    "effect": "rings",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "rings"
+    ]
+  },
+  {
+    "effect": "scattered",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "scattered"
+    ]
+  },
+  {
+    "effect": "slice",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "slice"
+    ]
+  },
+  {
+    "effect": "slide",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "slide"
+    ]
+  },
+  {
+    "effect": "smoke",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "smoke"
+    ]
+  },
+  {
+    "effect": "spotlights",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "spotlights"
+    ]
+  },
+  {
+    "effect": "spray",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "spray"
+    ]
+  },
+  {
+    "effect": "swarm",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "swarm"
+    ]
+  },
+  {
+    "effect": "sweep",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "sweep"
+    ]
+  },
+  {
+    "effect": "synthgrid",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "synthgrid"
+    ]
+  },
+  {
+    "effect": "thunderstorm",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "thunderstorm"
+    ]
+  },
+  {
+    "effect": "unstable",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "unstable"
+    ]
+  },
+  {
+    "effect": "vhstape",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "vhstape"
+    ]
+  },
+  {
+    "effect": "waves",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "waves"
+    ]
+  },
+  {
+    "effect": "wipe",
+    "status": 0,
+    "args": [
+      "--seed",
+      "73",
+      "--frame-rate",
+      "0",
+      "--virtual-clock",
+      "--canvas-width",
+      "80",
+      "--canvas-height",
+      "24",
+      "--ignore-terminal-dimensions",
+      "wipe"
+    ]
+  }
+]

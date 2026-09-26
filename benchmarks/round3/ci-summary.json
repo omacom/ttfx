@@ -1,0 +1,81 @@
+{
+  "source_commit": "cfa5554531888d8193e1951c05d7c2e9a3b50cd5",
+  "binary_sha256": "aab9bbf1e732c2ce84bfd7b88cbc9837792386612ad337b129b6186687c944e9",
+  "bin_test_exit_code": 1,
+  "bin_test_stops_at": "two inherited Python colored-decrypt parity failures; remaining checks run separately",
+  "checks": {
+    "cargo_test_release": {
+      "passed": 57,
+      "failed": 0
+    },
+    "cli_corpus": {
+      "passed": 19,
+      "failed": 0
+    },
+    "sigterm_behavior": "passed",
+    "terminal_close_behavior": "passed",
+    "python_frame_parity_asm": {
+      "passed": 352,
+      "failed": 2,
+      "inherited_failures": [
+        "decrypt-dynamic seed=42",
+        "decrypt-dynamic seed=1337"
+      ],
+      "reproduces_on_upstream": "189840b66521437352ef5822f30eba10ad5b4cc0",
+      "details": "inherited-decrypt.json"
+    },
+    "python_decrypt_dynamic_rust": {
+      "passed": 2,
+      "failed": 0
+    },
+    "tty_byte_stream_parity": {
+      "passed": 41,
+      "failed": 0
+    },
+    "resize_behavior": "passed",
+    "asm_diff_by_tier": {
+      "1": {
+        "passed": 21,
+        "failed": 0
+      },
+      "2": {
+        "passed": 21,
+        "failed": 0
+      },
+      "3": {
+        "passed": 21,
+        "failed": 0
+      },
+      "4": {
+        "passed": 21,
+        "failed": 0
+      }
+    },
+    "isa_audit": "tiers 1-4 and baseline dispatcher clean"
+  },
+  "not_tested": [
+    "macOS",
+    "musl",
+    "physical lower-tier CPUs"
+  ],
+  "log_sha256": {
+    "final-bin-test.log": "0c90f7ce0eaf439ee9824af7fa9fe82562ace5797db91abe6752b28008b184eb",
+    "final-tty.log": "04c10a831d5cff7f1c3eea69869792a55234dbde9d722ef00634df6516488973",
+    "final-resize.log": "63c25e02cce307ebc134098be021920f7b2c4ba593c98440cd2b3b98fdadb2f1",
+    "final-isa.log": "304752cb7021684de77a1db9e0254ad2d24fde1a779362af107e24cafa6ea3a2",
+    "final-decrypt-rust.log": "941d41f54df19917a805b6c8af43163655cd14deb64dbf1d5b2890ad2d19b48b"
+  },
+  "oracle": {
+    "mode": "quick",
+    "tiers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "effects_per_tier": 37,
+    "passed": 54756,
+    "failed": 0,
+    "summary": "oracle-summary.json"
+  }
+}

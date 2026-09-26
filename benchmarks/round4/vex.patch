@@ -1,0 +1,38 @@
+diff --git i/asm/utils/geometry.asm w/asm/utils/geometry.asm
+index b7f27cd..939eca1 100644
+--- i/asm/utils/geometry.asm
++++ w/asm/utils/geometry.asm
+@@ -587,6 +587,25 @@ extrapolate_along_ray:
+ ; 0x80000000) takes the scalar path, which wraps like the i64 cast does.
+ ; Clobbers rcx, rdx, xmm0-xmm4.
+ find_coord_on_line:
++%if TIER >= 3
++    vmovq    xmm3, rdi
++    vcvtdq2pd xmm3, xmm3
++    vmovq    xmm4, rsi
++    vcvtdq2pd xmm4, xmm4
++    vmovddup xmm2, xmm0
++    vmovddup xmm1, [geo_one]
++    vsubpd   xmm1, xmm1, xmm2
++    vmulpd   xmm3, xmm3, xmm1
++    vmulpd   xmm4, xmm4, xmm2
++    vaddpd   xmm3, xmm3, xmm4
++    vcvtpd2dq xmm4, xmm3
++    vmovq    rax, xmm4
++    vpcmpeqd xmm2, xmm4, [geo_int_min]
++    vpmovmskb ecx, xmm2
++    test     ecx, 0xff
++    jnz      .scalar
++    ret
++%else
+     movq    xmm3, rdi
+     cvtdq2pd xmm3, xmm3                 ; start column, row
+     movq    xmm4, rsi
+@@ -607,6 +626,7 @@ find_coord_on_line:
+     test    ecx, 0xff
+     jnz     .scalar
+     ret
++%endif
+ .scalar:
+     movsd   xmm1, [geo_one]
+     subsd   xmm1, xmm0                  ; 1 - t

@@ -1,0 +1,146 @@
+[
+  {
+    "effect": "binarypath",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "1225859719;;cycles:u;214946552;83.00;;\n2122620374;;instructions:u;214959035;83.00;;\n483443330;;branches:u;214997896;83.00;;\n8902210;;branch-misses:u;214916745;83.00;;\n83619337;;L1-dcache-load-misses:u;215018739;83.00;;\n41327666;;cache-misses:u;214994068;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "1242755425;;cycles:u;221211286;83.00;;\n2373112879;;instructions:u;221434158;83.00;;\n525184636;;branches:u;222238822;83.00;;\n8713724;;branch-misses:u;222276903;83.00;;\n75550503;;L1-dcache-load-misses:u;222306064;83.00;;\n34148662;;cache-misses:u;221842082;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "1266081670;;cycles:u;229466930;83.00;;\n2366810397;;instructions:u;229541123;83.00;;\n527450441;;branches:u;229481442;83.00;;\n8787218;;branch-misses:u;229567499;83.00;;\n76172310;;L1-dcache-load-misses:u;229840561;83.00;;\n33462915;;cache-misses:u;229670135;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "1180508663;;cycles:u;214313245;83.00;;\n2134101926;;instructions:u;214366869;83.00;;\n480580457;;branches:u;214241503;83.00;;\n8828784;;branch-misses:u;214334125;83.00;;\n83516102;;L1-dcache-load-misses:u;214318308;83.00;;\n39957089;;cache-misses:u;214966980;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "1166040513;;cycles:u;210413148;83.00;;\n2127826215;;instructions:u;210644471;83.00;;\n479330775;;branches:u;210781261;83.00;;\n8812362;;branch-misses:u;210715506;83.00;;\n84099556;;L1-dcache-load-misses:u;210752816;83.00;;\n39449704;;cache-misses:u;210395513;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "1209577454;;cycles:u;215047068;83.00;;\n2368531154;;instructions:u;215067166;83.00;;\n524713771;;branches:u;215001647;83.00;;\n8689867;;branch-misses:u;215064048;83.00;;\n76046837;;L1-dcache-load-misses:u;215048051;83.00;;\n33473194;;cache-misses:u;215017975;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "741350464;;cycles:u;130139724;83.00;;\n928861170;;instructions:u;130097821;83.00;;\n204001122;;branches:u;130087786;83.00;;\n5977984;;branch-misses:u;130138176;83.00;;\n44455189;;L1-dcache-load-misses:u;130116880;83.00;;\n17530199;;cache-misses:u;129955843;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "724650019;;cycles:u;126875528;83.00;;\n928337604;;instructions:u;126762952;82.00;;\n200504600;;branches:u;127638282;83.00;;\n6016016;;branch-misses:u;127804897;83.00;;\n43818314;;L1-dcache-load-misses:u;127826289;83.00;;\n16932809;;cache-misses:u;127114097;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "720749503;;cycles:u;125520667;82.00;;\n922248164;;instructions:u;126109268;83.00;;\n200495478;;branches:u;126496283;83.00;;\n5990692;;branch-misses:u;126530517;83.00;;\n44324516;;L1-dcache-load-misses:u;126427883;83.00;;\n17382816;;cache-misses:u;126436922;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "742314760;;cycles:u;130368475;83.00;;\n935099097;;instructions:u;130279799;83.00;;\n202630986;;branches:u;130363021;83.00;;\n5995204;;branch-misses:u;130309736;83.00;;\n44126532;;L1-dcache-load-misses:u;130314233;83.00;;\n18112795;;cache-misses:u;129961101;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "766562506;;cycles:u;135732413;82.00;;\n934056552;;instructions:u;136581379;83.00;;\n203600978;;branches:u;136675890;83.00;;\n6033738;;branch-misses:u;136780328;83.00;;\n44405436;;L1-dcache-load-misses:u;136767444;83.00;;\n17402653;;cache-misses:u;136210101;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "750879614;;cycles:u;130941506;83.00;;\n916659437;;instructions:u;131461156;83.00;;\n198740777;;branches:u;131465408;83.00;;\n5982749;;branch-misses:u;131493536;83.00;;\n43929721;;L1-dcache-load-misses:u;131511133;83.00;;\n17718316;;cache-misses:u;130566806;82.00;;\n"
+  },
+  {
+    "effect": "swarm",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "899695166;;cycles:u;161006198;83.00;;\n1372070062;;instructions:u;161086512;83.00;;\n301482370;;branches:u;161019041;83.00;;\n7583323;;branch-misses:u;161013135;83.00;;\n73134431;;L1-dcache-load-misses:u;161046837;83.00;;\n12926218;;cache-misses:u;160077757;82.00;;\n"
+  },
+  {
+    "effect": "swarm",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "931778647;;cycles:u;166111671;83.00;;\n1370346897;;instructions:u;166122441;83.00;;\n296657665;;branches:u;167187622;83.00;;\n7603848;;branch-misses:u;167060094;83.00;;\n73385122;;L1-dcache-load-misses:u;167011554;83.00;;\n12298271;;cache-misses:u;166836563;83.00;;\n"
+  },
+  {
+    "effect": "swarm",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "1034981430;;cycles:u;184180175;83.00;;\n1360709749;;instructions:u;184283018;83.00;;\n298058248;;branches:u;184310291;83.00;;\n7673523;;branch-misses:u;184199741;83.00;;\n73129693;;L1-dcache-load-misses:u;184344310;83.00;;\n14531130;;cache-misses:u;184987125;83.00;;\n"
+  },
+  {
+    "effect": "swarm",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "931527613;;cycles:u;166961903;83.00;;\n1369972734;;instructions:u;166961305;83.00;;\n305110346;;branches:u;167908851;83.00;;\n7617109;;branch-misses:u;167954735;83.00;;\n73872883;;L1-dcache-load-misses:u;167997117;83.00;;\n12889372;;cache-misses:u;166961089;83.00;;\n"
+  },
+  {
+    "effect": "swarm",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "1002568882;;cycles:u;175263609;83.00;;\n1372539248;;instructions:u;176168320;83.00;;\n297254387;;branches:u;176101725;83.00;;\n7576307;;branch-misses:u;176191700;83.00;;\n75525088;;L1-dcache-load-misses:u;176198417;83.00;;\n13972418;;cache-misses:u;175849519;83.00;;\n"
+  },
+  {
+    "effect": "swarm",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "908682377;;cycles:u;165028532;83.00;;\n1374024848;;instructions:u;164988036;83.00;;\n305111985;;branches:u;165046598;83.00;;\n7600944;;branch-misses:u;165051406;83.00;;\n73247333;;L1-dcache-load-misses:u;165016199;83.00;;\n12403209;;cache-misses:u;164951704;83.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "219007575;;cycles:u;44203348;83.00;;\n459247864;;instructions:u;44303987;83.00;;\n92833264;;branches:u;44189283;83.00;;\n1996869;;branch-misses:u;44236160;83.00;;\n25491417;;L1-dcache-load-misses:u;44663066;83.00;;\n278172;;cache-misses:u;44503721;83.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "224091224;;cycles:u;45378768;83.00;;\n459967861;;instructions:u;45380310;83.00;;\n93510081;;branches:u;45388616;83.00;;\n1979137;;branch-misses:u;45369259;83.00;;\n25763394;;L1-dcache-load-misses:u;45385590;83.00;;\n310833;;cache-misses:u;44988957;82.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "214745970;;cycles:u;43234446;82.00;;\n465274912;;instructions:u;43246650;82.00;;\n91708762;;branches:u;43187186;82.00;;\n1987255;;branch-misses:u;43200442;82.00;;\n25659545;;L1-dcache-load-misses:u;44154148;84.00;;\n278718;;cache-misses:u;44010668;84.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "213114796;;cycles:u;42437437;82.00;;\n463455190;;instructions:u;42411446;82.00;;\n93875033;;branches:u;42738000;83.00;;\n1979716;;branch-misses:u;43444690;84.00;;\n25737254;;L1-dcache-load-misses:u;43449320;84.00;;\n233275;;cache-misses:u;42711317;83.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/final",
+    "counters": "225428719;;cycles:u;45313695;82.00;;\n465089732;;instructions:u;46030255;83.00;;\n90744877;;branches:u;46068128;83.00;;\n2007650;;branch-misses:u;46058657;83.00;;\n25837696;;L1-dcache-load-misses:u;46038743;83.00;;\n304416;;cache-misses:u;45736447;83.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass4/memo-v2",
+    "counters": "235220960;;cycles:u;46890746;82.00;;\n467869719;;instructions:u;46925919;82.00;;\n93080834;;branches:u;46988287;82.00;;\n1998563;;branch-misses:u;47904644;84.00;;\n25649121;;L1-dcache-load-misses:u;47942131;84.00;;\n343114;;cache-misses:u;47919188;84.00;;\n"
+  }
+]

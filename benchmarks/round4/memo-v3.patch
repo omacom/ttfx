@@ -1,0 +1,122 @@
+diff --git i/asm/engine/motion.asm w/asm/engine/motion.asm
+index 9b99ff3..10108ff 100644
+--- i/asm/engine/motion.asm
++++ w/asm/engine/motion.asm
+@@ -24,6 +24,8 @@
+ %define ETAB_MAP_BITS       12
+ %define ETAB_MAP_SIZE       (1 << ETAB_MAP_BITS)
+ ; Shared segment lists (see path_seg_share).
++%define PAF_MEMO            16          ; a shared list was reused
++%define PATH_MEMO_BYTES      512         ; eight cache lines before shared segments
+ %define PAF_SHARED          8           ; PA_SEGS is a shared list
+ %define SEGSHARE_BITS       14
+ %define SEGSHARE_SIZE       (1 << SEGSHARE_BITS)    ; 16-byte entries: list, count, tag
+@@ -481,7 +483,7 @@ path_unshare:
+     inc     ecx
+     jmp     .flag
+ .flagged:
+-    and     dword [rbp + PA_FLAGS], ~PAF_SHARED
++    and     dword [rbp + PA_FLAGS], ~(PAF_SHARED | PAF_MEMO)
+     ret
+
+ ; path_unshare_all(edi=slot): path_unshare for every path of the character
+@@ -587,6 +589,7 @@ path_seg_share:
+     dec     ecx
+     jnz     .compare
+     inc     dword [segshare_hits]
++    or      dword [rbp + PA_FLAGS], PAF_MEMO
+     mov     rsi, [rdx]
+     jmp     .use
+ .next:
+@@ -608,7 +611,11 @@ path_seg_share:
+     inc     dword [segshare_count]
+     mov     r8, rdx
+     imul    edi, [rbp + PA_SEG_COUNT], SEGMENT_SIZE
++    add     edi, PATH_MEMO_BYTES + 63
+     call    alloc
++    add     rax, 63
++    and     rax, -64
++    add     rax, PATH_MEMO_BYTES
+     mov     [r8], rax
+     mov     ecx, [rbp + PA_SEG_COUNT]
+     mov     [r8 + 8], ecx
+@@ -938,7 +945,70 @@ path_ease_table:
+ ; finishes without saving any register; only the rest of the walk (.slow)
+ ; keeps its state in callee-saved ones.
+ path_step:
++    PATH_PTR r8, rsi
++    test    dword [r8 + PA_FLAGS], PAF_MEMO
++    jz      path_step_uncached.ready
++    mov     rax, [r8 + PA_MAX]
++    test    rax, rax
++    jz      path_step_uncached.ready
++    mov     rcx, [r8 + PA_STEP]
++    cmp     rcx, rax
++    jge     path_step_uncached.ready
++    xorpd   xmm1, xmm1
++    ucomisd xmm1, [r8 + PA_TOTAL]
++    je      path_step_uncached.ready    ; also decline NaN
++    mov     r9, rcx
++    and     r9d, 7
++    shl     r9, 6
++    add     r9, [r8 + PA_SEGS]
++    sub     r9, PATH_MEMO_BYTES
++    cmp     [r9], rcx
++    jne     .miss
++    cmp     [r9 + 8], rax
++    jne     .miss
++    mov     rdx, [r8 + PA_TOTAL]
++    cmp     [r9 + 16], rdx
++    jne     .miss
++    mov     edx, [r8 + PA_EASE]
++    cmp     [r9 + 24], edx
++    jne     .miss
++    mov     rdx, [r8 + PA_INT_COUNT]
++    cmp     [r9 + 32], rdx
++    jne     .miss
++    inc     rcx
++    mov     [r8 + PA_STEP], rcx
++    mov     rax, [r9 + 48]
++    mov     [r8 + PA_LAST], rax
++    mov     rax, [r9 + 56]
++    mov     [r8 + PA_INT_COUNT], rax
++    mov     rax, [r9 + 40]
++    ret
++.miss:
++    mov     [r9], rcx
++    mov     [r9 + 8], rax
++    mov     rdx, [r8 + PA_TOTAL]
++    mov     [r9 + 16], rdx
++    mov     edx, [r8 + PA_EASE]
++    mov     [r9 + 24], edx
++    mov     rdx, [r8 + PA_INT_COUNT]
++    mov     [r9 + 32], rdx
++    push    r8
++    push    r9
++    sub     rsp, 8
++    call    path_step_uncached
++    add     rsp, 8
++    pop     r9
++    pop     r8
++    mov     [r9 + 40], rax
++    mov     rdx, [r8 + PA_LAST]
++    mov     [r9 + 48], rdx
++    mov     rdx, [r8 + PA_INT_COUNT]
++    mov     [r9 + 56], rdx
++    ret
++
++path_step_uncached:
+     PATH_PTR r8, rsi                    ; records never move
++.ready:
+     mov     rax, [r8 + PA_MAX]
+     test    rax, rax
+     jz      .at_end
+@@ -1411,7 +1481,7 @@ path_reset:
+     mov     qword [rax + PA_SEGS], 0    ; the next segment starts a list
+     mov     dword [rax + PA_SEG_CAP], 0
+ .own:
+-    and     dword [rax + PA_FLAGS], ~(PAF_ORIGIN | PAF_SHARED)
++    and     dword [rax + PA_FLAGS], ~(PAF_ORIGIN | PAF_SHARED | PAF_MEMO)
+     mov     dword [rax + PA_WP_COUNT], 0
+     mov     dword [rax + PA_SEG_COUNT], 0
+     mov     qword [rax + PA_TOTAL], 0

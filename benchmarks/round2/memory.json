@@ -1,0 +1,138 @@
+{
+  "method": "Linux wait4 ru_maxrss, KiB",
+  "runs": 3,
+  "cpu": 4,
+  "input_sha256": "5520772cb3e4a78263b258c2020280ce291135615cbc193e89added6c41d732b",
+  "input_bytes": 8785,
+  "transparent_hugepages": "[always] madvise never",
+  "binaries": {
+    "original": {
+      "path": "/home/gardnmi/Projects/ttfx/target/ttfx-pr35",
+      "sha256": "61709d1c647a4b76bcc25644712fe1d89db0b8863006b0c0c893212fe764052e"
+    },
+    "round1": {
+      "path": "/home/gardnmi/Projects/ttfx/target/ttfx-round1",
+      "sha256": "dc21e15157a7f2863a8eaa31f6bf2bee1b77b884817eac97edfe48bddda5d80b"
+    },
+    "round2": {
+      "path": "/home/gardnmi/Projects/ttfx/target/ttfx-round2",
+      "sha256": "7cd3c7289c07154e4c1ad0251480efc2cee151bc7461197cf5ec0371e6caf89d"
+    }
+  },
+  "effects": {
+    "waves": {
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "waves"
+      ],
+      "original": {
+        "peak_rss_kib": [
+          85724,
+          85656,
+          85804
+        ],
+        "median_peak_rss_kib": 85724
+      },
+      "round1": {
+        "peak_rss_kib": [
+          75456,
+          75584,
+          75592
+        ],
+        "median_peak_rss_kib": 75584
+      },
+      "round2": {
+        "peak_rss_kib": [
+          21596,
+          21744,
+          21664
+        ],
+        "median_peak_rss_kib": 21664
+      }
+    },
+    "highlight": {
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "highlight"
+      ],
+      "original": {
+        "peak_rss_kib": [
+          71368,
+          71228,
+          71408
+        ],
+        "median_peak_rss_kib": 71368
+      },
+      "round1": {
+        "peak_rss_kib": [
+          71364,
+          71380,
+          71284
+        ],
+        "median_peak_rss_kib": 71364
+      },
+      "round2": {
+        "peak_rss_kib": [
+          21380,
+          21380,
+          21384
+        ],
+        "median_peak_rss_kib": 21380
+      }
+    },
+    "binarypath": {
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "binarypath"
+      ],
+      "original": {
+        "peak_rss_kib": [
+          253644,
+          253592,
+          253708
+        ],
+        "median_peak_rss_kib": 253644
+      },
+      "round1": {
+        "peak_rss_kib": [
+          253692,
+          253560,
+          253640
+        ],
+        "median_peak_rss_kib": 253640
+      },
+      "round2": {
+        "peak_rss_kib": [
+          204032,
+          204048,
+          204016
+        ],
+        "median_peak_rss_kib": 204032
+      }
+    }
+  }
+}

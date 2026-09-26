@@ -1,0 +1,82 @@
+[
+  {
+    "tier": 1,
+    "effect": "waves",
+    "equal": true
+  },
+  {
+    "tier": 1,
+    "effect": "print",
+    "equal": true
+  },
+  {
+    "tier": 1,
+    "effect": "rings",
+    "equal": true
+  },
+  {
+    "tier": 1,
+    "effect": "matrix",
+    "equal": true
+  },
+  {
+    "tier": 2,
+    "effect": "waves",
+    "equal": true
+  },
+  {
+    "tier": 2,
+    "effect": "print",
+    "equal": true
+  },
+  {
+    "tier": 2,
+    "effect": "rings",
+    "equal": true
+  },
+  {
+    "tier": 2,
+    "effect": "matrix",
+    "equal": true
+  },
+  {
+    "tier": 3,
+    "effect": "waves",
+    "equal": true
+  },
+  {
+    "tier": 3,
+    "effect": "print",
+    "equal": true
+  },
+  {
+    "tier": 3,
+    "effect": "rings",
+    "equal": true
+  },
+  {
+    "tier": 3,
+    "effect": "matrix",
+    "equal": true
+  },
+  {
+    "tier": 4,
+    "effect": "waves",
+    "equal": true
+  },
+  {
+    "tier": 4,
+    "effect": "print",
+    "equal": true
+  },
+  {
+    "tier": 4,
+    "effect": "rings",
+    "equal": true
+  },
+  {
+    "tier": 4,
+    "effect": "matrix",
+    "equal": true
+  }
+]

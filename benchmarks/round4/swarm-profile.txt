@@ -1,0 +1,39 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 9K of event 'cycles:u'
+# Event count (approx.): 996629898
+#
+# Overhead  Command          Shared Object         Symbol
+# ........  ...............  ....................  ............................................................................................
+#
+     8.47%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.have_table
+     7.43%  ttfx-bolt-input  ttfx-bolt-input       [.] ..@231.done
+     7.19%  ttfx-bolt-input  ttfx-bolt-input       [.] find_coord_on_line
+     4.56%  ttfx-bolt-input  ttfx-bolt-input       [.] step_synced_scene.index
+     4.17%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move
+     3.31%  ttfx-bolt-input  ttfx-bolt-input       [.] handle_event.action
+     3.30%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.fast_ratio
+     3.25%  ttfx-bolt-input  ttfx-bolt-input       [.] entry_matches
+     3.16%  ttfx-bolt-input  ttfx-bolt-input       [.] row_rebuild
+     2.86%  ttfx-bolt-input  ttfx-bolt-input       [.] emit_blocks.quad
+     2.83%  ttfx-bolt-input  ttfx-bolt-input       [.] update
+     2.69%  ttfx-bolt-input  ttfx-bolt-input       [.] swarm_next_frame.lead
+     2.64%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.try
+     1.92%  ttfx-bolt-input  ttfx-bolt-input       [.] coordinate_changed
+     1.72%  ttfx-bolt-input  ttfx-bolt-input       [.] set_coordinate
+     1.71%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step
+     1.69%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move.moved
+     1.68%  ttfx-bolt-input  ttfx-bolt-input       [.] cell_rewin
+     1.68%  ttfx-bolt-input  ttfx-bolt-input       [.] step_animation_awake
+     1.64%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move.placed
+     1.60%  ttfx-bolt-input  ttfx-bolt-input       [.] path_activate
+     1.58%  ttfx-bolt-input  ttfx-bolt-input       [.] cell_unlink.owner
+     1.55%  ttfx-bolt-input  ttfx-bolt-input       [.] step_synced_scene.distance
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

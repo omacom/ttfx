@@ -1,0 +1,34 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 5K of event 'cycles:u'
+# Event count (approx.): 536716101
+#
+# Overhead  Command          Shared Object         Symbol
+# ........  ...............  ....................  .............................................................................................................................................................................................................................................................................................................................................................
+#
+     9.80%  ttfx-bolt-input  ttfx-bolt-input       [.] find_coord_on_bezier_curve
+     7.38%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.have_table
+     4.58%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.fast_ratio
+     4.51%  ttfx-bolt-input  ttfx-bolt-input       [.] find_coord_on_line
+     4.12%  ttfx-bolt-input  ttfx-bolt-input       [.] update
+     3.95%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move
+     3.82%  ttfx-bolt-input  ttfx-bolt-input       [.] step_animation_awake
+     3.73%  ttfx-bolt-input  ttfx-bolt-input       [.] emit_blocks.quad
+     3.65%  ttfx-bolt-input  ttfx-bolt-input       [.] ..@231.done
+     2.93%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step
+     1.99%  ttfx-bolt-input  ttfx-bolt-input       [.] path_step.try
+     1.96%  ttfx-bolt-input  ttfx-bolt-input       [.] row_rebuild
+     1.86%  ttfx-bolt-input  ttfx-bolt-input       [.] handle_event.action
+     1.84%  ttfx-bolt-input  ttfx-bolt-input       [.] motion_move.placed
+     1.81%  ttfx-bolt-input  libm.so.6             [.] hypot
+     1.77%  ttfx-bolt-input  ttfx-bolt-input       [.] scene_load_head
+     1.71%  ttfx-bolt-input  ttfx-bolt-input       [.] coordinate_changed
+     1.70%  ttfx-bolt-input  ttfx-bolt-input       [.] step_synced_scene.path
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

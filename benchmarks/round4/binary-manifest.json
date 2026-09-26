@@ -1,0 +1,42 @@
+[
+  {
+    "name": "deferred",
+    "sha256": "e3835ea9e4fbaf03204398f601cf9039713d8d8b3ca607b50bdd26d5bf789ee6",
+    "bytes": 2814456
+  },
+  {
+    "name": "vex",
+    "sha256": "f04623f5f3dd227c4db223ec7d98dc3adb94b6b9c8cb5e3efd925ff3a1bbb658",
+    "bytes": 2813816
+  },
+  {
+    "name": "path-layout",
+    "sha256": "e5fe715b855662876427ab3701cab848b72ca13c7e5a36b8044b72dfc1b9afd2",
+    "bytes": 2813896
+  },
+  {
+    "name": "split-path",
+    "sha256": "278f0fc5e658458e2c9e67e4ea95a29525225246ae1096c4829ea5faf8c556ff",
+    "bytes": 2814920
+  },
+  {
+    "name": "memo-path",
+    "sha256": "2624fdcb42ae12353dd7af4da2539092d6fffa922a44ae69ad63ffe13ac1f53a",
+    "bytes": 2814856
+  },
+  {
+    "name": "memo-v2",
+    "sha256": "477e846067b72cde20f325e9c16414d95620fd9eabb0472d59b0adfef5d24863",
+    "bytes": 2814856
+  },
+  {
+    "name": "memo-v3",
+    "sha256": "68ceecb4077df45e4c87ed105c4b9c9eeaf7432b20815ee3a372f7b9d3b8c956",
+    "bytes": 2814920
+  },
+  {
+    "name": "space-quad",
+    "sha256": "86bc05b0b8f1821d104f9ea2f8fd8e11885d6cb4c018dfd1d56d00de916b4e04",
+    "bytes": 2814056
+  }
+]
