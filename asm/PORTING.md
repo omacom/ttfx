@@ -274,6 +274,12 @@ Scenes are addressed by a u32 index. Names are u32:
 
 Rust keys events by name, so keep Rust's names distinct the same way.
 
+Scene indices are handed out in per-name chunks (so the same scene of neighboring
+characters shares cache lines), not in creation order: keep the index `scene_new`
+returns, or `scene_find` it by name, and never derive one scene's index from
+another's. vhstape still does (its scenes at fixed distances from the first), so
+`scenes_init` keeps creation order for it; drop that exception once it stops.
+
 - **Creation:**
   - `scene_new(edi=slot, esi=name/AUTO, edx=SCF_LOOPING|SCF_SYNC_STEP|SCF_SYNC_DISTANCE, ecx=easing id or NONE) -> eax`.
     This is `animation.new_scene(is_looping, sync, ease, id, uses_preexisting)`;
