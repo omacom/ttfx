@@ -131,6 +131,10 @@ budget:
   - Allocate with `alloc` (bump arena, 64-byte aligned, zeroed) or reserve a region with
     `reserve` for big growable arrays. There is no free. Reserved regions are released
     automatically on the next run.
+  - With transparent huge pages on, the first touch of a reserved region commits and
+    zeroes 2 MB. For a region sized for a limit (`CHAR_LIMIT`, ...) but usually filled
+    to a few kilobytes, use `reserve_small` (engine/chars.asm), which keeps it on 4 KB
+    pages: the character arrays alone cost 2-3 ms of kernel time per run before.
 - **Errors:**
   - `FAIL label` returns `OUT_ERROR` with the message at `label` (define it with
     `STR label, "text"`). Rust prints `Error: <text>`, so match Rust's message exactly.
@@ -270,6 +274,12 @@ Scenes are addressed by a u32 index. Names are u32:
 
 Rust keys events by name, so keep Rust's names distinct the same way.
 
+Scene indices are handed out in per-name chunks (so the same scene of neighboring
+characters shares cache lines), not in creation order: keep the index `scene_new`
+returns, or `scene_find` it by name, and never derive one scene's index from
+another's. vhstape still does (its scenes at fixed distances from the first), so
+`scenes_init` keeps creation order for it; drop that exception once it stops.
+
 - **Creation:**
   - `scene_new(edi=slot, esi=name/AUTO, edx=SCF_LOOPING|SCF_SYNC_STEP|SCF_SYNC_DISTANCE, ecx=easing id or NONE) -> eax`.
     This is `animation.new_scene(is_looping, sync, ease, id, uses_preexisting)`;
@@ -279,6 +289,12 @@ Rust keys events by name, so keep Rust's names distinct the same way.
   - `scene_add_frame(edi=scene, rsi=symbol, edx=duration, rcx=fg/NONE, r8=bg/NONE, r9d=ATTR_*)`
   - `scene_add_frame_visual(edi=scene, esi=handle, edx=duration)`, when you cached the
     visual yourself
+  - `scene_append_frames(edi=scene, rsi=frames, rdx=count)` appends a list of frame
+    records (`FRAME_SIZE` each, e.g. a copy of another scene's `SC_FRAMES`) in one
+    go. Use it instead of a loop of `scene_add_frame_visual` when every character
+    gets the same frames (waves' template copy: build 28% faster). It does not
+    re-check durations or apply preexisting colors, so only copy frames made for
+    an equivalent scene.
   - `scene_apply_gradient(edi=scene, rsi=symbols, rdx=count, ecx=duration, r8=fg spectrum/0, r9=fg count, stack: bg spectrum/0, bg count)`
   - `scene_copy(edi=slot, esi=src, edx=name) -> eax` for `scene.clone()` inserted
     elsewhere, and `scene_reset(edi=scene)`
@@ -351,6 +367,22 @@ A `POOL` struc lives in your memory.
 - **RNG** (utils/rng.asm): `rng_below(rdi=n)` (randbelow and choice),
   `rng_randint(rdi, rsi)`, `rng_randrange(rdi, rsi)`, `rng_random -> xmm0`,
   `rng_uniform(xmm0, xmm1)`, `rng_shuffle32/64(rdi=array, rsi=count)`.
+  - **Draws in a hot loop:** keep the batch position and base in registers
+    instead of reloading `rng_pos` on every draw (a store-to-load round trip
+    that serialises the loop). All operands are 64-bit registers, `dest`
+    distinct from `pos` and `base`:
+    - `RNG_OPEN pos, base` before the loop;
+    - `RNG_TAKE dest, pos, base`: the next raw u64 draw;
+    - `RNG_TAKE53 dest, pos, base`: the next draw `>> 11`, the integer behind
+      `rng_random` (`random() < c` is exactly `dest < rng_threshold(c)`);
+    - `RNG_CLOSE pos` after the loop, **and before calling anything that
+      draws** (`rng_below`, `rng_random`, a helper that uses them); `RNG_OPEN`
+      again after the call.
+  - A draw is `cmp`/`jb`/`mov`/`inc`. When the batch runs out, `rng_refill`
+    runs in place and preserves every register (at TIER 4 it uses and
+    restores zmm16-31 and k1), so the macros can sit anywhere.
+  - The draw sequence is the functions' exactly: one `RNG_TAKE` is one
+    `rng_next`. `RNG_BITS53` (one draw, `rng_pos` in memory) still works.
 - **Gradients** (utils/graphics.asm):
   - `gradient_capacity(rdi=steps, rcx=step count, rsi=stop count) -> rax` sizes the
     spectrum.

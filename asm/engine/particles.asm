@@ -54,10 +54,10 @@ pool_init:
     mov     qword [rbx + POOL.reset], RESET_DEFAULT
     mov     qword [rbx + POOL.initializer], 0
     mov     rdi, POOL_CAPACITY * 4
-    call    reserve
+    call    reserve_small
     mov     [rbx + POOL.available], rax
     mov     rdi, POOL_CAPACITY * 4
-    call    reserve
+    call    reserve_small
     mov     [rbx + POOL.particles], rax
     mov     qword [rbx + POOL.available_count], 0
     mov     qword [rbx + POOL.particle_count], 0
