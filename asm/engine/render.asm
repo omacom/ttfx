@@ -30,15 +30,12 @@
 %define CR_HEAD         0
 %define CR_OWNER        4
 %define CR_LAYER        8
-; cells per dirty block: 4 or 8
-%ifndef BLOCK
+; cells per dirty block (one emission quad)
 %define BLOCK           4
-%endif
-%if BLOCK == 4
 %define BLOCK_SHIFT     2
-%else
-%define BLOCK_SHIFT     3
-%endif
+; a clean gap of fewer blocks than this between dirty runs is formatted
+; along with them: a copy has a fixed cost of several blocks' formatting
+%define MIN_GAP         4
 %define OUTPUT_RESERVE  (1 << 36)
 ; POPCNT dst, scratch: dst = its own population count (SWAR below TIER 2).
 ; Clobbers scratch.
@@ -612,37 +609,6 @@ row_dirty:
     xor     eax, eax
     xor     ecx, ecx
 .chunk:
-%if BLOCK == 8
-%if TIER >= 4
-    vmovdqu64 zmm0, [rsi]
-    vptestmq k1, zmm0, zmm0
-    kmovb   r11d, k1
-    vmovdqu64 [rsi], zmm1
-%elif TIER >= 3
-    vpcmpeqq ymm0, ymm2, [rsi]
-    vpcmpeqq ymm1, ymm2, [rsi + 32]
-    vmovmskpd r11d, ymm0
-    vmovmskpd edx, ymm1
-    shl     edx, 4
-    or      r11d, edx
-    xor     r11d, 0xff
-    vmovdqu [rsi], ymm2
-    vmovdqu [rsi + 32], ymm2
-%else
-    xor     r11d, r11d
-    %assign k 7
-    %rep 8
-    mov     rdx, [rsi + k * 8]
-    neg     rdx                         ; CF = block k is dirty
-    adc     r11d, r11d
-    %assign k k - 1
-    %endrep
-    movdqu  [rsi], xmm4
-    movdqu  [rsi + 16], xmm4
-    movdqu  [rsi + 32], xmm4
-    movdqu  [rsi + 48], xmm4
-%endif
-%else
 %if TIER >= 4
     vmovdqu64 zmm0, [rsi]
     vptestmd k1, zmm0, zmm0
@@ -682,7 +648,6 @@ row_dirty:
     movdqu  [rsi + 16], xmm4
     movdqu  [rsi + 32], xmm4
     movdqu  [rsi + 48], xmm4
-%endif
 %endif
     shl     r11, cl
     or      rax, r11
@@ -1008,6 +973,23 @@ row_rebuild:
     ; dirty blocks r12 .. next clear - 1
     mov     rax, r12
     call    next_clear
+.extend:
+    ; a short clean gap joins the run
+    cmp     rax, [row_blocks]
+    jae     .extended
+    push    rax
+    call    next_set
+    pop     rcx
+    lea     rdx, [rcx + MIN_GAP]
+    cmp     rax, rdx
+    jae     .gap_kept
+    cmp     rax, [row_blocks]
+    jae     .gap_kept
+    call    next_clear
+    jmp     .extend
+.gap_kept:
+    mov     rax, rcx
+.extended:
     mov     r9, [rsp + 16]
     lea     r9, [r9 + r12 * 4]
     mov     rcx, rbp
@@ -1033,27 +1015,21 @@ row_rebuild:
     ret
 
 ; emit_blocks(rsi=first handle, at a block start, rdx=end, rdi=output,
-; r9=the first block's start entry) -> rdi advanced. Each block's start (the
-; low half of its output address) is stored at [r9], r9 advancing.
-; rbx = pool base. Clobbers rax, rcx, rsi, r8, r9, r10, r11, vector
-; registers.
+; r9=the first block's start entry) -> rdi advanced. Each 4-cell block's
+; start (the low half of its output address) is stored at [r9], r9
+; advancing. rbx = pool base. Clobbers rax, rcx, rsi, r8, r9, r10, r11,
+; vector registers.
 emit_blocks:
     push    r12
     push    r13
-.block:
-    cmp     rsi, rdx
-    jae     .done
-    mov     [r9], edi
-    add     r9, 4
-    lea     r12, [rsi + BLOCK * 4]
-    cmp     r12, rdx
-    cmova   r12, rdx                    ; the block's end
 .quad:
-    ; four cells per iteration; one test covers all four lengths (< 32 bytes
+    ; a block per iteration; one test covers all four lengths (< 32 bytes
     ; leaves bits 5-7 of every length clear, so their OR stays below 32)
     lea     r8, [rsi + 16]
-    cmp     r8, r12
-    ja      .cell
+    cmp     r8, rdx
+    ja      .tail
+    mov     [r9], edi
+    add     r9, 4
     mov     eax, [rsi]
     mov     ecx, [rsi + 4]
     mov     r8d, [rsi + 8]
@@ -1063,7 +1039,7 @@ emit_blocks:
     or      r11d, r8d
     or      r11d, r10d
     test    r11d, 0xE0000000
-    jnz     .cell
+    jnz     .slow
     add     rsi, 16
     mov     r11d, eax
     shr     r11d, HANDLE_LEN_SHIFT
@@ -1090,10 +1066,20 @@ emit_blocks:
     ST32    rdi, 6, 7
     add     rdi, r13
     jmp     .quad
+.slow:
+    ; a block with a visual of 32 bytes or more: cell by cell
+    lea     r12, [rsi + 16]
+    jmp     .cell
+.tail:
+    ; the row's last, partial block
+    cmp     rsi, rdx
+    jae     .done
+    mov     [r9], edi
+    add     r9, 4
+    mov     r12, rdx
 .cell:
-    ; one cell at a time: block tails and visuals of 32 bytes or more
     cmp     rsi, r12
-    jae     .block
+    jae     .quad
     mov     eax, [rsi]
     add     rsi, 4
     mov     ecx, eax
@@ -1104,11 +1090,11 @@ emit_blocks:
     LD32    0, 1, rbx + rax
     ST32    rdi, 0, 1
     add     rdi, rcx
-    jmp     .quad
+    jmp     .cell
 .wide:
     COPY128 rdi, rbx + rax
     add     rdi, rcx
-    jmp     .quad
+    jmp     .cell
 .done:
     pop     r13
     pop     r12
