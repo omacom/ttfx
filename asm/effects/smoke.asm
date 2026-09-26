@@ -198,7 +198,15 @@ smk_character:
     call    scene_add_frame
     jmp     .smoke
 .paint_gradient:
-    ; Gradient(*final stops, final fg, steps=5) over the input symbol
+    ; Gradient(*final stops, final fg, steps=5) over the input symbol: a
+    ; frame per color, the visuals shared by symbol and final fg
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbx * 8]
+    mov     rsi, r12
+    mov     rdx, NONE
+    call    visual_run_find
+    test    rax, rax
+    jnz     .paint_frames
     mov     rax, [smk_paint_stop_count]
     mov     rcx, [smk_paint_stops]
     mov     [rcx + rax * 8 - 8], r12
@@ -208,17 +216,18 @@ smk_character:
     mov     ecx, 1
     mov     r8, [smk_paint_spectrum]
     call    gradient_new
-    push    0
-    push    0
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbx * 8]
+    mov     rsi, [smk_paint_spectrum]
+    mov     edx, eax
+    mov     rcx, NONE
+    mov     r8, r12
+    call    visual_run
+.paint_frames:
     mov     edi, ebp
-    mov     rsi, [ch_sym]
-    lea     rsi, [rsi + rbx * 8]
-    mov     edx, 1
+    mov     rsi, rax
     mov     ecx, 5
-    mov     r8, [smk_paint_spectrum]
-    mov     r9d, eax
-    call    scene_apply_gradient
-    add     rsp, 16
+    call    visual_frames
 .smoke:
     mov     edi, ebx
     mov     esi, SMK_SMOKE
@@ -245,6 +254,28 @@ smk_character:
     inc     r15
     jmp     .smoke_frame
 .smoke_gradient:
+    ; the same frames for every character: the first one's, copied, unless
+    ; either scene applies preexisting colors
+    mov     ecx, ebp
+    shl     rcx, SCENE_SHIFT
+    add     rcx, [scenes]
+    test    dword [rcx + SC_FLAGS], SCF_PREEXISTING | SCF_PRE_BOLD
+    jnz     .smoke_apply
+    mov     edx, [smk_smoke_template]
+    test    edx, edx
+    jz      .smoke_first
+    dec     edx
+    shl     rdx, SCENE_SHIFT
+    add     rdx, [scenes]
+    mov     edi, ebp
+    mov     rsi, [rdx + SC_FRAMES]
+    mov     edx, [rdx + SC_COUNT]
+    call    scene_append_frames
+    jmp     .event
+.smoke_first:
+    lea     ecx, [rbp + 1]
+    mov     [smk_smoke_template], ecx
+.smoke_apply:
     push    0
     push    0
     mov     edi, ebp
@@ -361,6 +392,7 @@ smk_three_four:     dq 3, 4
 smk_five:           dq 5
 
 section .tstate
+smk_smoke_template: resd 1          ; scene + 1 whose frames every smoke scene copies
 alignb 8
 smk_map:                resq 1
 smk_map_width:          resq 1

@@ -489,6 +489,26 @@ visual_run_find:
     mov     rcx, r10
     ret
 
+; visual_run_keep(rcx=the empty entry visual_run_find gave, rdi=symbol,
+; rsi=key, rdx=bg, r8=pointer): keep a caller's own pointer (after a u32
+; count, as visual_run's handles) under the key, for effects memoizing
+; something else by (symbol, key, bg) - a template scene, say. Keys must
+; not collide with the effect's visual_run keys. Clobbers rax, rcx, rdx,
+; rsi, rdi, r8-r11 and xmm0-xmm1.
+visual_run_keep:
+    mov     [rcx], rdi
+    mov     [rcx + 8], rsi
+    mov     [rcx + 16], rdx
+    mov     [rcx + 24], r8
+    inc     dword [vrun_count]
+    mov     eax, [vrun_count]
+    add     eax, eax
+    cmp     eax, [vrun_mask]
+    jbe     .kept
+    jmp     visual_run_grow
+.kept:
+    ret
+
 ; visual_run_grow: double visual_run's table. Clobbers rax, rcx, rdx, rsi,
 ; rdi, r8-r11.
 visual_run_grow:

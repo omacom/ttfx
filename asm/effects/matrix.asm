@@ -178,25 +178,32 @@ matrix_build:
     add     rax, rcx
     sub     rax, [text_left]
     mov     rax, [r14 + rax * 8]
+    ; a frame per gradient color, the visuals shared by symbol and final
+    ; color (the gradient only made for a new pair)
+    mov     [rsp + 16], rax
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbx * 8]
+    mov     rsi, rax
+    mov     rdx, NONE
+    call    visual_run_find
+    test    rax, rax
+    jnz     .frames
+    mov     rax, [rsp + 16]
     call    resolve_gradient_fg
-    mov     [rsp + 8], eax              ; spectrum length
-    mov     dword [rsp + 12], 0
-.frame:
-    mov     eax, [rsp + 12]
-    cmp     eax, [rsp + 8]
-    jae     .next_character
-    lea     rcx, [mx_fg_spectrum]
-    mov     rcx, [rcx + rax * 8]
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbx * 8]
+    lea     rsi, [mx_fg_spectrum]
+    mov     edx, eax
+    mov     rcx, NONE
+    mov     r8, [rsp + 16]
+    call    visual_run
+.frames:
     mov     edi, [rsp]
-    mov     rsi, [ch_sym]
-    mov     rsi, [rsi + rbx * 8]
-    mov     rdx, [effect_config]
-    mov     edx, [rdx + matrix_config.final_frames]
-    mov     r8, NONE
-    xor     r9d, r9d
-    call    scene_add_frame
-    inc     dword [rsp + 12]
-    jmp     .frame
+    mov     rsi, rax
+    mov     rcx, [effect_config]
+    mov     ecx, [rcx + matrix_config.final_frames]
+    call    visual_frames
+    jmp     .next_character
 .dynamic:
     ; ColorPair(input fg, input bg): gradients from the highlight to each
     xor     eax, eax
