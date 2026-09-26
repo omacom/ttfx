@@ -171,9 +171,13 @@ path_new:
     mov     r13, rcx
     mov     r14d, r8d
     mov     r15d, r9d
+    ; Rust rejects speed <= 0.0 only: a NaN speed (uniform(inf, inf)) is
+    ; accepted, so an unordered compare must not take the error branch
     xorpd   xmm1, xmm1
     ucomisd xmm0, xmm1
+    jp      .speed_ok
     jbe     .bad_speed
+.speed_ok:
     cmp     r15d, AUTO
     jne     .named
     mov     rax, [ch_paths]
