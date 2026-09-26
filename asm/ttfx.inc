@@ -19,6 +19,61 @@
 default rel
 bits 64
 
+; The instruction-set budget (PORTING.md "CPU tiers"). Only TIER 1 has a
+; NASM CPU level that fits: NASM 3.02's levels stop at Ivy Bridge, do not
+; flag BMI or LZCNT, and its nehalem/westmere levels reject SSSE3 and SSE4.
+; tools/asm/isa-audit.sh checks every tier's object exactly. build.rs passes
+; -DTTFX_NO_CPU_CHECK for its unchecked dev build.
+%ifndef TTFX_NO_CPU_CHECK
+%if TIER == 1
+cpu x86-64
+%endif
+%endif
+
+; EXPORT name: a SysV entry point. Every tier's object exports it as
+; name_v<TIER>, so the four objects link side by side; within the file the
+; plain name keeps working. Reference the name's local labels through a
+; ..@ label, since name.local is one token that does not expand.
+%macro EXPORT 1
+%xdefine %1 %1 %+ _v %+ TIER
+global %1
+%endmacro
+
+; ZEROUPPER: vzeroupper where VEX code may have dirtied the upper halves
+; (TIER 3+); nothing below that.
+%macro ZEROUPPER 0
+%if TIER >= 3
+    vzeroupper
+%endif
+%endmacro
+
+; FLOORSD xmm, gpr64, xmm_tmp: xmm = floor(xmm), bit for bit roundsd's mode 1
+; for every finite value, zero and infinity (NaN passes through unchanged,
+; where roundsd would quiet a signalling one). TIER 1 uses cvttsd2si, which
+; is exact below 2^52; at and above 2^52 every double is already integral.
+; Clobbers the gpr, xmm_tmp and flags.
+%macro FLOORSD 3
+%if TIER >= 2
+    roundsd %1, %1, 1
+%else
+    movq    %2, %1
+    add     %2, %2                      ; drop the sign; zero is its own floor
+    jz      %%done
+    shr     %2, 53
+    cmp     %2, 0x433                   ; |x| >= 2^52, infinity or NaN
+    jae     %%done
+    cvttsd2si %2, %1
+    cvtsi2sd %3, %2
+    ucomisd %3, %1
+    jbe     %%store                     ; trunc(x) <= x: that is the floor
+    dec     %2
+    cvtsi2sd %3, %2
+%%store:
+    movapd  %1, %3
+%%done:
+%endif
+%endmacro
+
 ; ---------------------------------------------------------------- syscalls
 %define SYS_read            0
 %define SYS_write           1

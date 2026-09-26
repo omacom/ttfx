@@ -6,6 +6,9 @@
 ;
 ; One translation unit: every component is included here. Entry points follow
 ; the SysV ABI; everything internal uses the conventions in ttfx.inc.
+; build.rs assembles it once per CPU tier (-DTIER=1..4); each object exports
+; its entry points with a _v<TIER> suffix (EXPORT). asm/tier.asm detects the
+; CPU's tier, and src/asm/ffi.rs calls that tier's entry points.
 
 %include "ttfx.inc"
 
@@ -15,9 +18,8 @@ section .tstate nobits alloc write align=64
 tstate_begin:
 
 section .text
-global ttfx_asm_tier
-global ttfx_asm_run
-global ttfx_asm_effect_supported
+EXPORT ttfx_asm_run
+EXPORT ttfx_asm_effect_supported
 
 extern pow
 extern sin
@@ -25,51 +27,6 @@ extern cos
 extern sincos
 extern exp2
 extern hypot
-
-; ttfx_asm_tier() -> eax = the best ISA tier this CPU and OS support
-; (plan §5.2), 0 when none of the assembled tiers can run.
-ttfx_asm_tier:
-    push    rbx
-    xor     eax, eax
-    cpuid
-    cmp     eax, 7
-    jb      .none
-    mov     eax, 1
-    cpuid
-    ; OSXSAVE (27), AVX (28), FMA (12), MOVBE (22), F16C (29)
-    mov     eax, ecx
-    and     eax, (1 << 27) | (1 << 28) | (1 << 12) | (1 << 22) | (1 << 29)
-    cmp     eax, (1 << 27) | (1 << 28) | (1 << 12) | (1 << 22) | (1 << 29)
-    jne     .none
-    xor     ecx, ecx
-    xgetbv
-    ; XMM, YMM, opmask, ZMM_Hi256, Hi16_ZMM state enabled by the OS
-    and     eax, 0xe6
-    cmp     eax, 0xe6
-    jne     .none
-    mov     eax, 7
-    xor     ecx, ecx
-    cpuid
-    ; AVX2 (5), BMI1 (3), BMI2 (8), AVX512F (16), DQ (17), CD (28), BW (30), VL (31)
-    mov     eax, ebx
-    and     eax, (1 << 5) | (1 << 3) | (1 << 8) | (1 << 16) | (1 << 17) | (1 << 28) | (1 << 30) | (1 << 31)
-    cmp     eax, (1 << 5) | (1 << 3) | (1 << 8) | (1 << 16) | (1 << 17) | (1 << 28) | (1 << 30) | (1 << 31)
-    jne     .none
-    mov     eax, 0x80000000
-    cpuid
-    cmp     eax, 0x80000001
-    jb      .none
-    mov     eax, 0x80000001
-    cpuid
-    test    ecx, 1 << 5                 ; LZCNT
-    jz      .none
-    mov     eax, 4
-    pop     rbx
-    ret
-.none:
-    xor     eax, eax
-    pop     rbx
-    ret
 
 ; ttfx_asm_effect_supported(rdi=effect id) -> eax = 1 when this build has it.
 ttfx_asm_effect_supported:
@@ -141,6 +98,7 @@ ttfx_asm_run:
 .dump:
     call    dump_effect
 .return:
+..@run_return:
     push    rax
     call    store_rng_state
     pop     rax
@@ -152,7 +110,7 @@ ttfx_asm_run:
     pop     r12
     pop     rbp
     pop     rbx
-    vzeroupper
+    ZEROUPPER
     ret
 .declined:
     xor     eax, eax
@@ -167,7 +125,7 @@ engine_fail:
     mov     qword [rax + RQ_ERROR_KIND], ERR_MESSAGE
     mov     rsp, [fail_rsp]
     mov     eax, OUT_ERROR
-    jmp     ttfx_asm_run.return
+    jmp     ..@run_return
 
 ; fail_with_number(rdi=message, edx=length, rsi=number): FAIL with the
 ; message followed by the number in decimal ("... Received: -3").
@@ -243,7 +201,7 @@ stop_requested:
     mov     rax, [request]
     mov     rdi, [rax + RQ_STOP_CTX]
     mov     rax, [rax + RQ_STOP_CHECK]
-    vzeroupper
+    ZEROUPPER
     CCALL   rax
     ret
 

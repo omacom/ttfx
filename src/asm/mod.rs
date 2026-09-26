@@ -8,6 +8,13 @@
 //!
 //! `TTFX_ASM=0` forces the Rust engine; `TTFX_ASM=force` turns a decline into
 //! an error, so tests cannot silently fall back.
+//!
+//! The engine is assembled once per x86-64 level (v1 = SSE2, v2, v3 = AVX2,
+//! v4 = AVX-512), and the best one the CPU supports runs; every tier's output
+//! is byte-identical. `TTFX_ASM_TIER=1|2|3|4` forces a lower tier for testing:
+//! a tier above the CPU's, or one the build left out, is a decline (exit 3
+//! under `TTFX_ASM=force`). `TTFX_ASM_SHOW_TIER=1` prints the tier chosen on
+//! stderr. See asm/PORTING.md, "CPU tiers".
 
 use crate::effects::EffectCommand;
 use crate::engine::effect::RunOutcome;

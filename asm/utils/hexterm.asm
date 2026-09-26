@@ -3,14 +3,14 @@
 ; hex_to_xterm is the minimum mean absolute channel difference over codes
 ; 0..=255 in order, first minimum winning. The scan compares integer sums,
 ; which orders exactly like upstream's sum / 3. Sixteen codes per step with
-; AVX-512; results are memoized per RGB value.
+; AVX-512 (a scalar scan below TIER 4); results are memoized per RGB value.
 
 %define XTERM_MEMO_BYTES    (2 << 24)   ; u16 per RGB value: code + 1, 0 = unknown
 
 section .text
 
 ; hex_to_xterm(edi=0xRRGGBB) -> eax = xterm code. Clobbers rcx, rdx, rsi,
-; r8, zmm0-zmm7, k1-k2.
+; r8, r10, zmm0-zmm7, k1-k2. Below TIER 4 a scalar scan gives the same code.
 hex_to_xterm:
     mov     rax, [xterm_memo]
     test    rax, rax
@@ -30,6 +30,7 @@ hex_to_xterm:
     ret
 .scan:
     push    rdx
+%if TIER >= 4
     ; broadcast the query's channels
     mov     ecx, edi
     shr     ecx, 16
@@ -91,11 +92,46 @@ hex_to_xterm:
 .found:
     tzcnt   eax, eax
     add     eax, ecx
+    vzeroupper
+%else
+    ; scalar scan, strict < so the first minimum wins
+    push    rbx
+    push    r9
+    mov     r8d, 0x7fffffff             ; best difference
+    xor     eax, eax                    ; best code
+    lea     rsi, [xterm_rgb]
+    xor     ecx, ecx
+.code:
+    mov     r9d, [rsi + rcx * 4]
+    xor     ebx, ebx
+%assign sh 0
+%rep 3
+    mov     edx, r9d
+    shr     edx, sh
+    and     edx, 0xff
+    mov     r10d, edi
+    shr     r10d, sh
+    and     r10d, 0xff
+    sub     edx, r10d
+    mov     r10d, edx
+    neg     r10d
+    cmovs   r10d, edx                   ; |difference|
+    add     ebx, r10d
+  %assign sh sh + 8
+%endrep
+    cmp     ebx, r8d
+    cmovb   eax, ecx
+    cmovb   r8d, ebx
+    inc     ecx
+    cmp     ecx, 256
+    jb      .code
+    pop     r9
+    pop     rbx
+%endif
     pop     rdx
     mov     rcx, [xterm_memo]
     lea     esi, [rax + 1]
     mov     [rcx + rdx * 2], si
-    vzeroupper
     ret
 
 section .rodata

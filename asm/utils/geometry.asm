@@ -55,7 +55,7 @@ find_coords_on_circle:
     jnz     .limit
     movsd   xmm0, [geo_two_pi]
     mulsd   xmm0, xmm2
-    call    round_half_even
+    ROUND_HALF_EVEN
     mov     rbx, rax
 .limit:
     test    rbx, rbx
@@ -98,13 +98,13 @@ find_coords_on_circle:
     movapd  xmm1, xmm0
     subsd   xmm1, [rsp]
     addsd   xmm0, xmm1
-    call    round_half_even
+    ROUND_HALF_EVEN
     mov     [rsp + 48], rax
     ; y = origin.row + radius * sin
     movsd   xmm0, [rsp + 32]
     mulsd   xmm0, [rsp + 16]
     addsd   xmm0, [rsp + 8]
-    call    round_half_even
+    ROUND_HALF_EVEN
     mov     ecx, [rsp + 48]
     shl     rax, 32
     or      rax, rcx
@@ -149,7 +149,12 @@ coordset_new:
     mov     eax, 16
 .size:
     dec     rax
+%if TIER >= 3
     lzcnt   rcx, rax
+%else
+    bsr     rcx, rax                    ; rax >= 15: lzcnt is 63 - bsr
+    xor     ecx, 63
+%endif
     mov     eax, 64
     sub     eax, ecx
     mov     ecx, eax
@@ -169,8 +174,14 @@ coordset_insert:
     mov     rax, rsi
     mov     rcx, 0x9E3779B97F4A7C15
     imul    rax, rcx
+%if TIER >= 3
     lzcnt   rcx, qword [rdi]
     shrx    rax, rax, rcx               ; the top bits index the table
+%else
+    bsr     rcx, qword [rdi]            ; the mask is at least 15
+    xor     ecx, 63
+    shr     rax, cl
+%endif
     mov     rdx, [rdi]
 .probe:
     lea     r8, [rax * 2]
@@ -276,7 +287,7 @@ circle_column_range:
     mulsd   xmm1, xmm3                  ; the powf argument
     sqrtsd  xmm0, xmm1
     andpd   xmm0, [geo_abs_mask]
-    call    f64_to_i64
+    F64_TO_I64
     ucomisd xmm1, [geo_neg_inf]
     jne     .offset
     jp      .offset
@@ -545,7 +556,7 @@ extrapolate_along_ray:
     cvtsi2sd xmm0, rax
     mulsd   xmm0, xmm1
     addsd   xmm0, xmm3
-    call    round_half_even
+    ROUND_HALF_EVEN
     mov     [rsp + 16], rax
     mov     rax, rbx
     sar     rax, 32
@@ -556,7 +567,7 @@ extrapolate_along_ray:
     cvtsi2sd xmm0, rax
     mulsd   xmm0, xmm1
     addsd   xmm0, xmm3
-    call    round_half_even
+    ROUND_HALF_EVEN
     shl     rax, 32
     mov     ecx, [rsp + 16]
     or      rax, rcx
@@ -571,33 +582,33 @@ extrapolate_along_ray:
 
 ; find_coord_on_line(rdi=start, rsi=end, xmm0=t) -> rax = coord:
 ; (1 - t) * start + t * end per axis, rounded half-even.
+; Clobbers rcx, rdx, xmm0-xmm4.
 find_coord_on_line:
-    push    rbx
-    movapd  xmm2, xmm0                  ; t
     movsd   xmm1, [geo_one]
     subsd   xmm1, xmm0                  ; 1 - t
     movsxd  rax, edi
     cvtsi2sd xmm3, rax
     mulsd   xmm3, xmm1
-    movsxd  rax, esi
-    cvtsi2sd xmm0, rax
-    mulsd   xmm0, xmm2
-    addsd   xmm0, xmm3
-    call    round_half_even
-    mov     ebx, eax
     mov     rax, rdi
     sar     rax, 32
-    cvtsi2sd xmm3, rax
-    mulsd   xmm3, xmm1
+    cvtsi2sd xmm4, rax
+    mulsd   xmm4, xmm1
+    movsxd  rax, esi
+    cvtsi2sd xmm1, rax
+    mulsd   xmm1, xmm0
+    addsd   xmm3, xmm1                  ; column
     mov     rax, rsi
     sar     rax, 32
-    cvtsi2sd xmm0, rax
-    mulsd   xmm0, xmm2
-    addsd   xmm0, xmm3
-    call    round_half_even
+    cvtsi2sd xmm1, rax
+    mulsd   xmm1, xmm0
+    addsd   xmm4, xmm1                  ; row
+    movapd  xmm0, xmm3
+    ROUND_HALF_EVEN
+    mov     edx, eax
+    movapd  xmm0, xmm4
+    ROUND_HALF_EVEN
     shl     rax, 32
-    or      rax, rbx
-    pop     rbx
+    or      rax, rdx
     ret
 
 ; find_coord_on_bezier_curve(rdi=start, rsi=control points, rdx=control
@@ -737,10 +748,10 @@ find_coord_on_bezier_curve:
     movsd   xmm1, [rsp + 8]
     mov     rsp, rbp
 .round:
-    call    round_half_even
+    ROUND_HALF_EVEN
     mov     ebx, eax
     movapd  xmm0, xmm1
-    call    round_half_even
+    ROUND_HALF_EVEN
     shl     rax, 32
     or      rax, rbx
     pop     r12

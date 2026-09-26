@@ -67,9 +67,70 @@ const STOP_RESIZE: u64 = 3;
 const ERR_ANSI: u64 = 1;
 
 extern "C" {
+    /// The best x86-64 level (1-4) the CPU and OS support (asm/tier.asm).
     fn ttfx_asm_tier() -> i32;
-    fn ttfx_asm_effect_supported(effect: u64) -> i32;
-    fn ttfx_asm_run(request: *mut Request) -> i64;
+}
+
+/// One tier's copy of the engine (asm/lib.asm assembled with -DTIER=n).
+struct Engine {
+    tier: u32,
+    effect_supported: unsafe extern "C" fn(u64) -> i32,
+    run: unsafe extern "C" fn(*mut Request) -> i64,
+}
+
+macro_rules! tiers {
+    ($($tier:literal, $cfg:literal => $supported:ident, $run:ident;)*) => {
+        $(
+            #[cfg(ttfx_asm_tier = $cfg)]
+            extern "C" {
+                fn $supported(effect: u64) -> i32;
+                fn $run(request: *mut Request) -> i64;
+            }
+        )*
+
+        /// The engine assembled for `tier`, when build.rs linked that tier.
+        fn engine(tier: u32) -> Option<Engine> {
+            $(
+                #[cfg(ttfx_asm_tier = $cfg)]
+                if tier == $tier {
+                    return Some(Engine { tier, effect_supported: $supported, run: $run });
+                }
+            )*
+            None
+        }
+    };
+}
+
+tiers! {
+    1, "1" => ttfx_asm_effect_supported_v1, ttfx_asm_run_v1;
+    2, "2" => ttfx_asm_effect_supported_v2, ttfx_asm_run_v2;
+    3, "3" => ttfx_asm_effect_supported_v3, ttfx_asm_run_v3;
+    4, "4" => ttfx_asm_effect_supported_v4, ttfx_asm_run_v4;
+}
+
+/// The engine to run: the tier `TTFX_ASM_TIER` names (1-4, at most the
+/// CPU's), or else the best linked tier the CPU supports.
+fn select_engine() -> Result<Engine, &'static str> {
+    // SAFETY: ttfx_asm_tier only executes CPUID and XGETBV.
+    let cpu = unsafe { ttfx_asm_tier() }.clamp(1, 4) as u32;
+    let forced = std::env::var("TTFX_ASM_TIER").unwrap_or_default();
+    if forced.is_empty() {
+        return (1..=cpu)
+            .rev()
+            .find_map(engine)
+            .ok_or("this CPU lacks the instruction sets of every assembled tier");
+    }
+    let tier = match forced.as_str() {
+        "1" => 1,
+        "2" => 2,
+        "3" => 3,
+        "4" => 4,
+        _ => return Err("TTFX_ASM_TIER must be 1, 2, 3 or 4"),
+    };
+    if tier > cpu {
+        return Err("TTFX_ASM_TIER names a tier this CPU does not support");
+    }
+    engine(tier).ok_or("TTFX_ASM_TIER names a tier this build left out")
 }
 
 /// What the stop check needs; lives on the stack for the duration of a run.
@@ -123,14 +184,14 @@ pub fn color_word(color: &Color) -> u64 {
 }
 
 pub fn offer(run: Run<'_>) -> Result<Result<RunOutcome, EngineError>, &'static str> {
-    // SAFETY: ttfx_asm_tier only executes CPUID and XGETBV.
-    if unsafe { ttfx_asm_tier() } == 0 {
-        return Err("this CPU lacks the instruction sets of every assembled tier");
+    let engine = select_engine()?;
+    if std::env::var_os("TTFX_ASM_SHOW_TIER").is_some() {
+        crate::errln!("ttfx: asm engine tier {}", engine.tier);
     }
     let config = run.config;
     let (id, words): (u64, Words) = effects::marshal(run.effect)?;
     // SAFETY: a pure query of the engine's effect table.
-    if unsafe { ttfx_asm_effect_supported(id) } == 0 {
+    if unsafe { (engine.effect_supported)(id) } == 0 {
         return Err("this effect is not ported yet");
     }
 
@@ -188,7 +249,7 @@ pub fn offer(run: Run<'_>) -> Result<Result<RunOutcome, EngineError>, &'static s
 
     // SAFETY: the request and everything it points to (input, config words,
     // stop context) outlive the call; the engine writes only the out fields.
-    let outcome = unsafe { ttfx_asm_run(&mut *request) };
+    let outcome = unsafe { (engine.run)(&mut *request) };
     drop(words);
     if outcome == OUT_DECLINED {
         return Err("the engine declined the run");

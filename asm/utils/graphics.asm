@@ -86,28 +86,29 @@ gradient_new:
     xor     esi, esi
     test    ebx, ebx
     setnz   sil
+    mov     r8d, 255
 .step:
     cmp     rsi, r10
     jge     .pair_end
-    xor     edi, edi                    ; color being built
-    xor     ecx, ecx
-.clamp:
-    mov     rax, [rsp + 24 + rcx * 8]
+    ; channel k: clamp(start + delta * i, 0, 255) << 8k
+%assign k 2
+%rep 3
+    mov     rax, [rsp + 24 + k * 8]
     imul    rax, rsi
-    add     rax, [rsp + rcx * 8]
+    add     rax, [rsp + k * 8]
     xor     edx, edx
-    cmp     rax, 0
+    test    rax, rax
     cmovl   rax, rdx
-    mov     edx, 255
-    cmp     rax, rdx
-    cmovg   rax, rdx
-    shl     ecx, 3
-    shl     eax, cl
-    shr     ecx, 3
+    cmp     rax, r8
+    cmovg   rax, r8
+  %if k == 2
+    mov     edi, eax
+  %else
+    shl     edi, 8
     or      edi, eax
-    inc     ecx
-    cmp     ecx, 3
-    jb      .clamp
+  %endif
+  %assign k k - 1
+%endrep
     mov     [rbp + rbx * 8], rdi
     inc     ebx
     inc     rsi
@@ -152,26 +153,47 @@ gradient_capacity:
     ret
 
 ; gradient_at_fraction(rdi=spectrum, esi=length, xmm0=fraction) -> rax = color.
-; The first i in 1..=len with fraction <= i/len picks spectrum[i-1] - the
-; exact float boundaries of get_color_at_fraction.
+; get_color_at_fraction: index = min(fraction * len as usize, len - 1), then
+; stepped down while fraction <= index/len and up while fraction >
+; (index + 1)/len - the exact float boundaries of the Python division.
+; NaN or negative fractions give index 0. Clobbers rcx, rdx, xmm1-xmm2.
 gradient_at_fraction:
     mov     esi, esi
+    lea     rdx, [rsi - 1]              ; len - 1 (len 0 reads spectrum[-1])
+    test    esi, esi
+    jz      .pick
     cvtsi2sd xmm1, rsi                  ; len
-    mov     ecx, 1
-.scan:
-    cmp     ecx, esi
-    jae     .last
+    movapd  xmm2, xmm0
+    mulsd   xmm2, xmm1
+    cvttsd2si rcx, xmm2                 ; NaN/overflow give INT64_MIN
+    xor     eax, eax
+    test    rcx, rcx
+    cmovs   rcx, rax
+    cmp     rcx, rdx
+    cmova   rcx, rdx
+    mov     rdx, rcx
+.down:
+    test    rdx, rdx
+    jz      .up
+    cvtsi2sd xmm2, rdx
+    divsd   xmm2, xmm1
+    ucomisd xmm0, xmm2
+    ja      .up                         ; fraction > index/len (or NaN: stop)
+    jp      .up
+    dec     rdx
+    jmp     .down
+.up:
+    lea     rcx, [rdx + 1]
+    cmp     rcx, rsi
+    jae     .pick
     cvtsi2sd xmm2, rcx
     divsd   xmm2, xmm1
     ucomisd xmm0, xmm2
-    jbe     .found
-    inc     ecx
-    jmp     .scan
-.found:
-    mov     rax, [rdi + rcx * 8 - 8]
-    ret
-.last:
-    mov     rax, [rdi + rsi * 8 - 8]
+    jbe     .pick                       ; also NaN
+    mov     rdx, rcx
+    jmp     .up
+.pick:
+    mov     rax, [rdi + rdx * 8]
     ret
 
 ; gradient_map(rdi=spectrum, esi=length, rdx=min_row, rcx=max_row,

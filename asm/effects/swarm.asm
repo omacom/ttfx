@@ -771,9 +771,16 @@ swm_cache_grow:
     inc     rax
     jmp     .slot
 .move:
+%if TIER >= 3
     vmovdqu ymm0, [rsi]
     vmovdqu [rdi], ymm0
     vzeroupper
+%else
+    movdqu  xmm0, [rsi]
+    movdqu  xmm1, [rsi + 16]
+    movdqu  [rdi], xmm0
+    movdqu  [rdi + 16], xmm1
+%endif
     jmp     .entry
 .done:
     pop     r13

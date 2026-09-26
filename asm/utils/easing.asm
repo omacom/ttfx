@@ -6,15 +6,71 @@
 ; No sincos call occurs in these arms.
 
 %define EASE_BEZIER_BASE    31  ; first CubicBezier id (see bezier_new)
+%define EASE_MEMO_BITS      13  ; ease() memo entries (32 bytes each)
+; ids evaluated without the memo: linear, the quads, circs, InOutBack and
+; the bounces (no libm calls)
+%define EASE_CHEAP  ((1 << 0) | (7 << 4) | (7 << 19) | (1 << 24) | (7 << 28))
 
 section .text
 
 ; ease(edi=Easing id 0..30, xmm0=t) -> xmm0.
 ; All real inputs are accepted, including extrapolation. Ids from
 ; EASE_BEZIER_BASE up are the CubicBezier curves made by bezier_new.
+; Easings that call libm (and the curves) go through a per-run memo keyed
+; by (id, bits of t): an easing is a pure function of both, and the same
+; (easing, step / steps) pairs recur for every character that shares a
+; path length, so most calls skip pow/exp2/sin/cos. The rest are cheaper
+; to evaluate than to look up.
 ; Clobbers all caller-saved registers (libm through CCALL).
 ease:
     mov     edi, edi                    ; id is a 32-bit argument
+    cmp     edi, 32
+    jae     .memo
+    mov     eax, EASE_CHEAP
+    bt      eax, edi
+    jc      ease_eval
+.memo:
+    mov     rsi, [ease_memo]
+    test    rsi, rsi
+    jz      .alloc
+.lookup:
+    movq    rax, xmm0
+    lea     ecx, [rdi + 1]              ; tag; 0 marks an empty entry
+    lea     rdx, [rax + rcx]
+    mov     r8, 0x9E3779B97F4A7C15
+    imul    rdx, r8
+    shr     rdx, 64 - EASE_MEMO_BITS
+    shl     rdx, 5
+    add     rsi, rdx
+    cmp     [rsi], rax
+    jne     .miss
+    cmp     [rsi + 16], ecx
+    jne     .miss
+    movsd   xmm0, [rsi + 8]
+    ret
+.miss:
+    push    rsi
+    push    rcx
+    push    rax
+    call    ease_eval
+    pop     rax
+    pop     rcx
+    pop     rsi
+    mov     [rsi], rax
+    movsd   [rsi + 8], xmm0
+    mov     [rsi + 16], ecx
+    ret
+.alloc:
+    push    rdi
+    mov     edi, (1 << EASE_MEMO_BITS) * 32
+    call    alloc                       ; zeroed; leaves xmm0 alone
+    pop     rdi
+    mov     [ease_memo], rax
+    mov     rsi, rax
+    jmp     .lookup
+
+; ease_eval(edi=id, xmm0=t) -> xmm0: ease() without the memo.
+ease_eval:
     cmp     edi, EASE_BEZIER_BASE
     jae     ease_bezier_id
     sub     rsp, 40
@@ -527,37 +583,37 @@ ease:
 section .rodata
 align 8
 ease_table:
-    dd ease.linear - ease_table
-    dd ease.in_sine - ease_table
-    dd ease.out_sine - ease_table
-    dd ease.in_out_sine - ease_table
-    dd ease.in_quad - ease_table
-    dd ease.out_quad - ease_table
-    dd ease.in_out_quad - ease_table
-    dd ease.in_cubic - ease_table
-    dd ease.out_cubic - ease_table
-    dd ease.in_out_cubic - ease_table
-    dd ease.in_quart - ease_table
-    dd ease.out_quart - ease_table
-    dd ease.in_out_quart - ease_table
-    dd ease.in_quint - ease_table
-    dd ease.out_quint - ease_table
-    dd ease.in_out_quint - ease_table
-    dd ease.in_expo - ease_table
-    dd ease.out_expo - ease_table
-    dd ease.in_out_expo - ease_table
-    dd ease.in_circ - ease_table
-    dd ease.out_circ - ease_table
-    dd ease.in_out_circ - ease_table
-    dd ease.in_back - ease_table
-    dd ease.out_back - ease_table
-    dd ease.in_out_back - ease_table
-    dd ease.in_elastic - ease_table
-    dd ease.out_elastic - ease_table
-    dd ease.in_out_elastic - ease_table
-    dd ease.in_bounce - ease_table
-    dd ease.out_bounce - ease_table
-    dd ease.in_out_bounce - ease_table
+    dd ease_eval.linear - ease_table
+    dd ease_eval.in_sine - ease_table
+    dd ease_eval.out_sine - ease_table
+    dd ease_eval.in_out_sine - ease_table
+    dd ease_eval.in_quad - ease_table
+    dd ease_eval.out_quad - ease_table
+    dd ease_eval.in_out_quad - ease_table
+    dd ease_eval.in_cubic - ease_table
+    dd ease_eval.out_cubic - ease_table
+    dd ease_eval.in_out_cubic - ease_table
+    dd ease_eval.in_quart - ease_table
+    dd ease_eval.out_quart - ease_table
+    dd ease_eval.in_out_quart - ease_table
+    dd ease_eval.in_quint - ease_table
+    dd ease_eval.out_quint - ease_table
+    dd ease_eval.in_out_quint - ease_table
+    dd ease_eval.in_expo - ease_table
+    dd ease_eval.out_expo - ease_table
+    dd ease_eval.in_out_expo - ease_table
+    dd ease_eval.in_circ - ease_table
+    dd ease_eval.out_circ - ease_table
+    dd ease_eval.in_out_circ - ease_table
+    dd ease_eval.in_back - ease_table
+    dd ease_eval.out_back - ease_table
+    dd ease_eval.in_out_back - ease_table
+    dd ease_eval.in_elastic - ease_table
+    dd ease_eval.out_elastic - ease_table
+    dd ease_eval.in_out_elastic - ease_table
+    dd ease_eval.in_bounce - ease_table
+    dd ease_eval.out_bounce - ease_table
+    dd ease_eval.in_out_bounce - ease_table
 ease_bounce_d: dq 0x3fef800000000000 ; 0.984375
 ease_neg_one: dq 0xbff0000000000000 ; -1.0
 ease_back_c2: dq 0x4004c25fe974a340 ; 2.5949095
@@ -799,9 +855,10 @@ bezier_new:
     mov     rax, rbx
     shl     rax, 5
     add     rax, [bezier_table]
-    vmovdqu ymm0, [rsp]
-    vmovdqu [rax], ymm0
-    vzeroupper
+    movdqu  xmm0, [rsp]
+    movdqu  xmm5, [rsp + 16]
+    movdqu  [rax], xmm0
+    movdqu  [rax + 16], xmm5
     lea     eax, [rbx + EASE_BEZIER_BASE]
     add     rsp, 32
     pop     rbx
@@ -853,9 +910,10 @@ bezier_easing:
     ; +48 x1, +56 y1, +64 x2, +72 y2
     movsd   [rsp], xmm0
     movsd   [rsp + 8], xmm0
-    vmovdqu ymm1, [rdi]
-    vmovdqu [rsp + 48], ymm1
-    vzeroupper
+    movdqu  xmm1, [rdi]
+    movdqu  xmm5, [rdi + 16]
+    movdqu  [rsp + 48], xmm1
+    movdqu  [rsp + 48 + 16], xmm5
     mov     ebx, 20
 .newton:
     call    .powers                     ; xmm0 = t^3
@@ -952,6 +1010,7 @@ STR msg_bezier_full, "ttfx: asm engine: bezier easing limit reached", 10
 
 section .tstate
 alignb 8
+ease_memo:          resq 1
 bezier_table:       resq 1
 bezier_memo_t:      resq 1
 bezier_memo_value:  resq 1
