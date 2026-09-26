@@ -30,24 +30,29 @@ impl Waypoint {
     }
 }
 
-#[derive(Debug, Clone)]
+/// A span between two of the path's waypoints, held as indices into
+/// `Path::waypoints` (or `Path::ORIGIN` for the synthetic activation origin).
+/// Upstream keeps two Waypoint objects per segment; copying them made a
+/// segment 112 bytes, and binarypath alone builds half a million of them.
+#[derive(Debug, Clone, Copy)]
 pub struct Segment {
-    pub start: Waypoint,
-    pub end: Waypoint,
+    pub start: u32,
+    pub end: u32,
     pub distance: f64,
     pub enter_event_triggered: bool,
     pub exit_event_triggered: bool,
 }
 
 impl Segment {
-    pub fn new(start: Waypoint, end: Waypoint, distance: f64) -> Self {
+    pub fn new(start: u32, end: u32, distance: f64) -> Self {
         Segment { start, end, distance, enter_event_triggered: false, exit_event_triggered: false }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Path {
-    pub path_id: String,
+    /// Shared with the key in `Motion::paths`, so the id is stored once.
+    pub path_id: Rc<str>,
     pub speed: f64,
     pub ease: Option<Easing>,
     pub layer: Option<i64>,
@@ -60,9 +65,12 @@ pub struct Path {
     pub max_steps: i64,
     pub hold_time_remaining: i64,
     pub last_distance_reached: f64,
-    /// Distance of the synthetic origin segment set at activation (upstream
-    /// keeps the Segment object; only its distance is read back).
+    /// The synthetic origin segment set at activation (upstream keeps the
+    /// Segment object; only its distance is read back).
     pub origin_segment: Option<Segment>,
+    /// Where the character stood at the last activation: the start of the
+    /// origin segment, which is not one of the path's own waypoints.
+    pub origin_waypoint: Option<Waypoint>,
 }
 
 impl Path {
@@ -78,7 +86,7 @@ impl Path {
             return Err(format!("Path speed must be greater than 0. Received: {speed}"));
         }
         Ok(Path {
-            path_id: path_id.to_string(),
+            path_id: Rc::from(path_id),
             speed,
             ease,
             layer,
@@ -92,7 +100,20 @@ impl Path {
             hold_time_remaining: hold_time,
             last_distance_reached: 0.0,
             origin_segment: None,
+            origin_waypoint: None,
         })
+    }
+
+    /// Segment endpoint index for the activation origin.
+    pub const ORIGIN: u32 = u32::MAX;
+
+    /// The waypoint a segment endpoint refers to.
+    pub fn waypoint_at(&self, index: u32) -> &Waypoint {
+        if index == Path::ORIGIN {
+            self.origin_waypoint.as_ref().expect("origin segment without an origin waypoint")
+        } else {
+            &self.waypoints[index as usize]
+        }
     }
 
     /// Path.new_waypoint: auto-id like scenes; duplicate explicit id errors.
@@ -137,7 +158,8 @@ impl Path {
             None => geometry::find_length_of_line(prev.coord, waypoint.coord, true),
         };
         self.total_distance += distance_from_previous;
-        self.segments.push(Segment::new(prev.clone(), waypoint.clone(), distance_from_previous));
+        let end = (self.waypoints.len() - 1) as u32;
+        self.segments.push(Segment::new(end - 1, end, distance_from_previous));
         self.max_steps = round_half_even(self.total_distance / self.speed);
     }
 
@@ -202,7 +224,8 @@ impl Motion {
             path_id.to_string()
         };
         let path = Path::new(&path_id, speed, ease, layer, hold_time, loop_)?;
-        self.paths.insert(path_id.clone(), path);
+        let key = Rc::clone(&path.path_id);
+        self.paths.insert(key, path);
         Ok(path_id)
     }
 
