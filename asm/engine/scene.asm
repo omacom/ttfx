@@ -28,6 +28,13 @@
 %define SCF_SHAPE           (SCF_SHAPE_SAME | SCF_SHAPE_TAG)
 %define EASED_MEMO_LIMIT    (1 << 16)
 
+; shared frame lists (see scene_share)
+%define SCF_SHARED          (1 << 16)   ; looked up since the last append
+%define SHARE_MAX_FRAMES    64
+%define SHARE_BITS          16
+%define SHARE_SIZE          (1 << SHARE_BITS)   ; 16-byte entries: list, count, tag
+%define SHARE_PROBATION     256         ; new lists before the hit rate counts
+
 section .text
 
 scenes_init:
@@ -295,7 +302,7 @@ scene_append_frame:
     add     esi, edx
     mov     [r8 + SC_EASE_TOTAL], esi
     inc     dword [r8 + SC_COUNT]
-    and     dword [r8 + SC_FLAGS], ~SCF_SHAPE
+    and     dword [r8 + SC_FLAGS], ~(SCF_SHAPE | SCF_SHARED)
     cmp     ecx, [r8 + SC_HEAD]
     jne     .done
     mov     [r8 + SC_HEAD_HANDLE], ebx
@@ -613,6 +620,7 @@ scene_copy:
     mov     [r8 + SC_NEXT], r9d
     mov     [r8 + SC_NAME], r13d
     mov     [r8 + SC_OWNER], ebx
+    and     dword [r8 + SC_FLAGS], ~SCF_SHARED
     ; the frames are the clone's own, at the end of the frame region
     mov     rsi, [r8 + SC_FRAMES]
     mov     rdi, [frame_region_end]
@@ -638,6 +646,13 @@ scene_activate:
     mov     ecx, [r8 + SC_HEAD]
     cmp     ecx, [r8 + SC_COUNT]
     jae     .empty
+    mov     eax, [r8 + SC_FLAGS]
+    test    eax, SCF_SHARED
+    jnz     .shared
+    test    eax, SCF_SYNC
+    jz      .shared
+    call    scene_share
+.shared:
     mov     rdx, [ch_scene]
     mov     [rdx + rdi * 4], esi
     mov     eax, [r8 + SC_HEAD_HANDLE]
@@ -653,6 +668,124 @@ scene_activate:
     ret
 .empty:
     FAIL    msg_scene_empty
+
+; ------------------------------------------------------------ shared frames
+;
+; Effects often give many characters identical frame lists (a gradient
+; toward the same color with the same symbol). Synced stepping reads a
+; list every tick, so private copies spread the working set over the whole
+; frame region. When a synced scene is activated its frames are looked up
+; by content in share_table, and the scene then points at the first list
+; seen with that content. (Plain scenes read their frames once per frame,
+; and there the lookups cost more than they save.) Lists are only ever appended to, and scene_append_frame appends
+; in place only at the end of the frame region (anywhere else it moves the
+; scene's frames first), so no scene can change another's frames. Appending
+; clears SCF_SHARED, and the next activation looks the list up again.
+
+; scene_share(r8=scene record): point the scene at the shared copy of its
+; frames. Preserves rdi, rsi, r8; clobbers rax, rcx, rdx, r9, r10, r11.
+scene_share:
+    or      dword [r8 + SC_FLAGS], SCF_SHARED
+    cmp     byte [share_off], 0
+    jne     .done
+    mov     ecx, [r8 + SC_COUNT]
+    cmp     ecx, SHARE_MAX_FRAMES
+    ja      .done
+    mov     r9, [share_table]
+    test    r9, r9
+    jnz     .hash
+    push    rdi
+    push    rsi
+    push    r8
+    mov     rdi, SHARE_SIZE * 16
+    call    reserve
+    pop     r8
+    pop     rsi
+    pop     rdi
+    mov     [share_table], rax
+    mov     r9, rax
+    mov     ecx, [r8 + SC_COUNT]
+.hash:
+    ; the hash: a running sum of the frames (handle and duration) and the
+    ; xor of its prefixes, which is order-sensitive and one cycle a frame
+    mov     r10, [r8 + SC_FRAMES]
+    mov     rax, rcx                    ; the sum, seeded with the count
+    xor     edx, edx                    ; the xor of the prefix sums
+.fold:
+    add     rax, [r10]
+    xor     rdx, rax
+    add     r10, FRAME_SIZE
+    dec     ecx
+    jnz     .fold
+    mov     r11, 0x9E3779B97F4A7C15
+    imul    rax, r11
+    rol     rdx, 29
+    xor     rax, rdx
+    imul    rax, r11
+    mov     r10, rax                    ; the hash
+    shr     rax, 64 - SHARE_BITS
+.probe:
+    mov     rdx, rax
+    shl     rdx, 4
+    add     rdx, r9                     ; the entry
+    mov     rcx, [rdx]
+    test    rcx, rcx
+    jz      .insert
+    cmp     [rdx + 12], r10d
+    jne     .next
+    mov     r11d, [r8 + SC_COUNT]
+    cmp     [rdx + 8], r11d
+    jne     .next
+    ; compare the lists
+    push    rsi
+    push    rdi
+    mov     rsi, [r8 + SC_FRAMES]
+    mov     rdi, rcx
+.compare:
+    mov     rcx, [rsi]
+    cmp     rcx, [rdi]
+    jne     .differ
+    add     rsi, FRAME_SIZE
+    add     rdi, FRAME_SIZE
+    dec     r11d
+    jnz     .compare
+    pop     rdi
+    pop     rsi
+    mov     rcx, [rdx]
+    mov     [r8 + SC_FRAMES], rcx
+    inc     dword [share_hits]
+    ret
+.differ:
+    pop     rdi
+    pop     rsi
+.next:
+    inc     eax
+    and     eax, SHARE_SIZE - 1
+    jmp     .probe
+.insert:
+    ; a new list; when few lists repeat, looking them up costs more than
+    ; sharing saves, so the lookups stop for the rest of the run
+    mov     ecx, [share_count]
+    cmp     ecx, SHARE_SIZE * 3 / 4
+    jae     .off
+    cmp     ecx, SHARE_PROBATION
+    jb      .keep
+    mov     r11d, [share_hits]
+    shl     r11d, 2
+    cmp     r11d, ecx
+    jb      .off                        ; under one hit in four new lists
+.keep:
+    inc     dword [share_count]
+    mov     rcx, [r8 + SC_FRAMES]
+    mov     [rdx], rcx
+    mov     ecx, [r8 + SC_COUNT]
+    mov     [rdx + 8], ecx
+    mov     [rdx + 12], r10d
+.done:
+    ret
+.off:
+    mov     byte [share_off], 1
+    ret
 
 ; scene_activate_name(edi=slot, esi=name)
 scene_activate_name:
@@ -850,6 +983,7 @@ step_synced_scene:
     cmovl   rax, rcx
     cvtsi2sd xmm1, rax
     divsd   xmm0, xmm1
+    movapd  xmm2, xmm0
     jmp     .index
 .distance:
     ; total = max(total_distance, 1); remaining = max(total_distance - last, 1)
@@ -864,27 +998,11 @@ step_synced_scene:
     subsd   xmm2, xmm1
     maxsd   xmm2, xmm3
     divsd   xmm2, xmm0
-    movapd  xmm0, xmm2
 .index:
-    ; round(final * ratio).min(final).max(0); the product is almost always
-    ; in [0, 2^52), where rounding is one instruction (or the 2^52 trick)
-    cvtsi2sd xmm1, r9
-    mulsd   xmm1, xmm0
-    movapd  xmm0, xmm1
-    xorpd   xmm2, xmm2
-    ucomisd xmm0, xmm2
-    jb      .round_slow
-    movsd   xmm2, [scene_two_52]
-    ucomisd xmm2, xmm0
-    jbe     .round_slow                 ; also NaN
-%if TIER >= 2
-    roundsd xmm0, xmm0, 0               ; nearest, ties to even
-%else
-    addsd   xmm0, xmm2                  ; x + 2^52 rounds to an integer,
-    subsd   xmm0, xmm2                  ; ties to even (MXCSR default)
-%endif
-    cvttsd2si rax, xmm0
-.rounded:
+    ; round(final * ratio).min(final).max(0)
+    cvtsi2sd xmm0, r9
+    mulsd   xmm0, xmm2
+    ROUND_HALF_EVEN
     cmp     rax, r9
     cmovg   rax, r9
     xor     ecx, ecx
@@ -900,9 +1018,6 @@ step_synced_scene:
     SET_HANDLE
 .same:
     ret
-.round_slow:
-    call    round_half_even
-    jmp     .rounded
 
 ; ------------------------------------------------------------ eased shapes
 ;
@@ -1237,7 +1352,6 @@ reset_appearance:
 section .rodata
 align 8
 scene_one:  dq 1.0
-scene_two_52: dq 0x4330000000000000   ; 2^52
 STR msg_scenes_full, "ttfx: asm engine: scene limit reached", 10
 STR msg_scene_empty, "activate_scene: empty scene"
 STR msg_scene_missing, "activate_scene: scene not found"
@@ -1255,5 +1369,10 @@ scene_count:    resd 1
 alignb 8
 shape_last:     resq 1              ; the last shape found (initially shapes)
 shape_count:    resd 1
+share_count:    resd 1              ; lists in share_table
+share_hits:     resd 1              ; lookups that found one
+share_off:      resb 1              ; lookups stopped
+alignb 8
+share_table:    resq 1
 alignb 64
 shapes:         resb SHAPE_LIMIT << SHAPE_SHIFT
