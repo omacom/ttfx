@@ -109,10 +109,15 @@ event_register:
     cmp     eax, NONE
     jne     .have_entry
     ; a new entry at the end of the character's list
+    mov     edi, r12d
+    call    entry_take_free             ; particles.asm: a recycled entry, or NONE
+    cmp     eax, NONE
+    jne     .new_entry
     mov     eax, [entry_count]
     cmp     eax, ENTRY_LIMIT
     jae     .full
     inc     dword [entry_count]
+.new_entry:
     mov     r8, rax
     shl     r8, 6
     add     r8, [event_entries]
@@ -166,10 +171,14 @@ event_register:
     mov     eax, [rcx + AC_NEXT]
     jmp     .dup
 .append:
+    call    action_take_free            ; particles.asm: a recycled action, or NONE
+    cmp     eax, NONE
+    jne     .new_action
     mov     eax, [action_count]
     cmp     eax, ACTION_LIMIT
     jae     .full
     inc     dword [action_count]
+.new_action:
     mov     rcx, rax
     shl     rcx, 5
     add     rcx, [event_actions]

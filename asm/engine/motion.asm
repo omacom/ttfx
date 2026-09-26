@@ -198,10 +198,14 @@ path_new:
     cmp     eax, NONE
     jne     .duplicate
 .fresh:
+    call    path_take_free              ; particles.asm: a recycled index, or NONE
+    cmp     eax, NONE
+    jne     .recycled
     mov     eax, [path_count]
     cmp     eax, PATH_LIMIT
     jae     .full
     inc     dword [path_count]
+.recycled:
     mov     [rsp + 8], rax
 %if TIER >= 3
     mov     rcx, [path_owners]
@@ -214,6 +218,7 @@ path_new:
     movdqu  [r8 + pz_off], xmm0
 %assign pz_off pz_off + 16
 %endrep
+    call    path_take_restore           ; particles.asm: its empty arrays
     mov     [r8 + PA_NAME], r15d
     mov     dword [r8 + PA_NEXT], NONE
     movsd   xmm0, [rsp]
@@ -310,7 +315,7 @@ path_new_waypoint:
     test    r13, r13
     jz      .no_controls
     lea     rdi, [r14 * 8]
-    call    alloc
+    call    bez_alloc                   ; particles.asm: alloc, or a freed block
     mov     rdi, rax
     mov     rsi, r13
     mov     ecx, r14d
@@ -541,7 +546,7 @@ path_unshare:
     cmovb   ecx, eax
     mov     [rbp + PA_SEG_CAP], ecx
     imul    edi, ecx, SEGMENT_SIZE
-    call    alloc
+    call    path_unpark_segs            ; particles.asm: alloc, or its parked list
     mov     rsi, [rbp + PA_SEGS]
     mov     [rbp + PA_SEGS], rax
     mov     rdi, rax
@@ -715,6 +720,7 @@ path_seg_share:
     jnz     .fire
 .use:
     ; the path walks the shared list; activation left every flag clear
+    call    path_park_segs              ; particles.asm: its own list, for reuse
     mov     [rbp + PA_SEGS], rsi
     mov     ecx, [rbp + PA_SEG_COUNT]
     mov     [rbp + PA_SEG_CAP], ecx

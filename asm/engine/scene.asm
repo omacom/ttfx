@@ -212,6 +212,11 @@ scene_new:
 %define SCENE_CHUNK         64
 %define SCENE_BANKS         64          ; 8-byte cursors: next index, chunk end
 scene_alloc:
+    call    scene_take_free             ; particles.asm: a recycled index, or NONE
+    cmp     eax, NONE
+    je      .banked
+    ret
+.banked:
     cmp     byte [scene_unbanked], 0
     jne     .next
     imul    eax, r12d, 0x9E3779B1
@@ -349,6 +354,8 @@ scene_append_frame:
 .done:
     ret
 .relocate:
+    call    scene_append_recycled       ; particles.asm: CF when it reused a block
+    jc      .done
     ; move this scene's frames to the end of the region
     mov     rsi, [r8 + SC_FRAMES]
     mov     rdi, [frame_region_end]
