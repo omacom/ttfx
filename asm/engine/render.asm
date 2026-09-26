@@ -231,10 +231,8 @@ render_init:
     mov     byte [all_dirty], 1
     ; the change logs, one per ring entry, and the first one open
     mov     rdi, FRAME_RING << LOG_SHIFT
-    call    reserve
+    call    reserve_small               ; touched a stretch per entry
     mov     [log_ptr], rax
-    mov     rsi, FRAME_RING << LOG_SHIFT
-    call    small_pages
     lea     rcx, [ring]
     xor     edx, edx
 .logs:
@@ -245,10 +243,8 @@ render_init:
     cmp     edx, FRAME_RING
     jb      .logs
     mov     rdi, OUTPUT_RESERVE
-    call    reserve
+    call    reserve_small
     mov     [out_base], rax
-    mov     rsi, OUTPUT_RESERVE
-    call    small_pages
     ; each ring entry's pending bytes (a frame's prefix) get an equal share
     lea     rcx, [ring]
     xor     edx, edx
@@ -316,19 +312,6 @@ render_init:
     call    alloc
     mov     [dirty_bits], rax
     pop     rbx
-    ret
-
-; small_pages(rax=region, rsi=bytes) -> rax kept: no transparent huge pages
-; for a region that is touched sparsely (one stretch per ring entry): each
-; stretch would otherwise cost a zeroed 2 MB page. Clobbers rcx, rdx, rdi,
-; r11.
-small_pages:
-    push    rax
-    mov     rdi, rax
-    and     rdi, -4096                  ; reserve staggers the base
-    mov     edx, MADV_NOHUGEPAGE
-    SYSCALL SYS_madvise
-    pop     rax
     ret
 
 ; cell_of(edi=slot) -> eax = grid cell of the character's current coordinate,
