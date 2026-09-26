@@ -1598,11 +1598,16 @@ motion_move:
 
 ; MV_AXIS4: ymm7 = start, ymm8 = control, ymm9 = end on one axis, ymm2 = t,
 ; ymm3 = 1 - t, ymm13 = the curve lanes -> ymm7 = the point: the line
-; start.interpolate(end, t), or the one-control curve. Clobbers ymm10-12.
+; start.interpolate(end, t), or the one-control curve. Clobbers ymm10-12
+; and the flags.
 %macro MV_AXIS4 0
     vmulpd  ymm10, ymm7, ymm3
     vmulpd  ymm11, ymm8, ymm2
     vaddpd  ymm10, ymm10, ymm11         ; a = start.interpolate(control, t)
+    ; a is the line result (control = end): a group with no curve lane is done
+    vmovapd ymm7, ymm10
+    vtestpd ymm13, ymm13
+    jz      %%done
     vmulpd  ymm11, ymm8, ymm3
     vmulpd  ymm12, ymm9, ymm2
     vaddpd  ymm11, ymm11, ymm12         ; b = control.interpolate(end, t)
@@ -1610,6 +1615,7 @@ motion_move:
     vmulpd  ymm11, ymm11, ymm2
     vaddpd  ymm12, ymm12, ymm11         ; a.interpolate(b, t)
     vblendvpd ymm7, ymm10, ymm12, ymm13
+%%done:
 %endmacro
 
 ; MV_LINE4: ymm7 = start, ymm9 = end on one axis, ymm2 = t, ymm3 = 1 - t
@@ -1881,8 +1887,13 @@ motion_batch:
     kandnb  k5, k4, k5
     kandb   k5, k5, k1                  ; past the end
     korb    k1, k4, k5
+    ; most groups stay inside their segments: keep the masked add off the
+    ; division's dependency chain unless a lane needs the for-else
+    kortestb k5, k5
+    jz      .segment_ratio
     vsubpd  zmm10, zmm7, zmm8
     vaddpd  zmm7{k5}, zmm10, zmm8       ; the for-else adds the distance back
+.segment_ratio:
     vdivpd  zmm9, zmm7, zmm8            ; t
     knotb   k7, k2
     vminpd  zmm9{k7}, zmm9, zmm20       ; linear: f64::min(t, 1.0)
@@ -2676,18 +2687,21 @@ motion_batch:
     vpmovqd ymm8, zmm4
     vcvtdq2pd zmm7, ymm7                ; control column
     vcvtdq2pd zmm8, ymm8                ; control row
-    vmovdqu64 zmm4, [rdi + MB_E + rax * 8]
-    vpmovqd ymm9, zmm4
-    vpsrlq  zmm4, zmm4, 32
-    vpmovqd ymm10, zmm4
-    vcvtdq2pd zmm9, ymm9                ; end column
-    vcvtdq2pd zmm10, ymm10              ; end row
+    ; a = start.interpolate(control, t), the line itself (control = end)
     vmulpd  zmm11, zmm5, zmm3
     vmulpd  zmm12, zmm7, zmm2
     vaddpd  zmm11, zmm11, zmm12
     vmulpd  zmm13, zmm6, zmm3
     vmulpd  zmm12, zmm8, zmm2
     vaddpd  zmm13, zmm13, zmm12
+    kortestb k3, k3
+    jz      .lanes8_rounded             ; no curve lane: a is the point
+    vmovdqu64 zmm4, [rdi + MB_E + rax * 8]
+    vpmovqd ymm9, zmm4
+    vpsrlq  zmm4, zmm4, 32
+    vpmovqd ymm10, zmm4
+    vcvtdq2pd zmm9, ymm9                ; end column
+    vcvtdq2pd zmm10, ymm10              ; end row
     vmulpd  zmm14, zmm7, zmm3
     vmulpd  zmm12, zmm9, zmm2
     vaddpd  zmm14, zmm14, zmm12
@@ -2700,6 +2714,7 @@ motion_batch:
     vmulpd  zmm17, zmm13, zmm3
     vmulpd  zmm12, zmm15, zmm2
     vaddpd  zmm13{k3}, zmm17, zmm12
+.lanes8_rounded:
     vcvtpd2dq ymm11, zmm11
     vcvtpd2dq ymm13, zmm13
     vmovdqu32 [rdi + MB_COL + rax * 4], ymm11
