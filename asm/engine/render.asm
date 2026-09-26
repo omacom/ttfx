@@ -206,10 +206,10 @@ render_init:
     call    alloc
     mov     [handle_grid], rax
     mov     rdi, CHAR_LIMIT * 8
-    call    reserve
+    call    reserve_small
     mov     [rs_link], rax
     mov     rdi, CHAR_LIMIT * 8
-    call    reserve
+    call    reserve_small
     mov     [rs_cell], rax
     mov     rdi, [grid_cells]
     lea     rdi, [rdi * 8 + 64]
@@ -440,14 +440,32 @@ handle_direct:
     pop     rdx
     ret
 
-; coordinate_changed(edi=slot): the character's current coordinate changed;
-; a visible character that changes cells logs the move. Clobbers rax, rcx,
-; rdx.
+; coordinate_changed(edi=slot, rsi=its new coordinate, packed): the
+; character's current coordinate changed (set_coordinate); a visible
+; character that changes cells logs the move. Clobbers rax, rcx, rdx.
 coordinate_changed:
     mov     rax, [ch_flags]
     test    word [rax + rdi * 2], CF_VISIBLE
     jz      .done
-    CELL_OF
+    ; the cell, as CELL_OF
+    mov     rcx, rsi
+    sar     rcx, 32
+    movsxd  rdx, esi
+    mov     rax, rcx
+    add     rax, [co_rbase]
+    cmp     rax, [co_rspan]
+    ja      .outside
+    mov     rax, rdx
+    add     rax, [co_cbase]
+    cmp     rax, [co_cspan]
+    ja      .outside
+    imul    rcx, [grid_width]
+    add     rdx, [co_cell0]
+    lea     rax, [rcx + rdx]
+    jmp     .cell
+.outside:
+    mov     eax, NONE
+.cell:
     mov     rcx, [ch_cell]
     mov     edx, [rcx + rdi * 4]
     cmp     edx, eax
@@ -1423,7 +1441,7 @@ pipeline_plan:
     jb      .done
     mov     byte [log_handles], 1
     mov     rdi, CHAR_LIMIT * 4
-    call    reserve
+    call    reserve_small
     mov     [rs_handle], rax
 .done:
     ret
