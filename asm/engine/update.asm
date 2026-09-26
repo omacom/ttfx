@@ -539,14 +539,18 @@ update:
     inc     rbx
     jmp     .tick_word
 .waking:
-    ; its doze ran out: settle a pending retirement, then tick as usual
+    ; A dozer has no path; mutations wake it before changing its scene.
+    ; Reuse the scene record after settling a pending head retirement.
     btr     rax, rdi
     mov     [rdx + rbx * 8], rax
     mov     rax, [ch_scene]
-    mov     eax, [rax + rdi * 4]
-    SCENE_PTR r8, rax
+    mov     esi, [rax + rdi * 4]
+    SCENE_PTR r8, rsi
     call    doze_retire
-    jmp     .tick
+    mov     [doze_slot], edi
+    call    ..@animation_loaded
+    mov     dword [doze_slot], -1
+    jmp     .ticked
 .tick_next:
     inc     rbx
     jmp     .tick_word

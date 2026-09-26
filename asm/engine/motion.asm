@@ -2032,17 +2032,19 @@ motion_batch:
     kortestb k2, k2
     jz      .group_next
     vmaxpd  zmm5, zmm1, zmm20           ; max(current_step, 1)
-    vmaxpd  zmm6, zmm2, zmm20           ; max(max_steps, 1)
-    vdivpd  zmm5, zmm5, zmm6
+    vmaxpd  zmm8, zmm2, zmm20           ; max(max_steps, 1)
     vmovupd zmm6, [rbx + rsi * 8 + MVO_TOTAL]
     vmaxpd  zmm7, zmm6, zmm20           ; total = max(total_distance, 1)
     vsubpd  zmm6, zmm6, zmm3
     vmaxpd  zmm6, zmm6, zmm20           ; remaining
     vsubpd  zmm6, zmm7, zmm6
     vmaxpd  zmm6, zmm6, zmm20           ; reached
-    vdivpd  zmm6, zmm6, zmm7
+    ; Select each scene's numerator and denominator before dividing.
+    ; This is the same division per lane; the unused ratio is never made.
     vpmovd2m k3, ymm4                   ; SCF_SYNC_STEP
     vmovapd zmm6{k3}, zmm5
+    vmovapd zmm7{k3}, zmm8
+    vdivpd  zmm6, zmm6, zmm7
     vpandd  ymm5, ymm4, [mv_key_final]{1to8}
     vpternlogd ymm7, ymm7, ymm7, 0xff
     vpaddd  ymm5, ymm5, ymm7            ; final_frame_index
@@ -2257,18 +2259,19 @@ motion_batch:
     jz      .group_next
     vmovupd ymm1, [rdi + MB_STEPF + rcx * 8]
     vmaxpd  ymm1, ymm1, ymm15           ; max(current_step, 1)
-    vmovupd ymm2, [rbx + rsi * 8 + MVO_MAX]
-    vmaxpd  ymm2, ymm2, ymm15           ; max(max_steps, 1)
-    vdivpd  ymm1, ymm1, ymm2
+    vmovupd ymm8, [rbx + rsi * 8 + MVO_MAX]
+    vmaxpd  ymm8, ymm8, ymm15           ; max(max_steps, 1)
     vmovupd ymm2, [rbx + rsi * 8 + MVO_TOTAL]
     vmaxpd  ymm3, ymm2, ymm15           ; total = max(total_distance, 1)
     vsubpd  ymm2, ymm2, [rdi + MB_LAST + rcx * 8]
     vmaxpd  ymm2, ymm2, ymm15           ; remaining
     vsubpd  ymm2, ymm3, ymm2
     vmaxpd  ymm2, ymm2, ymm15           ; reached
+    ; Keep the original operands and rounding, with one selected divide.
+    vpmovsxdq ymm5, xmm4                ; SCF_SYNC_STEP in the sign
+    vblendvpd ymm2, ymm2, ymm1, ymm5
+    vblendvpd ymm3, ymm3, ymm8, ymm5
     vdivpd  ymm2, ymm2, ymm3
-    vpmovsxdq ymm3, xmm4                ; SCF_SYNC_STEP in the sign
-    vblendvpd ymm2, ymm2, ymm1, ymm3
     vpbroadcastd xmm6, [mv_key_final]
     vpand   xmm6, xmm4, xmm6
     vpcmpeqd xmm7, xmm7, xmm7

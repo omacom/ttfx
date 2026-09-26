@@ -972,6 +972,8 @@ step_animation_awake:
     cmp     esi, NONE
     je      .done
     SCENE_PTR r8, rsi
+; update's wake path already has esi = scene and r8 = its record.
+..@animation_loaded:
     mov     ecx, [r8 + SC_HEAD]
     cmp     ecx, [r8 + SC_COUNT]
     jae     .done                       ; no remaining frames: nothing to step

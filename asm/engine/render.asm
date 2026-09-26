@@ -735,50 +735,14 @@ cell_rewin:
 row_dirty:
     mov     rcx, [dirty_cells]
     add     rcx, rax
-    ; most rows are clean: a first pass only ORs the bytes together
-    mov     rdx, rcx
-    mov     r9, r14
+    ; render_frame already filters clean rows using the chunk marks.
+    ; Gather and clear the surviving row in one pass.
 %if TIER >= 4
     vpxord  zmm1, zmm1, zmm1
-    vpxord  zmm0, zmm0, zmm0
-.any:
-    vporq   zmm0, zmm0, [rdx]
-    add     rdx, 64
-    sub     r9, 64
-    ja      .any
-    vptestmb k1, zmm0, zmm0
-    kortestq k1, k1
-    jz      .clean
 %elif TIER >= 3
     vpxor   ymm2, ymm2, ymm2
-    vpxor   ymm0, ymm0, ymm0
-.any:
-    vpor    ymm0, ymm0, [rdx]
-    vpor    ymm0, ymm0, [rdx + 32]
-    add     rdx, 64
-    sub     r9, 64
-    ja      .any
-    vptest  ymm0, ymm0
-    jz      .clean
 %else
     pxor    xmm4, xmm4
-    pxor    xmm0, xmm0
-.any:
-    movdqu  xmm1, [rdx]
-    movdqu  xmm2, [rdx + 16]
-    por     xmm0, xmm1
-    por     xmm0, xmm2
-    movdqu  xmm1, [rdx + 32]
-    movdqu  xmm2, [rdx + 48]
-    por     xmm0, xmm1
-    por     xmm0, xmm2
-    add     rdx, 64
-    sub     r9, 64
-    ja      .any
-    pcmpeqb xmm0, xmm4
-    pmovmskb eax, xmm0
-    cmp     eax, 0xffff
-    je      .clean
 %endif
     ; 64 / BLOCK block bits per 64 cells, gathered into whole words in rax (narrow
     ; stores would stall the word loads of the run scan)
@@ -856,9 +820,6 @@ row_dirty:
     shl     r9, cl
     or      [r8 + rdx * 8], r9
     mov     rax, r10
-    ret
-.clean:
-    xor     eax, eax
     ret
 
 ; next_set(rax=block) -> rax = the first block >= rax whose dirty bit is set
