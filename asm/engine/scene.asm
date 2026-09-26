@@ -1127,7 +1127,7 @@ shape_find:
 
 ; shape_check(r8=scene record, r9=its shape): compare the scene's frames
 ; with the shape's reference frames, recording the tag and the verdict in
-; SC_FLAGS. Clobbers rax, rcx, rdx.
+; SC_FLAGS. Clobbers rax, rcx, rdx (and zmm16, k1 at TIER 4).
 shape_check:
     push    rsi
     push    rdi
@@ -1140,6 +1140,23 @@ shape_check:
     jne     .store
     mov     rsi, [r8 + SC_FRAMES]
     mov     rdi, [r9 + SH_REF]
+%if TIER >= 4
+    ; eight frames a compare (in zmm16, which legacy SSE code never uses)
+.compare8:
+    cmp     ecx, 8
+    jb      .compare_tail
+    vmovdqu64 zmm16, [rsi]
+    vpcmpq  k1, zmm16, [rdi], 4         ; not equal
+    kortestb k1, k1
+    jnz     .store
+    add     rsi, 8 * FRAME_SIZE
+    add     rdi, 8 * FRAME_SIZE
+    sub     ecx, 8
+    jmp     .compare8
+.compare_tail:
+    test    ecx, ecx
+    jz      .same
+%endif
 .compare:
     mov     rax, [rsi]
     cmp     rax, [rdi]
@@ -1148,6 +1165,7 @@ shape_check:
     add     rdi, FRAME_SIZE
     dec     ecx
     jnz     .compare
+.same:
     or      edx, SCF_SHAPE_SAME
 .store:
     mov     [r8 + SC_FLAGS], edx
