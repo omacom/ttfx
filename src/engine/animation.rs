@@ -178,7 +178,7 @@ impl CharacterVisual {
         FORMAT_SCRATCH.with(|scratch| {
             let mut scratch = scratch.borrow_mut();
             scratch.clear();
-            vis.format_symbol_into(&mut scratch);
+            vis.format_symbol_into(&mut scratch, false);
             vis.formatted_symbol = FormattedSymbol::new(&scratch);
         });
         vis
@@ -188,40 +188,56 @@ impl CharacterVisual {
         CharacterVisual::new(symbol, VisualParams::default())
     }
 
-    /// SGR emission in upstream's fixed order; `dim` intentionally omitted;
-    /// bare symbol when nothing applies.
-    fn format_symbol_into(&self, fmt: &mut String) {
-        if self.bold {
-            fmt.push_str(ansi::BOLD);
-        }
-        if self.italic {
-            fmt.push_str(ansi::ITALIC);
-        }
-        if self.underline {
-            fmt.push_str(ansi::UNDERLINE);
-        }
-        if self.blink {
-            fmt.push_str(ansi::BLINK);
-        }
-        if self.reverse {
-            fmt.push_str(ansi::REVERSE);
-        }
-        if self.hidden {
-            fmt.push_str(ansi::HIDDEN);
-        }
-        if self.strike {
-            fmt.push_str(ansi::STRIKETHROUGH);
-        }
+    /// Assemble either the immutable raw cache or a render-time transformed symbol.
+    fn format_symbol_into(&self, fmt: &mut String, live_transform: bool) {
+        if self.bold { fmt.push_str(ansi::BOLD); }
+        if self.italic { fmt.push_str(ansi::ITALIC); }
+        if self.underline { fmt.push_str(ansi::UNDERLINE); }
+        if self.blink { fmt.push_str(ansi::BLINK); }
+        if self.reverse { fmt.push_str(ansi::REVERSE); }
+        if self.hidden { fmt.push_str(ansi::HIDDEN); }
+        if self.strike { fmt.push_str(ansi::STRIKETHROUGH); }
         if let Some(code) = &self.fg_color_code {
-            ansi::fg(code, fmt);
+            if live_transform { ansi::fg(code, fmt); } else { ansi::fg_raw(code, fmt); }
         }
         if let Some(code) = &self.bg_color_code {
-            ansi::bg(code, fmt);
+            if live_transform { ansi::bg(code, fmt); } else { ansi::bg_raw(code, fmt); }
         }
         fmt.push_str(&self.symbol);
-        if fmt.len() != self.symbol.len() {
-            fmt.push_str(ansi::RESET_ALL);
+        if fmt.len() != self.symbol.len() { fmt.push_str(ansi::RESET_ALL); }
+    }
+
+    #[inline]
+    pub fn append_rendered_to(&self, out: &mut Vec<u8>) {
+        if !ansi::transforms_active() || (self.fg_color_code.is_none() && self.bg_color_code.is_none()) {
+            self.formatted_symbol.append_to(out);
+            return;
         }
+        // Own the pooled buffer while formatting. No RefCell borrow is held while
+        // a user transform runs, so nested rendering/visual construction is safe.
+        let mut scratch = FORMAT_SCRATCH.with(|slot| std::mem::take(&mut *slot.borrow_mut()));
+        scratch.clear();
+        self.format_symbol_into(&mut scratch, true);
+        out.extend_from_slice(scratch.as_bytes());
+        FORMAT_SCRATCH.with(|slot| {
+            let mut pooled = slot.borrow_mut();
+            if pooled.capacity() < scratch.capacity() { *pooled = scratch; }
+        });
+    }
+
+    pub fn push_rendered_to(&self, out: &mut String) {
+        if !ansi::transforms_active() || (self.fg_color_code.is_none() && self.bg_color_code.is_none()) {
+            out.push_str(self.formatted_symbol.as_str());
+            return;
+        }
+        let mut scratch = FORMAT_SCRATCH.with(|slot| std::mem::take(&mut *slot.borrow_mut()));
+        scratch.clear();
+        self.format_symbol_into(&mut scratch, true);
+        out.push_str(&scratch);
+        FORMAT_SCRATCH.with(|slot| {
+            let mut pooled = slot.borrow_mut();
+            if pooled.capacity() < scratch.capacity() { *pooled = scratch; }
+        });
     }
 }
 
@@ -651,5 +667,42 @@ impl Animation {
             round_half_even(green * 255.0) as u8,
             round_half_even(blue * 255.0) as u8,
         )
+    }
+}
+
+#[cfg(test)]
+mod live_color_tests {
+    use super::*;
+
+    #[test]
+    fn cached_visual_uses_new_selective_transform_without_rebuild() {
+        let visual = CharacterVisual::new("X", VisualParams {
+            fg_color_code: Some(ColorCode::Rgb("123456".into())), ..Default::default()
+        });
+        assert_eq!(visual.formatted_symbol.as_str(), "\x1b[38;2;18;52;86mX\x1b[0m");
+        ansi::set_color_transform(Some(std::rc::Rc::new(|r, g, b| {
+            if (r, g, b) == (255, 0, 0) { (r, g, b) } else { (9, 8, 7) }
+        })));
+        let mut themed = Vec::new(); visual.append_rendered_to(&mut themed);
+        assert_eq!(String::from_utf8(themed).unwrap(), "\x1b[38;2;9;8;7mX\x1b[0m");
+        ansi::set_color_transform(Some(std::rc::Rc::new(|_, _, _| (1, 2, 3))));
+        let mut changed = Vec::new(); visual.append_rendered_to(&mut changed);
+        assert_eq!(String::from_utf8(changed).unwrap(), "\x1b[38;2;1;2;3mX\x1b[0m");
+        ansi::set_color_transform(None);
+    }
+
+    #[test]
+    fn transform_can_construct_a_nested_visual_without_scratch_borrow_panic() {
+        let visual = CharacterVisual::new("X", VisualParams {
+            fg_color_code: Some(ColorCode::Rgb("123456".into())), ..Default::default()
+        });
+        ansi::set_color_transform(Some(std::rc::Rc::new(|r, g, b| {
+            let _nested = CharacterVisual::new("N", VisualParams::default());
+            (r, g, b)
+        })));
+        let mut rendered = Vec::new();
+        visual.append_rendered_to(&mut rendered);
+        assert_eq!(String::from_utf8(rendered).unwrap(), "\x1b[38;2;18;52;86mX\x1b[0m");
+        ansi::set_color_transform(None);
     }
 }

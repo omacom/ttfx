@@ -9,6 +9,8 @@
 //! No observable set iteration beyond the engine-canonical active_characters
 //! (docs/ordering-inventory.md).
 
+use std::collections::VecDeque;
+
 use clap::Args;
 
 use crate::cli::parse_color;
@@ -110,7 +112,7 @@ pub struct Thunderstorm {
     delay: i64,
     strike_progression_delay: i64,
     rain_pool: ParticlePool,
-    pending_strike_chars: Vec<CharId>,
+    pending_strike_chars: VecDeque<CharId>,
     available_strike_chars: Vec<CharId>,
     active_strike_chars: Vec<CharId>,
     spark_pool: ParticlePool,
@@ -121,6 +123,8 @@ pub struct Thunderstorm {
     strike_branch_chance: f64,
     phase: Phase,
     storm_start_time: f64,
+    audio_volume: f32,
+    audio_beat: bool,
 }
 
 /// ThunderstormIterator._adjust_color_pair_brightness.
@@ -301,7 +305,7 @@ impl Thunderstorm {
             delay: 0,
             strike_progression_delay: 0,
             rain_pool,
-            pending_strike_chars: Vec::new(),
+            pending_strike_chars: VecDeque::new(),
             available_strike_chars: Vec::new(),
             active_strike_chars: Vec::new(),
             spark_pool,
@@ -311,6 +315,8 @@ impl Thunderstorm {
             strike_branch_chance: 0.05,
             phase: Phase::PreStorm,
             storm_start_time: 0.0,
+            audio_volume: 0.0,
+            audio_beat: false,
         }
     }
 
@@ -392,7 +398,7 @@ impl Thunderstorm {
                 column -= 1;
             }
 
-            self.pending_strike_chars.push(strike_char);
+            self.pending_strike_chars.push_back(strike_char);
             // random.random() is always drawn (left operand of `and`).
             if ctx.rng.random() < self.strike_branch_chance && branch_neighbor.is_none() {
                 self.strike_branch_chance -= 0.01;
@@ -403,9 +409,103 @@ impl Thunderstorm {
         self.strike_branch_chance = 0.05;
     }
 
+    fn setup_lightning_strike_capped(
+        &mut self,
+        ctx: &mut EngineCtx,
+        branch_neighbor: Option<CharId>,
+        max_branches: usize,
+    ) {
+        let mut used = 0usize;
+        self.setup_lightning_strike_inner(ctx, branch_neighbor, max_branches, &mut used);
+        self.strike_branch_chance = 0.05;
+    }
+
+    fn setup_lightning_strike_inner(
+        &mut self,
+        ctx: &mut EngineCtx,
+        branch_neighbor: Option<CharId>,
+        max_branches: usize,
+        branches_used: &mut usize,
+    ) {
+        let mut branch_neighbor = branch_neighbor;
+        let (mut column, mut row);
+        if let Some(neighbor) = branch_neighbor {
+            let coord = ctx.terminal.arena[neighbor.0 as usize].motion.current_coord;
+            column = coord.column;
+            row = coord.row;
+        } else {
+            column = ctx.rng.randint(1, ctx.terminal.canvas.right);
+            row = ctx.terminal.canvas.top;
+        }
+
+        while row >= ctx.terminal.canvas.bottom {
+            if self.available_strike_chars.is_empty() {
+                self.build_strike_characters(ctx, 20);
+            }
+            let symbol: &str;
+            if let Some(neighbor) = branch_neighbor {
+                let neighbor_symbol = ctx.terminal.arena[neighbor.0 as usize].input_symbol.clone();
+                if neighbor_symbol == "/" {
+                    column += 1;
+                    symbol = *ctx.rng.choice(&["|", "\\"]);
+                } else if neighbor_symbol == "\\" {
+                    column -= 1;
+                    symbol = *ctx.rng.choice(&["|", "/"]);
+                } else {
+                    let delta = *ctx.rng.choice(&[-1i64, 1]);
+                    column += delta;
+                    symbol = if delta == 1 { "\\" } else { "/" };
+                }
+            } else {
+                symbol = *ctx.rng.choice(&["\\", "/", "|"]);
+            }
+
+            let strike_char = self.get_next_strike_char(ctx);
+            {
+                let ch = &mut ctx.terminal.arena[strike_char.0 as usize];
+                ch.motion.set_coordinate(Coord::new(column, row));
+                let input_symbol = ch.input_symbol.clone();
+                let uses_pre = ch.uses_input_preexisting_colors;
+                ch.animation.set_appearance(
+                    &input_symbol,
+                    uses_pre,
+                    Some(symbol),
+                    Some(ColorPair::new(Some(self.config.lightning_color.clone()), None)),
+                );
+            }
+            row -= 1;
+            if symbol == "\\" {
+                column += 1;
+            } else if symbol == "/" {
+                column -= 1;
+            }
+
+            self.pending_strike_chars.push_back(strike_char);
+            // Cap branches to max_branches (thin rays: e.g. 0 for multi-strike).
+            if *branches_used < max_branches
+                && ctx.rng.random() < self.strike_branch_chance
+                && branch_neighbor.is_none()
+            {
+                self.strike_branch_chance -= 0.01;
+                *branches_used += 1;
+                self.setup_lightning_strike_inner(ctx, Some(strike_char), max_branches, branches_used);
+            }
+            branch_neighbor = None;
+        }
+        // Only reset chance at top-level (branch_neighbor.is_none() at entry).
+        // For inner branch calls we keep the decayed value; reset after top-level.
+        // (reset handled by setup_lightning_strike_capped after inner returns)
+    }
+
     /// ThunderstormIterator.lightning_strike.
     fn lightning_strike(&mut self, ctx: &mut EngineCtx) {
         self.setup_lightning_strike(ctx, None);
+        self.finish_lightning_strike(ctx);
+    }
+
+    /// Build flash/fade scenes and callbacks for characters already queued by a
+    /// normal or audio-triggered strike.
+    fn finish_lightning_strike(&mut self, ctx: &mut EngineCtx) {
         let strike_base_color = self.config.lightning_color.clone();
         let strike_flash_color = Animation::adjust_color_brightness(&strike_base_color, 1.7);
         let strike_gradient = Gradient::with_steps(&[strike_base_color.clone(), strike_flash_color], 7, true)
@@ -505,15 +605,18 @@ impl Thunderstorm {
             return;
         }
         if !self.pending_strike_chars.is_empty() {
-            let batch = ctx.rng.randint(1, 3);
+            // Audio-reactive fall speed: louder/beat = bigger batch and no delay (faster drop).
+            let vol = self.audio_volume.clamp(0.0, 1.0);
+            let batch = if vol > 0.6 || self.audio_beat { ctx.rng.randint(3, 5) } else if vol > 0.32 { ctx.rng.randint(2, 4) } else { ctx.rng.randint(1, 3) };
+            let delay = if vol > 0.45 || self.audio_beat { 0 } else { 1 };
             for _ in 0..batch {
                 if self.pending_strike_chars.is_empty() {
                     break;
                 }
-                let next_strike_char = self.pending_strike_chars.remove(0);
+                let next_strike_char = self.pending_strike_chars.pop_front().unwrap();
                 self.active_strike_chars.push(next_strike_char);
                 ctx.terminal.set_character_visibility(next_strike_char, true);
-                self.strike_progression_delay = 1;
+                self.strike_progression_delay = delay;
 
                 // if the last strike_char was activated, activate the sparks
                 // and setup the post-fade callback to indicate the strike has
@@ -918,5 +1021,48 @@ impl Effect for Thunderstorm {
         }
         ctx.update(self);
         Some(ctx.frame())
+    }
+
+    fn on_audio(&mut self, ctx: &mut EngineCtx, volume: f32, _bass: f32, beat: bool) {
+        self.audio_volume = volume.clamp(0.0, 1.0);
+        self.audio_beat = beat;
+        if self.phase != Phase::Storm || self.strike_in_progress {
+            return;
+        }
+        let volume = self.audio_volume;
+        let threshold = if beat { 0.22 } else { 0.42 };
+        if volume < threshold {
+            return;
+        }
+        let chance = if beat {
+            (volume * 0.65) as f64
+        } else {
+            (volume * 0.28) as f64
+        };
+        if ctx.rng.random() >= chance {
+            return;
+        }
+
+        self.strike_in_progress = true;
+        let ray_count = if volume > 0.85 {
+            10
+        } else if volume > 0.78 {
+            8
+        } else if volume > 0.70 {
+            6
+        } else if volume > 0.60 {
+            5
+        } else if volume > 0.48 {
+            3
+        } else if volume > 0.36 {
+            2
+        } else {
+            1
+        };
+        let branches_per_ray = ((volume * 5.0).floor() as usize).clamp(0, 5);
+        for _ in 0..ray_count {
+            self.setup_lightning_strike_capped(ctx, None, branches_per_ray);
+        }
+        self.finish_lightning_strike(ctx);
     }
 }

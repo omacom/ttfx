@@ -52,8 +52,15 @@ fn closest_xterm([r, g, b]: Rgb) -> u8 {
 /// codes 0..=255 in order, strict `<` so the first minimum wins (upstream
 /// hexterm.py hex_to_xterm).
 pub fn hex_to_xterm(hex_color: &str) -> u8 {
-    let rgb = parse_rgb(hex_color);
-    let key = u32::from_be_bytes([0, rgb[0], rgb[1], rgb[2]]);
+    let [r, g, b] = parse_rgb(hex_color);
+    rgb_to_xterm(r, g, b)
+}
+
+/// Closest xterm-256 code for raw RGB channels, sharing the same cache and tie
+/// behavior as [`hex_to_xterm`] without allocating a temporary hex string.
+pub fn rgb_to_xterm(r: u8, g: u8, b: u8) -> u8 {
+    let rgb = [r, g, b];
+    let key = u32::from_be_bytes([0, r, g, b]);
     HEX_TO_XTERM_CACHE.with(|cache| {
         if let Some(cached) = cache.borrow().get(&key).copied() {
             return cached;
