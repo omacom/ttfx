@@ -19,7 +19,7 @@
 ; its own, and a frame is handed to the kernel as one iovec per row. A row
 ; none of whose cells changed since the previous frame is not touched at all.
 ; A row with changed cells is rebuilt into its second buffer: the runs of
-; unchanged 8-cell blocks are copied from the previous bytes (each row records
+; unchanged BLOCK-cell blocks are copied from the previous bytes (each row records
 ; where every block's bytes start), and only the changed blocks are formatted
 ; from the handle grid.
 
@@ -30,6 +30,15 @@
 %define CR_HEAD         0
 %define CR_OWNER        4
 %define CR_LAYER        8
+; cells per dirty block: 4 or 8
+%ifndef BLOCK
+%define BLOCK           4
+%endif
+%if BLOCK == 4
+%define BLOCK_SHIFT     2
+%else
+%define BLOCK_SHIFT     3
+%endif
 %define OUTPUT_RESERVE  (1 << 36)
 ; POPCNT dst, scratch: dst = its own population count (SWAR below TIER 2).
 ; Clobbers scratch.
@@ -204,11 +213,11 @@ render_init:
     lea     rdi, [rax * 2 + 4096]
     call    reserve
     mov     [row_store], rax
-    ; and two arrays of 8-cell block starts per row: blocks + 1 entries +
+    ; and two arrays of BLOCK-cell block starts per row: blocks + 1 entries +
     ; slack
     mov     rax, [grid_width]
-    add     rax, 7
-    shr     rax, 3
+    add     rax, BLOCK - 1
+    shr     rax, BLOCK_SHIFT
     mov     [row_blocks], rax
     lea     rcx, [rax * 3]
     mov     [full_blocks], rcx          ; 3/4 of the row's blocks, times 4
@@ -449,14 +458,14 @@ coordinate_changed:
     mov     rcx, [ch_cell]
     cmp     [rcx + rdi * 4], eax
     je      .done
-    ; the new cell's record and the layer are needed after the unlink: start
-    ; their loads now (the NONE cell's address is harmless to prefetch)
+    ; the new cell's record is needed after the unlink: start its load now
+    cmp     eax, NONE
+    je      .unlink
     mov     rcx, rax
     shl     rcx, 4
     add     rcx, [cell_rec]
     prefetcht0 [rcx]
-    mov     rcx, [ch_layer]
-    prefetcht0 [rcx + rdi * 4]
+.unlink:
     push    rax
     call    cell_unlink
     pop     rax
@@ -537,7 +546,7 @@ repaint:
     ret
 
 ; row_dirty(rax=first cell of the row) -> rax = the number of the row's
-; 8-cell blocks with changed cells. When there are any, also writes the
+; BLOCK-cell blocks with changed cells. When there are any, also writes the
 ; row's block bitmap to [dirty_bits] (one bit per block, plus a set bit at
 ; index row_blocks: a sentinel for the run scan) and clears the row's dirty
 ; bytes. r14 = width, nonzero. Clobbers rcx, rdx, rsi, r8, r9, r10, r11,
@@ -594,7 +603,7 @@ row_dirty:
     cmp     eax, 0xffff
     je      .clean
 %endif
-    ; 8 block bits per 64 cells, gathered into whole words in rax (narrow
+    ; 64 / BLOCK block bits per 64 cells, gathered into whole words in rax (narrow
     ; stores would stall the word loads of the run scan)
     mov     rsi, rcx
     mov     r8, [dirty_bits]
@@ -603,6 +612,7 @@ row_dirty:
     xor     eax, eax
     xor     ecx, ecx
 .chunk:
+%if BLOCK == 8
 %if TIER >= 4
     vmovdqu64 zmm0, [rsi]
     vptestmq k1, zmm0, zmm0
@@ -632,9 +642,51 @@ row_dirty:
     movdqu  [rsi + 32], xmm4
     movdqu  [rsi + 48], xmm4
 %endif
+%else
+%if TIER >= 4
+    vmovdqu64 zmm0, [rsi]
+    vptestmd k1, zmm0, zmm0
+    kmovw   r11d, k1
+    vmovdqu64 [rsi], zmm1
+%elif TIER >= 3
+    vpcmpeqd ymm0, ymm2, [rsi]
+    vpcmpeqd ymm1, ymm2, [rsi + 32]
+    vmovmskps r11d, ymm0
+    vmovmskps edx, ymm1
+    shl     edx, 8
+    or      r11d, edx
+    xor     r11d, 0xffff
+    vmovdqu [rsi], ymm2
+    vmovdqu [rsi + 32], ymm2
+%else
+    movdqu  xmm0, [rsi]
+    movdqu  xmm1, [rsi + 16]
+    movdqu  xmm2, [rsi + 32]
+    movdqu  xmm3, [rsi + 48]
+    pcmpeqd xmm0, xmm4
+    pcmpeqd xmm1, xmm4
+    pcmpeqd xmm2, xmm4
+    pcmpeqd xmm3, xmm4
+    movmskps r11d, xmm3
+    shl     r11d, 4
+    movmskps edx, xmm2
+    or      r11d, edx
+    shl     r11d, 4
+    movmskps edx, xmm1
+    or      r11d, edx
+    shl     r11d, 4
+    movmskps edx, xmm0
+    or      r11d, edx
+    xor     r11d, 0xffff
+    movdqu  [rsi], xmm4
+    movdqu  [rsi + 16], xmm4
+    movdqu  [rsi + 32], xmm4
+    movdqu  [rsi + 48], xmm4
+%endif
+%endif
     shl     r11, cl
     or      rax, r11
-    add     ecx, 8
+    add     ecx, 64 / BLOCK
     cmp     ecx, 64
     jb      .next
     mov     [r8], rax
@@ -962,10 +1014,10 @@ row_rebuild:
     imul    rcx, r14
     lea     rcx, [r13 + rcx * 4]        ; handles of this row
     lea     rdx, [rcx + r14 * 4]        ; their end
-    shl     r12, 5
+    shl     r12, BLOCK_SHIFT + 2
     lea     rsi, [rcx + r12]
     mov     r12, rax
-    shl     rax, 5
+    shl     rax, BLOCK_SHIFT + 2
     add     rax, rcx
     cmp     rax, rdx
     cmovb   rdx, rax
@@ -993,7 +1045,7 @@ emit_blocks:
     jae     .done
     mov     [r9], edi
     add     r9, 4
-    lea     r12, [rsi + 8 * 4]
+    lea     r12, [rsi + BLOCK * 4]
     cmp     r12, rdx
     cmova   r12, rdx                    ; the block's end
 .quad:
