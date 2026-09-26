@@ -72,18 +72,13 @@
 
 section .text
 
-; chars_init: reserve every field array. Each starts at its own offset
-; within a page: a slot's fields would otherwise share their addresses' low
-; 12 bits, and a load of one then waits on a store to another (4K
-; aliasing), which a tick does all the time.
+; chars_init: reserve every field array. (Staggering them within a page
+; against 4K aliasing measured neutral overall and cost matrix 10%.)
 chars_init:
-%assign field_stagger 0
 %macro RESERVE_FIELD 3
-    mov     rdi, CHAR_LIMIT * %2 + 4096
+    mov     rdi, CHAR_LIMIT * %2
     call    reserve
-    add     rax, field_stagger
     mov     [%1], rax
-%assign field_stagger (field_stagger + 192) % 4096
 %endmacro
     CHAR_FIELDS RESERVE_FIELD
     mov     rdi, CHAR_LIMIT * 4
