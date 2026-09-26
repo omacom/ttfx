@@ -60,50 +60,88 @@ teardown).
 These are layout and algorithm wins, not ISA wins. AVX-512 only appears in the renderer's
 bounded copies, dirty-row scans and hashing. That agrees with §2.
 
-**All 37 effects (2026-09-25).** The engine now links into the Rust binary as
-`libttfx_asm.a` (feature `asm`, default on). Rust stays the front end and offers each run to
-`ttfx_asm_run` when the CPU has the v4 tier; `TTFX_ASM=0` forces Rust, `TTFX_ASM=force`
-fails loudly on a decline. Every effect and every option is ported, including ANSI input,
-`--wrap-text` and all three `--existing-color-handling` modes, so on a v4 CPU the asm engine
-takes every run.
+**All 37 effects, every CPU tier (2026-09-26).** The engine links into the Rust binary as
+`libttfx_asm.a` (feature `asm`, default on; without NASM the build warns and stays pure Rust).
+Rust stays the front end and offers each run to the asm engine, which declines before any
+output or runs the effect to the end. Every effect and option is supported, including ANSI
+input, `--wrap-text` and all `--existing-color-handling` modes.
 
-Verification: `tools/asm/oracle.sh <effect> full` for all 37 effects, 91,641 byte-identical
-cases (stdout, stderr and exit status against the Rust engine in the same binary), plus
-`cargo test --release --test asm_diff` (21 tests).
+- **Tiers:** the engine is assembled four times (x86-64 v1, v2, v3, v4) and the CPU's best
+  tier is picked at startup. `TTFX_ASM_TIER=n` forces one and `TTFX_ASM_SHOW_TIER=1` says
+  which engine ran. `tools/asm/isa-audit.sh` proves each object stays within its tier.
+  Verified natively (all tiers on Zen 5), under qemu-user (qemu64, Nehalem, Haswell) and on
+  real tier-3 hardware (Core Ultra 5 135U: 8.16x on one E-core).
+- **Threads:** unpaced runs with two or more CPUs render on a second thread from a per-frame
+  change log (`TTFX_ASM_THREADS=1` forces one thread). Output and signal/teardown
+  behaviour are identical.
+- **Verification:** `tools/asm/oracle.sh` (every effect, every option set, ANSI input under
+  every color mode; option sets that only reach an error must be marked), at every tier,
+  threaded and not; `qemu-oracle.sh`; `pty_compare.py`, `sigtest.py`, `resizetest.py`,
+  `closetest.py` for real ttys and signals; `cargo test --test asm_diff`.
 
-| effect | Rust ms | asm ms | × | effect | Rust ms | asm ms | × |
-|---|---:|---:|---:|---|---:|---:|---:|
-| beams | 207 | 29 | 7.1 | pour | 197 | 41 | 4.8 |
-| binarypath | 708 | 420 | 1.7 | print | 267 | 16 | 16.7 |
-| blackhole | 354 | 143 | 2.5 | rain | 168 | 50 | 3.4 |
-| bouncyballs | 284 | 66 | 4.3 | randomsequence | 41 | 9 | 4.6 |
-| bubbles | 416 | 103 | 4.0 | rings | 562 | 157 | 3.6 |
-| burn | 306 | 46 | 6.7 | scattered | 117 | 58 | 2.0 |
-| colorshift | 303 | 23 | 13.2 | slice | 51 | 31 | 1.6 |
-| crumble | 253 | 88 | 2.9 | slide | 77 | 30 | 2.6 |
-| decrypt | 379 | 34 | 11.1 | smoke | 160 | 27 | 5.9 |
-| errorcorrect | 247 | 31 | 8.0 | spotlights | 261 | 47 | 5.6 |
-| expand | 96 | 56 | 1.7 | spray | 120 | 48 | 2.5 |
-| fireworks | 294 | 140 | 2.1 | swarm | 567 | 245 | 2.3 |
-| highlight | 38 | 8 | 4.8 | sweep | 54 | 9 | 6.0 |
-| laseretch | 490 | 97 | 5.1 | synthgrid | 103 | 12 | 8.6 |
-| matrix | 153 | 59 | 2.6 | thunderstorm | 252 | 31 | 8.1 |
-| middleout | 67 | 31 | 2.2 | unstable | 143 | 75 | 1.9 |
-| orbittingvolley | 58 | 31 | 1.9 | vhstape | 184 | 36 | 5.1 |
-| overflow | 95 | 45 | 2.1 | waves | 414 | 27 | 15.3 |
-| | | | | wipe | 34 | 9 | 3.8 |
+Speed on a quiet Zen 5 (Ryzen 9 9955HX), `tools/asm/speed.py`: 200x50 canvas, 190x46 text,
+`--frame-rate 0`, output to /dev/null, best of 3-5. "1 core" pins to one CPU (single-threaded
+engine, the like-for-like comparison with the single-threaded Rust engine); "2 cores" pins to
+two physical cores (render thread on). Python is TerminalTextEffects 0.15.0 on CPython
+3.14.7, one run each, against the 2-core asm time (`speed.py --python`).
 
-(200×50 canvas, 190×46 text, `--frame-rate 0`, seed 1, pinned, best of 5, output to
-`/dev/null`; matrix and thunderstorm with `--virtual-clock`.) Geometric mean 4.1×.
-Effects dominated by per-character motion (binarypath, expand, slice, unstable,
-orbittingvolley, scattered) gain least: the time goes to path/bezier math and the libm calls
-that must stay bit-identical to Rust's.
+| effect | Python ms | Rust ms | asm ms (2 cores) | vs Rust, 1 core | vs Rust, 2 cores | vs Python |
+|---|---:|---:|---:|---:|---:|---:|
+| beams | 7415.5 | 206.5 | 11.3 | 13.20 | 18.27 | 656.1 |
+| binarypath | 19840.1 | 709.0 | 135.0 | 3.36 | 5.25 | 147.0 |
+| blackhole | 11890.4 | 351.8 | 50.2 | 5.43 | 7.01 | 236.8 |
+| bouncyballs | 9048.6 | 282.0 | 25.4 | 7.64 | 11.12 | 356.7 |
+| bubbles | 13733.6 | 413.5 | 34.4 | 7.20 | 12.02 | 399.1 |
+| burn | 8522.5 | 304.3 | 18.1 | 10.36 | 16.85 | 471.9 |
+| colorshift | 6782.8 | 299.7 | 17.7 | 15.53 | 16.94 | 383.5 |
+| crumble | 8664.4 | 251.0 | 42.7 | 4.21 | 5.88 | 203.1 |
+| decrypt | 10410.4 | 380.4 | 16.4 | 19.26 | 23.16 | 633.7 |
+| errorcorrect | 7690.2 | 245.3 | 17.6 | 9.80 | 13.95 | 437.4 |
+| expand | 3704.1 | 95.4 | 14.5 | 4.88 | 6.60 | 256.3 |
+| fireworks | 18098.3 | 295.6 | 56.4 | 3.99 | 5.24 | 321.1 |
+| highlight | 1446.2 | 37.9 | 3.4 | 11.32 | 11.10 | 423.1 |
+| laseretch | 18640.2 | 488.1 | 40.0 | 6.98 | 12.19 | 465.6 |
+| matrix | n/a | 153.1 | 18.5 | 5.65 | 8.29 | n/a |
+| middleout | 2575.6 | 69.1 | 9.6 | 6.27 | 7.23 | 269.4 |
+| orbittingvolley | 2032.5 | 57.4 | 13.5 | 2.87 | 4.26 | 150.8 |
+| overflow | 2724.6 | 94.7 | 10.7 | 6.49 | 8.86 | 254.9 |
+| pour | 6818.2 | 196.5 | 15.4 | 9.10 | 12.78 | 443.5 |
+| print | 8346.6 | 264.1 | 7.5 | 32.40 | 35.23 | 1113.5 |
+| rain | 5360.5 | 166.1 | 17.8 | 6.54 | 9.31 | 300.3 |
+| randomsequence | 1243.4 | 40.3 | 3.7 | 9.14 | 11.04 | 340.5 |
+| rings | 12681.0 | 553.4 | 94.2 | 4.62 | 5.87 | 134.6 |
+| scattered | 4027.2 | 117.4 | 19.4 | 4.03 | 6.05 | 207.4 |
+| slice | 2750.7 | 52.9 | 7.4 | 6.40 | 7.13 | 370.7 |
+| slide | 2690.9 | 75.8 | 10.2 | 5.09 | 7.45 | 264.6 |
+| smoke | 3917.2 | 160.0 | 10.4 | 11.94 | 15.38 | 376.7 |
+| spotlights | 9857.3 | 260.8 | 29.1 | 7.86 | 8.95 | 338.2 |
+| spray | 3425.1 | 120.3 | 23.6 | 3.59 | 5.10 | 145.3 |
+| swarm | 17582.1 | 574.5 | 79.1 | 4.94 | 7.26 | 222.3 |
+| sweep | 1683.3 | 52.8 | 5.5 | 10.10 | 9.65 | 307.3 |
+| synthgrid | 2680.0 | 102.3 | 7.0 | 15.03 | 14.62 | 383.0 |
+| thunderstorm | n/a | 243.3 | 20.7 | 11.28 | 11.73 | n/a |
+| unstable | 5125.1 | 142.9 | 27.5 | 3.49 | 5.20 | 186.3 |
+| vhstape | 7167.1 | 182.7 | 25.0 | 6.54 | 7.31 | 286.9 |
+| waves | 10669.1 | 410.6 | 15.2 | 22.21 | 27.04 | 702.7 |
+| wipe | 1360.8 | 35.1 | 3.3 | 10.33 | 10.73 | 415.9 |
+
+Geometric means over the 37 effects: **7.53x** faster than Rust on one core and **9.79x** on
+two cores; **322x** faster than Python (Rust alone: 33x) over the 35 effects without a fixed
+duration. When every effect was first ported (2026-09-25) the 1-core figure was 4.11x.
+
+What got it there, roughly in order of effect: data layout (SoA characters, pooled visuals, an
+incremental cell grid with per-row buffers); removing repeated work (path cursors, memoized
+easing and eased-factor tables, visuals interned by header, dozing characters that skip ticks
+where nothing shows, shared frame and segment lists, scene cloning in build phases); memory
+effects (a 4K-aliasing stagger between arrays, prefetching the next frame at retirement,
+huge-page control); and finally SIMD (batched motion 8 or 4 lanes wide, an 8-lane RNG) and
+the render thread. The slowest effects (orbittingvolley, spray, fireworks, binarypath,
+unstable) are bound by the main thread's motion batch, whose groups are sparse.
 
 **Next:**
 
-- motion math for the effects under 2.5× (batch the per-character path steps; vectorize
-  where the Rust rounding allows it);
-- the v3 and v1 tiers (§10), so the asm engine also runs on pre-AVX-512 CPUs;
+- pack sparse motion-batch lanes before the vector work;
+- orbittingvolley's render side, which is as busy as its main thread;
 - the generated CLI tables of §11.
 
 ## 1. Goals and non-goals
