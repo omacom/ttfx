@@ -1,0 +1,12 @@
+# middleout option sets (each also runs with every seed and input)
+--starting-color ff0000
+--starting-color 196 --expand-direction horizontal
+--expand-direction horizontal --center-movement-speed 0.3 --full-movement-speed 1.7
+--center-movement-speed 2.5 --full-movement-speed 0.05 --center-easing linear --full-easing out_bounce
+--center-easing in_out_back --full-easing in_expo --expand-direction vertical
+--center-easing out_elastic --full-easing in_out_circ --expand-direction horizontal
+--final-gradient-stops ff00ff 00ffff --final-gradient-steps 5
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction radial
+--final-gradient-stops 123456 --final-gradient-steps 4 --final-gradient-direction diagonal
+--final-gradient-stops 45 201 --final-gradient-steps 2 --starting-color 21

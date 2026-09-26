@@ -1,0 +1,16 @@
+# orbittingvolley option sets (each also runs with every seed and input)
+--top-launcher-symbol ▲ --right-launcher-symbol ▶ --bottom-launcher-symbol ▼ --left-launcher-symbol ◀
+--top-launcher-symbol @ --right-launcher-symbol 😀 --bottom-launcher-symbol é --left-launcher-symbol x
+--launcher-movement-speed 0.1 --launch-delay 5
+--launcher-movement-speed 5.0 --character-movement-speed 0.3
+--character-movement-speed 6 --character-easing linear
+--volley-size 0 --launch-delay 0
+--volley-size 1 --launch-delay 3
+--volley-size 0.5 --launch-delay 1 --character-easing in_out_bounce
+--volley-size 0.2 --launch-delay 100 --character-easing out_elastic
+--launch-delay 0 --character-easing in_back --launcher-movement-speed 2.5
+--character-easing in_out_expo --volley-size 0.08
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--final-gradient-stops ff00ff --final-gradient-direction vertical --launch-delay 10
+--final-gradient-stops 45 201 --final-gradient-steps 5 --final-gradient-direction diagonal
+--final-gradient-stops ff0000 00ff00 0000ff --final-gradient-steps 1 --final-gradient-direction radial --volley-size 0.1

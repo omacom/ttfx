@@ -2,7 +2,7 @@
 # Startup + throughput benchmark: ttfx vs the Python reference.
 set -u
 cd "$(dirname "$0")/../.."
-RUST=./target/release/ttfx
+RUST=${RUST:-./target/release/ttfx}
 export COLUMNS=120 LINES=40
 input=$(mktemp); trap 'rm -f "$input"' EXIT
 python3 -c "print('\n'.join('benchmark line %03d with some text to render' % i for i in range(30)))" > "$input"

@@ -4,7 +4,7 @@
 # unsupported-ANSI on STDERR; 2 usage errors).
 set -u
 cd "$(dirname "$0")/../.."
-RUST=./target/release/ttfx
+RUST=${RUST:-./target/release/ttfx}
 export COLUMNS=80 LINES=24
 pass=0; fail=0; failed=()
 

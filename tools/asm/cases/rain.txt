@@ -1,0 +1,16 @@
+# rain option sets (each also runs with every seed and input)
+--rain-colors ff0000
+--rain-colors 196 00ff00 21 --rain-symbols x
+--rain-symbols ▓ ░ 🌧 é
+--movement-speed 0.1-0.2
+--movement-speed 1-3 --movement-easing linear
+--movement-speed 0.5-0.5 --movement-easing out_bounce
+--movement-easing in_out_elastic --rain-colors 45 ffcc0d
+--movement-easing out_back --movement-speed 0.2-1.5
+--final-gradient-stops ff00ff 00ffff --final-gradient-steps 5
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction vertical
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction radial
+--final-gradient-stops 123456 --final-gradient-steps 4 --final-gradient-direction diagonal
+--final-gradient-stops 45 201 --final-gradient-steps 2
+--movement-speed inf-inf

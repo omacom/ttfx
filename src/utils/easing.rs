@@ -46,6 +46,44 @@ pub enum Easing {
 }
 
 impl Easing {
+    /// Assembly engine id for a named easing; custom curves use the Rust engine.
+    pub fn asm_id(&self) -> Option<i64> {
+        Some(match self {
+            Easing::Linear => 0,
+            Easing::InSine => 1,
+            Easing::OutSine => 2,
+            Easing::InOutSine => 3,
+            Easing::InQuad => 4,
+            Easing::OutQuad => 5,
+            Easing::InOutQuad => 6,
+            Easing::InCubic => 7,
+            Easing::OutCubic => 8,
+            Easing::InOutCubic => 9,
+            Easing::InQuart => 10,
+            Easing::OutQuart => 11,
+            Easing::InOutQuart => 12,
+            Easing::InQuint => 13,
+            Easing::OutQuint => 14,
+            Easing::InOutQuint => 15,
+            Easing::InExpo => 16,
+            Easing::OutExpo => 17,
+            Easing::InOutExpo => 18,
+            Easing::InCirc => 19,
+            Easing::OutCirc => 20,
+            Easing::InOutCirc => 21,
+            Easing::InBack => 22,
+            Easing::OutBack => 23,
+            Easing::InOutBack => 24,
+            Easing::InElastic => 25,
+            Easing::OutElastic => 26,
+            Easing::InOutElastic => 27,
+            Easing::InBounce => 28,
+            Easing::OutBounce => 29,
+            Easing::InOutBounce => 30,
+            Easing::CubicBezier(..) => return None,
+        })
+    }
+
     /// CLI parser for the 31 named functions (argutils.Ease.type_parser).
     pub fn parse(s: &str) -> Option<Easing> {
         Some(match s.to_lowercase().as_str() {

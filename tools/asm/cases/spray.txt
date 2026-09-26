@@ -1,0 +1,16 @@
+# spray option sets (each also runs with every seed and input)
+--spray-position n
+--spray-position ne --spray-volume 0.1
+--spray-position e --movement-speed-range 0.2-0.5 --movement-easing linear
+--spray-position se --spray-volume 1 --movement-easing in_out_bounce
+--spray-position s --movement-speed-range 2-2 --movement-easing out_elastic
+--spray-position sw --spray-volume 0.02 --movement-easing in_back
+--spray-position w --movement-speed-range 0.1-3.5 --movement-easing in_out_circ
+--spray-position nw --spray-volume 0.3 --movement-easing in_quad
+--spray-position center --movement-easing out_bounce
+--final-gradient-stops ff00ff 00ffff --final-gradient-steps 5
+--spray-position center --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction radial
+--spray-position n --final-gradient-stops 123456 --final-gradient-steps 4 --final-gradient-direction diagonal
+--final-gradient-stops 45 201 --final-gradient-steps 2 --final-gradient-direction vertical
+--movement-speed-range inf-inf

@@ -1,0 +1,320 @@
+; utils/graphics.asm - Gradient generation, fraction lookup and coordinate
+; mappings (src/utils/graphics.rs). Colors use the u64 format of ttfx.inc;
+; generated colors are plain RGB, stops keep their xterm codes.
+;
+; Gradients are NOT float lerps: channel deltas use Python floor division and
+; the exact end stop is appended per pair (plan.md §5.2).
+
+section .text
+
+; gradient_new(rdi=stops (u64 colors), esi=stop count, rdx=steps (i64),
+;              ecx=step count, r8=spectrum out) -> eax = spectrum length.
+; Gradient::new with do_loop = false. Step values reaching here are >= 1
+; (the CLI validates them), so the per-pair error path cannot trigger.
+gradient_new:
+    push    rbx
+    push    rbp
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    mov     r12, rdi
+    mov     r13d, esi
+    mov     r14, rdx
+    mov     r15d, ecx
+    mov     rbp, r8
+    xor     ebx, ebx                    ; spectrum length
+    cmp     r13d, 1
+    jne     .pairs
+    ; one stop: steps[0] copies of it
+    mov     rcx, [r14]
+    mov     rax, [r12]
+.single:
+    test    rcx, rcx
+    jle     .done
+    mov     [rbp + rbx * 8], rax
+    inc     ebx
+    dec     rcx
+    jmp     .single
+.pairs:
+    xor     r9d, r9d                    ; pair index
+.pair:
+    lea     eax, [r13d - 1]
+    cmp     r9d, eax
+    jae     .done
+    ; step count: steps[min(pair, count - 1)]
+    lea     eax, [r15d - 1]
+    cmp     r9d, eax
+    cmovb   eax, r9d
+    mov     r10, [r14 + rax * 8]        ; step_count
+    mov     eax, [r12 + r9 * 8]         ; start (RGB bits)
+    mov     r11, [r12 + r9 * 8 + 8]     ; end (the whole color)
+    ; per-channel start and floor-divided delta, channels in xmm-free regs
+    sub     rsp, 48
+    xor     ecx, ecx
+.channel:
+    mov     edx, eax
+    shl     ecx, 3
+    shr     edx, cl
+    shr     ecx, 3
+    movzx   edx, dl                     ; start channel (shift 0, 8, 16)
+    mov     [rsp + rcx * 8], rdx
+    mov     rdi, r11
+    and     edi, 0xffffff
+    shl     ecx, 3
+    shr     edi, cl
+    shr     ecx, 3
+    movzx   edi, dil
+    sub     rdi, rdx                    ; end - start
+    push    rax
+    mov     rax, rdi
+    cqo
+    idiv    r10
+    ; floor: adjust when the remainder is nonzero and signs differ
+    test    rdx, rdx
+    jz      .exact
+    xor     rdx, r10
+    jns     .exact
+    dec     rax
+.exact:
+    mov     [rsp + 8 + 24 + rcx * 8], rax   ; +8 for the pushed rax
+    pop     rax
+    inc     ecx
+    cmp     ecx, 3
+    jb      .channel
+    ; i from (spectrum non-empty ? 1 : 0) up to step_count - 1
+    xor     esi, esi
+    test    ebx, ebx
+    setnz   sil
+    mov     r8d, 255
+.step:
+    cmp     rsi, r10
+    jge     .pair_end
+    ; channel k: clamp(start + delta * i, 0, 255) << 8k
+%assign k 2
+%rep 3
+    mov     rax, [rsp + 24 + k * 8]
+    imul    rax, rsi
+    add     rax, [rsp + k * 8]
+    xor     edx, edx
+    test    rax, rax
+    cmovl   rax, rdx
+    cmp     rax, r8
+    cmovg   rax, r8
+  %if k == 2
+    mov     edi, eax
+  %else
+    shl     edi, 8
+    or      edi, eax
+  %endif
+  %assign k k - 1
+%endrep
+    mov     [rbp + rbx * 8], rdi
+    inc     ebx
+    inc     rsi
+    jmp     .step
+.pair_end:
+    add     rsp, 48
+    mov     [rbp + rbx * 8], r11        ; the exact end stop
+    inc     ebx
+    inc     r9d
+    jmp     .pair
+.done:
+    mov     eax, ebx
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbp
+    pop     rbx
+    ret
+
+; gradient_capacity(rdi=steps, rcx=step count, rsi=stop count) -> rax = an
+; upper bound on the spectrum length of Gradient::new(stops, steps).
+gradient_capacity:
+    mov     rax, 1
+    cmp     rsi, 1
+    jbe     .single
+    dec     rsi                         ; pairs
+    xor     edx, edx
+.pair:
+    cmp     rdx, rsi
+    jae     .done
+    lea     r8, [rcx - 1]
+    cmp     rdx, r8
+    cmovb   r8, rdx
+    mov     r8, [rdi + r8 * 8]
+    lea     rax, [rax + r8 + 1]
+    inc     rdx
+    jmp     .pair
+.single:
+    add     rax, [rdi]
+.done:
+    ret
+
+; gradient_at_fraction(rdi=spectrum, esi=length, xmm0=fraction) -> rax = color.
+; get_color_at_fraction: index = min(fraction * len as usize, len - 1), then
+; stepped down while fraction <= index/len and up while fraction >
+; (index + 1)/len - the exact float boundaries of the Python division.
+; NaN or negative fractions give index 0. Clobbers rcx, rdx, xmm1-xmm2.
+gradient_at_fraction:
+    mov     esi, esi
+    lea     rdx, [rsi - 1]              ; len - 1 (len 0 reads spectrum[-1])
+    test    esi, esi
+    jz      .pick
+    cvtsi2sd xmm1, rsi                  ; len
+    movapd  xmm2, xmm0
+    mulsd   xmm2, xmm1
+    cvttsd2si rcx, xmm2                 ; NaN/overflow give INT64_MIN
+    xor     eax, eax
+    test    rcx, rcx
+    cmovs   rcx, rax
+    cmp     rcx, rdx
+    cmova   rcx, rdx
+    mov     rdx, rcx
+.down:
+    test    rdx, rdx
+    jz      .up
+    cvtsi2sd xmm2, rdx
+    divsd   xmm2, xmm1
+    ucomisd xmm0, xmm2
+    ja      .up                         ; fraction > index/len (or NaN: stop)
+    jp      .up
+    dec     rdx
+    jmp     .down
+.up:
+    lea     rcx, [rdx + 1]
+    cmp     rcx, rsi
+    jae     .pick
+    cvtsi2sd xmm2, rcx
+    divsd   xmm2, xmm1
+    ucomisd xmm0, xmm2
+    jbe     .pick                       ; also NaN
+    mov     rdx, rcx
+    jmp     .up
+.pick:
+    mov     rax, [rdi + rdx * 8]
+    ret
+
+; gradient_map(rdi=spectrum, esi=length, rdx=min_row, rcx=max_row,
+;              r8=min_column, r9=max_column, [rsp+8]=direction) -> rax =
+; a dense map: map[(row - min_row) * width + (column - min_column)] = color.
+; build_coordinate_color_mapping; direction in GradientDirection order
+; (vertical, horizontal, radial, diagonal). Callers validate the bounds.
+gradient_map:
+    push    rbx
+    push    rbp
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    sub     rsp, 56
+    mov     [rsp], rdi                  ; spectrum
+    mov     [rsp + 8], rsi              ; length
+    mov     [rsp + 16], rdx             ; min_row
+    mov     [rsp + 24], rcx             ; max_row
+    mov     [rsp + 32], r8              ; min_column
+    mov     [rsp + 40], r9              ; max_column
+    mov     rax, [rsp + 56 + 48 + 8]
+    mov     [rsp + 48], rax             ; direction
+    mov     rbp, r9
+    sub     rbp, r8
+    inc     rbp                         ; width
+    mov     rax, rcx
+    sub     rax, rdx
+    inc     rax
+    imul    rax, rbp
+    lea     rdi, [rax * 8]
+    call    alloc
+    mov     r15, rax                    ; the map
+    mov     r12, [rsp + 16]             ; row
+.row:
+    cmp     r12, [rsp + 24]
+    jg      .done
+    mov     r13, [rsp + 32]             ; column
+.column:
+    cmp     r13, [rsp + 40]
+    jg      .next_row
+    mov     rax, [rsp + 48]
+    cmp     rax, 1
+    je      .horizontal
+    cmp     rax, 2
+    je      .radial
+    cmp     rax, 3
+    je      .diagonal
+    ; vertical: (row - row_offset) / (max_row - row_offset)
+    mov     rax, [rsp + 16]
+    dec     rax                         ; row_offset
+    mov     rcx, r12
+    sub     rcx, rax
+    mov     rdx, [rsp + 24]
+    sub     rdx, rax
+    jmp     .ratio
+.horizontal:
+    mov     rax, [rsp + 32]
+    dec     rax
+    mov     rcx, r13
+    sub     rcx, rax
+    mov     rdx, [rsp + 40]
+    sub     rdx, rax
+    jmp     .ratio
+.diagonal:
+    ; ((row - ro) * 2 + (column - co)) / ((max_row - ro) * 2 + (max_column - co))
+    mov     rax, [rsp + 16]
+    dec     rax
+    mov     rcx, r12
+    sub     rcx, rax
+    add     rcx, rcx
+    mov     rdx, [rsp + 24]
+    sub     rdx, rax
+    add     rdx, rdx
+    mov     rax, [rsp + 32]
+    dec     rax
+    mov     r8, r13
+    sub     r8, rax
+    add     rcx, r8
+    mov     r8, [rsp + 40]
+    sub     r8, rax
+    add     rdx, r8
+.ratio:
+    cvtsi2sd xmm0, rcx
+    cvtsi2sd xmm1, rdx
+    divsd   xmm0, xmm1
+    jmp     .color
+.radial:
+    mov     rdi, [rsp + 16]
+    mov     rsi, [rsp + 24]
+    mov     rdx, [rsp + 32]
+    mov     rcx, [rsp + 40]
+    mov     r8, r12
+    shl     r8, 32
+    mov     eax, r13d
+    or      r8, rax
+    call    find_normalized_distance_from_center
+.color:
+    mov     rdi, [rsp]
+    mov     rsi, [rsp + 8]
+    call    gradient_at_fraction
+    mov     rcx, r12
+    sub     rcx, [rsp + 16]
+    imul    rcx, rbp
+    add     rcx, r13
+    sub     rcx, [rsp + 32]
+    mov     [r15 + rcx * 8], rax
+    inc     r13
+    jmp     .column
+.next_row:
+    inc     r12
+    jmp     .row
+.done:
+    mov     rax, r15
+    add     rsp, 56
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbp
+    pop     rbx
+    ret
+
+

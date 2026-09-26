@@ -1,0 +1,10 @@
+# vhstape option sets (each also runs with every seed and input)
+--total-glitch-time 60 --glitch-line-chance 0.5 --noise-chance 0.05
+--total-glitch-time 40 --glitch-line-chance 1 --noise-chance 0 --glitch-line-colors ff0000 00ff00 --noise-colors 123456 196
+--total-glitch-time 30 --glitch-line-chance 0 --noise-chance 1 --noise-colors 45 --glitch-wave-colors 00ff00 0000ff
+--total-glitch-time 1 --glitch-line-chance 1 --noise-chance 1
+--total-glitch-time 80 --glitch-line-colors 9 --final-gradient-stops ff00ff 00ffff --final-gradient-steps 5
+--total-glitch-time 50 --glitch-line-chance 0.2 --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--total-glitch-time 50 --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction radial
+--total-glitch-time 50 --noise-chance 0.02 --final-gradient-stops 45 201 --final-gradient-direction diagonal
+--total-glitch-time 120 --glitch-line-chance 0.1 --noise-chance 0.01 --glitch-line-colors ffffff 111111 222222 333333 444444 555555 666666

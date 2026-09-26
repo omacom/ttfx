@@ -1,0 +1,12 @@
+# spotlights option sets (each also runs with every seed and input)
+--search-duration 40 --beam-width-ratio 0.5 --beam-falloff 0
+--search-duration 25 --beam-width-ratio 4.5 --beam-falloff 0.9
+--search-duration 30 --beam-falloff 2.5 --spotlight-count 1
+--search-duration 1 --spotlight-count 6 --search-speed-range 0.1-2.5
+--search-duration 50 --search-speed-range 1.5-1.5 --beam-width-ratio 100
+--search-duration 20 --beam-falloff inf --beam-width-ratio inf
+--search-duration 35 --spotlight-count 2 --final-gradient-stops ff0000 00ff00 0000ff 196 --final-gradient-steps 3 7
+--search-duration 15 --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction horizontal
+--search-duration 15 --final-gradient-stops 45 201 --final-gradient-steps 5 --final-gradient-direction radial
+--search-duration 15 --final-gradient-stops ffffff --final-gradient-direction diagonal --beam-falloff 0.05
+--search-speed-range inf-inf --search-duration 1

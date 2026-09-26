@@ -118,7 +118,6 @@ pub struct Terminal {
     pub input_colors_frequency: ColorFrequency,
     terminal_dimensions: (i64, i64),
     resize_seen_at: Option<Instant>,
-    layout: Layout,
     /// Pre-wrap input line lengths — all `compute_layout` needs from the input,
     /// so a resize can re-derive the geometry without re-preprocessing.
     input_line_lengths: Vec<i64>,
@@ -228,7 +227,6 @@ impl Terminal {
             input_colors_frequency,
             terminal_dimensions,
             resize_seen_at: None,
-            layout,
             input_line_lengths,
             canvas_column_offset,
             canvas_row_offset,
@@ -620,23 +618,12 @@ impl Terminal {
     /// exactly where it was, and restarting for those is pure loss. Explicitly
     /// ignored dimensions are fixed by definition.
     pub fn resize_settled(&mut self) -> bool {
-        const QUIET: std::time::Duration = std::time::Duration::from_millis(50);
-
-        if crate::take_terminal_resize() {
-            self.resize_seen_at = Some(Instant::now());
-        }
-        match self.resize_seen_at {
-            Some(seen) if seen.elapsed() >= QUIET => self.resize_seen_at = None,
-            _ => return false,
-        }
-        if self.config.ignore_terminal_dimensions {
-            return false;
-        }
-        let (width, height) = get_terminal_dimensions();
-        if (width, height) == self.terminal_dimensions {
-            return false;
-        }
-        compute_layout(&self.config, &self.input_line_lengths, width, height) != self.layout
+        resize_settled(
+            &mut self.resize_seen_at,
+            &self.config,
+            &self.input_line_lengths,
+            self.terminal_dimensions,
+        )
     }
 
     /// After a resize: go back to the top of the area this run allocated, wipe
@@ -701,9 +688,38 @@ impl Terminal {
     }
 }
 
+/// [`Terminal::resize_settled`] for a run described only by its settings,
+/// input line lengths and starting dimensions - what the assembly engine's
+/// runs are, as far as Rust can see them.
+pub fn resize_settled(
+    seen_at: &mut Option<Instant>,
+    config: &TerminalConfig,
+    line_lengths: &[i64],
+    dimensions: (i64, i64),
+) -> bool {
+    const QUIET: std::time::Duration = std::time::Duration::from_millis(50);
+
+    if crate::take_terminal_resize() {
+        *seen_at = Some(Instant::now());
+    }
+    match *seen_at {
+        Some(seen) if seen.elapsed() >= QUIET => *seen_at = None,
+        _ => return false,
+    }
+    if config.ignore_terminal_dimensions {
+        return false;
+    }
+    let (width, height) = get_terminal_dimensions();
+    if (width, height) == dimensions {
+        return false;
+    }
+    compute_layout(config, line_lengths, width, height)
+        != compute_layout(config, line_lengths, dimensions.0, dimensions.1)
+}
+
 /// shutil.get_terminal_size semantics: COLUMNS/LINES env vars win; else query
 /// the tty; on failure (80, 24).
-fn get_terminal_dimensions() -> (i64, i64) {
+pub fn get_terminal_dimensions() -> (i64, i64) {
     let env_dim = |name: &str| -> Option<i64> {
         std::env::var(name).ok()?.parse::<i64>().ok()
     };

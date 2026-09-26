@@ -1,0 +1,11 @@
+# laseretch option sets (each also runs with every seed and input)
+--etch-speed 3 --etch-delay 0
+--etch-speed 1 --etch-delay 4 --spark-cooling-frames 1
+--etch-speed 10 --spark-cooling-frames 60
+--etch-pattern row_top_to_bottom
+--etch-pattern center_to_outside --etch-speed 5
+--cool-gradient-stops ffffff --laser-gradient-stops 196 --spark-gradient-stops 000000 --final-gradient-stops ff0000 --final-gradient-steps 1
+--cool-gradient-stops 21 46 226 --laser-gradient-stops 111111 eeeeee 00ff00 --spark-gradient-stops ffffff 202 --spark-cooling-frames 3
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal --final-gradient-frames 1
+--final-gradient-stops 45 201 226 --final-gradient-steps 20 --final-gradient-direction radial --etch-delay 2
+--final-gradient-direction diagonal --final-gradient-frames 9 --etch-speed 2

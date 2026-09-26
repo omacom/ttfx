@@ -1,0 +1,16 @@
+# bouncyballs option sets (each also runs with every seed and input)
+--ball-colors ff0000
+--ball-colors 196 00ff00 45 0000ff --ball-symbols @ ● ◉
+--ball-symbols x --ball-delay 0
+--ball-delay 1 --movement-speed 0.2
+--ball-delay 9 --movement-speed 1.5 --movement-easing linear
+--movement-easing in_out_elastic --movement-speed 0.8
+--movement-easing out_expo --ball-colors 9 ffcc0d
+--movement-easing in_back --ball-delay 2
+--final-gradient-stops ff00ff 00ffff --final-gradient-steps 5
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction vertical
+--final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction radial
+--final-gradient-stops 123456 --final-gradient-steps 4 --final-gradient-direction diagonal
+--final-gradient-stops 45 201 --final-gradient-steps 2 --ball-colors 21 202
+--movement-speed 0.05 --ball-delay 5

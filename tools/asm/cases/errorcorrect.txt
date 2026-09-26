@@ -1,0 +1,5 @@
+# Every option; error-pairs inf saturates the pair count, 0.001 gives no pairs on small inputs.
+--error-pairs 0.02 --swap-delay 1 --error-color 196 --correct-color 00ff00 --movement-speed 0.3 --final-gradient-stops ff0000 33 00ff88 --final-gradient-steps 1 4 --final-gradient-direction horizontal
+--error-pairs inf --swap-delay 1 --movement-speed inf --final-gradient-stops ffffff --final-gradient-steps 1 --final-gradient-direction radial
+--error-pairs 0.3 --swap-delay 9 --error-color 112233 --correct-color 250 --movement-speed 4 --final-gradient-stops 000000 0000ff --final-gradient-steps 2 7 1 --final-gradient-direction diagonal
+--error-pairs 0.001 --swap-delay 3 --final-gradient-direction vertical

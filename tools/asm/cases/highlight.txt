@@ -1,0 +1,12 @@
+# highlight option sets (each also runs with every seed and input)
+--highlight-brightness 2.5 --highlight-width 3
+--highlight-brightness 0.4 --highlight-width 1 --highlight-direction column_left_to_right
+--highlight-direction column_right_to_left --highlight-width 20
+--highlight-direction row_top_to_bottom --highlight-brightness 1
+--highlight-direction row_bottom_to_top --final-gradient-stops ff00ff 00ffff --final-gradient-steps 5
+--highlight-direction diagonal_top_right_to_bottom_left --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--highlight-direction diagonal_top_left_to_bottom_right --final-gradient-direction radial
+--highlight-direction diagonal_bottom_right_to_top_left --final-gradient-direction diagonal --highlight-width 12
+--highlight-direction center_to_outside --final-gradient-stops 45 201 --highlight-brightness 3
+--highlight-direction outside_to_center --final-gradient-stops 9 --final-gradient-steps 4 --highlight-brightness 0.05
+--final-gradient-stops 000000 ffffff 123456 --final-gradient-steps 2 --highlight-width 50 --highlight-brightness 10

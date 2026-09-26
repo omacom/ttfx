@@ -1,0 +1,22 @@
+# pour option sets (each also runs with every seed and input)
+--pour-direction up
+--pour-direction left --pour-speed 1
+--pour-direction right --pour-speed 5 --gap 0
+--pour-direction down --gap 3 --movement-easing linear
+--pour-direction up --movement-easing out_bounce --movement-speed-range 0.1-2.5
+--pour-direction left --movement-easing in_out_elastic --movement-speed-range 1-1
+--pour-direction right --movement-easing in_back --gap 2 --pour-speed 3
+--movement-easing out_elastic --movement-speed-range 0.05-0.2 --final-gradient-frames 1
+--movement-easing in_expo --movement-speed-range 1.5-3 --pour-direction up
+--movement-easing in_out_back --pour-speed 100 --gap 5 --pour-direction left
+--starting-color 45 --final-gradient-direction radial
+--starting-color 000000 --final-gradient-direction diagonal --pour-direction right
+--final-gradient-stops ff0000 00ff00 0000ff --final-gradient-steps 3 7 --final-gradient-direction horizontal
+--final-gradient-stops 45 201 --final-gradient-steps 5 --final-gradient-frames 2
+--final-gradient-stops ffffff --final-gradient-steps 4 --pour-direction left
+--final-gradient-stops ff00ff 00ffff 9 abcdef --final-gradient-steps 1 5 20 --final-gradient-frames 5
+--final-gradient-steps 1 --final-gradient-frames 3 --movement-easing in_out_bounce
+!--final-gradient-frames 0
+!--final-gradient-frames=-3
+--movement-easing out_circ --pour-direction down --pour-speed 7 --gap 1 --starting-color ff8800
+--movement-speed-range inf-inf

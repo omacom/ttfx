@@ -4,7 +4,7 @@
 set -u
 cd "$(dirname "$0")/../.."
 
-RUST=./target/release/ttfx
+RUST=${RUST:-./target/release/ttfx}
 PY="python3 tools/parity/dump.py"
 export COLUMNS=80 LINES=24
 FILTER="${1:-}"

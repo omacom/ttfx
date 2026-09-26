@@ -1,0 +1,8 @@
+# smoke option sets (each also runs with every seed and input)
+--use-whole-canvas
+--starting-color ff0000 --smoke-symbols x y z --smoke-gradient-stops 000000
+--smoke-symbols ▓ --smoke-gradient-stops 21 196 226 --final-gradient-stops ffffff --final-gradient-steps 1
+--use-whole-canvas --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-steps 3 9 --final-gradient-direction horizontal
+--final-gradient-stops 45 201 226 --final-gradient-steps 20 --final-gradient-direction radial --starting-color 244
+--use-whole-canvas --final-gradient-direction diagonal --smoke-symbols 😀 ǅ . --smoke-gradient-stops 111111 eeeeee 00ff00
+--smoke-symbols a b c d e f g h --smoke-gradient-stops 000000 --final-gradient-stops ffffff

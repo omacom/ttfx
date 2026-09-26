@@ -138,6 +138,27 @@ fn main() -> ExitCode {
     }
 
     let result = loop {
+        // The assembly engine takes the run when it has this effect and this
+        // CPU runs one of its tiers; otherwise it declines untouched.
+        let offered = ttfx::asm::try_run(ttfx::asm::Run {
+            effect: effect_command,
+            input: &input_data,
+            config: &config,
+            rng: &mut rng,
+            parity_dump: cli.parity_dump,
+            virtual_clock: cli.virtual_clock,
+            max_frames: cli.max_frames,
+            tty_output,
+        });
+        match offered {
+            Some(Ok(ttfx::engine::effect::RunOutcome::TerminalResized)) => {
+                config.reuse_canvas = false;
+                continue;
+            }
+            Some(done) => break done.map(|_| ()),
+            None => {}
+        }
+
         let clock = if cli.parity_dump || cli.virtual_clock {
             ttfx::engine::ctx::Clock::virtual_with_frame_rate(config.frame_rate)
         } else {
