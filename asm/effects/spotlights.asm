@@ -677,13 +677,28 @@ spl_illuminate:
     push    r15
     sub     rsp, CIRCLE_ITER_size + 16
     ; [rsp] the ellipse's a^2/b^2 (CIRCLE_ITER), [rsp + 72] last column
-    inc     dword [spl_stamp]
-    mov     qword [spl_next_count], 0
-    ; the live spotlights' coordinates
+    ; the live spotlights' coordinates; the frame repeats the last one
+    ; exactly when they, the range and the expand phase are unchanged
+    ; (spotlights move under a cell a frame), and then nothing is redone
+    xor     r12d, r12d                  ; nonzero once something changed
+    mov     rax, [spl_range]
+    cmp     rax, [spl_prev_range]
+    setne   r12b
+    mov     [spl_prev_range], rax
+    mov     rax, [spl_live]
+    cmp     rax, [spl_prev_live]
+    setne   cl
+    or      r12b, cl
+    mov     [spl_prev_live], rax
+    movzx   eax, byte [spl_expanding]
+    cmp     al, [spl_prev_expanding]
+    setne   cl
+    or      r12b, cl
+    mov     [spl_prev_expanding], al
     xor     ebx, ebx
 .coords:
     cmp     rbx, [spl_live]
-    jae     .gather
+    jae     .changed
     mov     rax, [spl_slots]
     mov     ecx, [rax + rbx * 4]
     mov     rdx, rbx
@@ -691,12 +706,27 @@ spl_illuminate:
     add     rdx, [spl_coords]
     mov     rax, [ch_col]
     movsxd  rax, dword [rax + rcx * 4]
+    cmp     [rdx], rax
+    setne   sil
+    or      r12b, sil
     mov     [rdx], rax
     mov     rax, [ch_row]
     movsxd  rax, dword [rax + rcx * 4]
+    cmp     [rdx + 8], rax
+    setne   sil
+    or      r12b, sil
     mov     [rdx + 8], rax
     inc     rbx
     jmp     .coords
+.changed:
+    cmp     byte [spl_lit_once], 0
+    je      .fresh
+    test    r12b, r12b
+    jz      .same
+.fresh:
+    mov     byte [spl_lit_once], 1
+    inc     dword [spl_stamp]
+    mov     qword [spl_next_count], 0
 .gather:
     xor     r15d, r15d                  ; spotlight index
 .ellipse:
@@ -865,6 +895,7 @@ spl_illuminate:
     mov     [spl_next], rax
     mov     rax, [spl_next_count]
     mov     [spl_lit_count], rax
+.same:
     add     rsp, CIRCLE_ITER_size + 16
     pop     r15
     pop     r14
@@ -1056,7 +1087,11 @@ spl_search_left:    resq 1
 spl_edge:           resq 1          ; f64
 spl_falloff_width:  resq 1          ; f64
 spl_core2:          resq 1          ; f64: squared distances below are lit
+spl_prev_range:     resq 1          ; the last illumination's inputs
+spl_prev_live:      resq 1
 spl_stamp:          resd 1
+spl_prev_expanding: resb 1
+spl_lit_once:       resb 1
 alignb 16
 spl_batch:          resb SPL_BATCH * 16 ; SPL_BE entries
 spl_searching:      resb 1
