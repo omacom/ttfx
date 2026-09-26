@@ -362,7 +362,7 @@ rng_refill:
 
 ; rng_below(rdi=n > 0) -> rax in [0, n): bit-mask rejection sampling.
 ; n == 1 still draws (and may reject) exactly like Rust's randbelow.
-; Clobbers rcx, rdx, r8.
+; Clobbers rcx, rdx, r8-r10.
 rng_below:
     push    rbx
     push    r12
@@ -385,16 +385,57 @@ rng_below:
     mov     eax, 64
     sub     eax, ebx
     mov     ebx, eax                    ; shift = 64 - bits
-    ; the position stays in rdx through the rejection loop
+    ; the position stays in rdx through the rejection loop. Rejections are
+    ; unpredictable (up to half the draws), so four draws are tested at
+    ; once without branches and the first accepted one is taken; only four
+    ; rejections in a row loop.
     lea     r8, [rng_buf]
     mov     rdx, [rng_pos]
 %if TIER < 3
     mov     ecx, ebx
 %endif
 .again:
+    cmp     rdx, RNG_BATCH - 4
+    ja      .single
+    xor     r9d, r9d                    ; bit i: draw i is accepted
+%assign i 3
+%rep 4
+    mov     r10, [r8 + rdx * 8 + i * 8]
+%if TIER >= 3
+    shrx    r10, r10, rbx
+%else
+    shr     r10, cl
+%endif
+    cmp     r10, r12
+    adc     r9d, r9d
+%assign i i - 1
+%endrep
+    test    r9d, r9d
+    jz      .rejected
+%if TIER >= 3
+    tzcnt   r9d, r9d
+%else
+    bsf     r9d, r9d
+%endif
+    add     rdx, r9
+    mov     rax, [r8 + rdx * 8]
+    inc     rdx
+%if TIER >= 3
+    shrx    rax, rax, rbx
+%else
+    shr     rax, cl
+%endif
+    mov     [rng_pos], rdx
+    pop     r12
+    pop     rbx
+    ret
+.rejected:
+    add     rdx, 4
+    jmp     .again
+.single:
+    ; the batch's last draws, one at a time
     cmp     rdx, RNG_BATCH
     jae     .refill
-.take:
     mov     rax, [r8 + rdx * 8]
     inc     rdx
 %if TIER >= 3
@@ -411,7 +452,7 @@ rng_below:
 .refill:
     call    rng_refill
     xor     edx, edx
-    jmp     .take
+    jmp     .again
 
 ; rng_randint(rdi=a, rsi=b) -> rax in [a, b].
 rng_randint:
