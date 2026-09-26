@@ -38,7 +38,7 @@
 section .text
 
 scenes_init:
-    mov     rdi, 2 * SCENE_LIMIT * SCENE_SIZE
+    mov     rdi, SCENE_COLD + SCENE_LIMIT * SCENE_SIZE
     call    reserve
     mov     [scenes], rax
     mov     rdi, SCENE_LIMIT * 16

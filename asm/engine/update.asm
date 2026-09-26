@@ -32,6 +32,8 @@
 ; during update ahead of the ticking slot rejoins this update's snapshot,
 ; so it ticks exactly where Rust ticks it.
 
+%define UPD_STAGGER     640         ; bytes between the bitmaps' page offsets
+
 section .text
 
 ; update_init: once per run. chars_init already runs it, since input parsing
@@ -39,16 +41,19 @@ section .text
 update_init:
     cmp     qword [active_bits], 0
     jne     .done
-    mov     rdi, 4 * (CHAR_LIMIT / 8) + CHAR_LIMIT
+    ; the arrays are staggered within a page: the same word of two of them
+    ; would share its address's low 12 bits, and a load then waits on a
+    ; store to the other (4K aliasing)
+    mov     rdi, 4 * (CHAR_LIMIT / 8) + CHAR_LIMIT + 5 * UPD_STAGGER
     call    reserve
     mov     [active_bits], rax
-    add     rax, CHAR_LIMIT / 8
+    add     rax, CHAR_LIMIT / 8 + UPD_STAGGER
     mov     [snapshot_bits], rax
-    add     rax, CHAR_LIMIT / 8
+    add     rax, CHAR_LIMIT / 8 + UPD_STAGGER
     mov     [candidate_bits], rax
-    add     rax, CHAR_LIMIT / 8
+    add     rax, CHAR_LIMIT / 8 + UPD_STAGGER
     mov     [doze_bits], rax
-    add     rax, CHAR_LIMIT / 8
+    add     rax, CHAR_LIMIT / 8 + UPD_STAGGER
     mov     [ch_wake], rax
     mov     dword [upd_cursor], -1
     mov     dword [doze_slot], -1

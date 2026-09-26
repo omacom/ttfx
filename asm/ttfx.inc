@@ -199,7 +199,7 @@ global %1
 %define SCENE_LIMIT         (1 << 24)
 %define SCENE_SIZE          32
 %define SCENE_SHIFT         5
-%define SCENE_COLD          (SCENE_LIMIT * SCENE_SIZE)
+%define SCENE_COLD          (SCENE_LIMIT * SCENE_SIZE + 2080)  ; off the hot half's page offset
 %define SC_FRAMES           0           ; u64 pointer to the frame array
 %define SC_COUNT            8           ; u32 frames
 %define SC_HEAD             12          ; u32 head of the remaining-frames queue
