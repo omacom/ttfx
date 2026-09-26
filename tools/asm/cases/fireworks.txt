@@ -1,6 +1,6 @@
 # fireworks option sets (each also runs with every seed and input)
 --explode-anywhere
---firework-colors ff0000 00ff00 0000ff 196 --firework-symbol "*"
+--firework-colors ff0000 00ff00 0000ff 196 --firework-symbol *
 --firework-symbol ▓ --firework-volume 0.3 --launch-delay 5
 --firework-volume 0 --launch-delay 0
 --firework-volume 1 --explode-distance 1
