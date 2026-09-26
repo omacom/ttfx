@@ -52,6 +52,8 @@
 ; a clean gap of fewer blocks than this between dirty runs is formatted
 ; along with them: a copy has a fixed cost of several blocks' formatting
 %define MIN_GAP         4
+; cells per dirty chunk (the coarse summary of dirty_cells)
+%define CHUNK_SHIFT     6
 %define OUTPUT_RESERVE  (1 << 36)
 ; POPCNT dst, scratch: dst = its own population count (SWAR below TIER 2).
 ; Clobbers scratch.
@@ -137,6 +139,17 @@
 %%done:
 %endmacro
 
+; MARK_DIRTY cell, scratch: the cell changed; so did its CHUNK-cell chunk,
+; which render_frame checks before it scans a row's cells. cell is a 64-bit
+; register; both are clobbered.
+%macro MARK_DIRTY 2
+    mov     %2, [dirty_cells]
+    mov     byte [%2 + %1], 1
+    shr     %1, CHUNK_SHIFT
+    add     %1, [dirty_chunks]
+    mov     byte [%1], 1
+%endmacro
+
 section .rodata
 align 8
 pc_55:          dq 0x5555555555555555
@@ -193,14 +206,11 @@ render_init:
     call    alloc
     mov     [handle_grid], rax
     mov     rdi, CHAR_LIMIT * 8
-    call    reserve
+    call    reserve_small
     mov     [rs_link], rax
     mov     rdi, CHAR_LIMIT * 8
-    call    reserve
+    call    reserve_small
     mov     [rs_cell], rax
-    mov     rdi, CHAR_LIMIT * 4
-    call    reserve
-    mov     [rs_handle], rax
     mov     rdi, [grid_cells]
     lea     rdi, [rdi * 8 + 64]
     call    reserve
@@ -288,20 +298,29 @@ render_init:
     ; the rows' iovecs, top row first, and the frame's: one slot before
     ; the rows (prefix / header) and one after them (the dump's trailing
     ; newline)
-    mov     rdi, rbx
+    lea     rdi, [rbx + 2]
     shl     rdi, 4
-    add     rdi, 64
-    call    alloc
-    mov     [row_iov], rax
-    mov     rdi, rbx
-    shl     rdi, 4
-    add     rdi, 64
     call    alloc
     mov     [frame_iov], rax
+    add     rax, 16
+    mov     [row_iov], rax
+    lea     rdi, [rbx + 2]
+    shl     rdi, 4
+    call    alloc
+    mov     [iov_scratch], rax
     mov     rdi, [grid_cells]
     add     rdi, 128
     call    alloc
     mov     [dirty_cells], rax
+    mov     rdi, [grid_cells]
+    shr     rdi, CHUNK_SHIFT
+    add     rdi, 64
+    call    alloc
+    mov     [dirty_chunks], rax
+    mov     rdi, [grid_height]
+    add     rdi, 64
+    call    alloc
+    mov     [dirty_rows], rax
     mov     rdi, [grid_cells]
     lea     rdi, [rdi * 4 + 64]
     call    alloc
@@ -370,6 +389,8 @@ enter_cell:
     mov     rcx, [ch_cell]
     mov     [rcx + rdi * 4], eax
     mov     rcx, [log_ptr]
+    cmp     byte [log_handles], 0
+    je      .unlogged
     mov     rdx, [ch_handle]
     mov     edx, [rdx + rdi * 4]
     mov     [rcx], edi                  ; LOG_HANDLE
@@ -386,15 +407,65 @@ enter_cell:
     add     rcx, 24
     mov     [log_ptr], rcx
     ret
+.unlogged:
+    ; the renderer reads the visual from ch_handle
+    mov     rdx, [ch_layer]
+    mov     edx, [rdx + rdi * 4]
+    mov     [rcx + 4], edx
+    mov     edx, edi
+    or      edx, LOG_LAYER
+    mov     [rcx], edx
+    xor     edx, LOG_LAYER | LOG_MOVE
+    mov     [rcx + 8], edx
+    mov     [rcx + 12], eax
+    add     rcx, 16
+    mov     [log_ptr], rcx
+    ret
 
-; coordinate_changed(edi=slot): the character's current coordinate changed;
-; a visible character that changes cells logs the move. Clobbers rax, rcx,
-; rdx.
+; handle_direct(edi=slot, eax=handle, ecx=its cell): SET_HANDLE without a
+; render thread: the cell shows the visual at once when the character owns
+; it. The grid is only the renderer's between frames, and one whose move is
+; still in the log settles when the log is replayed. Clobbers rcx.
+handle_direct:
+    push    rdx
+    mov     rdx, [owner_grid]
+    cmp     [rdx + rcx * 4], edi
+    jne     .done
+    mov     rdx, [handle_grid]
+    cmp     [rdx + rcx * 4], eax
+    je      .done
+    mov     [rdx + rcx * 4], eax
+    MARK_DIRTY rcx, rdx
+.done:
+    pop     rdx
+    ret
+
+; coordinate_changed(edi=slot, rsi=its new coordinate, packed): the
+; character's current coordinate changed (set_coordinate); a visible
+; character that changes cells logs the move. Clobbers rax, rcx, rdx.
 coordinate_changed:
     mov     rax, [ch_flags]
     test    word [rax + rdi * 2], CF_VISIBLE
     jz      .done
-    CELL_OF
+    ; the cell, as CELL_OF
+    mov     rcx, rsi
+    sar     rcx, 32
+    movsxd  rdx, esi
+    mov     rax, rcx
+    add     rax, [co_rbase]
+    cmp     rax, [co_rspan]
+    ja      .outside
+    mov     rax, rdx
+    add     rax, [co_cbase]
+    cmp     rax, [co_cspan]
+    ja      .outside
+    imul    rcx, [grid_width]
+    add     rdx, [co_cell0]
+    lea     rax, [rcx + rdx]
+    jmp     .cell
+.outside:
+    mov     eax, NONE
+.cell:
     mov     rcx, [ch_cell]
     mov     edx, [rcx + rdi * 4]
     cmp     edx, eax
@@ -476,8 +547,7 @@ render_apply:
     cmp     [rdx + rcx * 4], eax
     je      .next
     mov     [rdx + rcx * 4], eax
-    mov     rdx, [dirty_cells]
-    mov     byte [rdx + rcx], 1
+    MARK_DIRTY rcx, rdx
     jmp     .next
 .layer:
     ; the cell picks its owner again
@@ -544,8 +614,8 @@ paint_rec:
     mov     ecx, [rcx + rdi * 4]
     mov     rdx, [handle_grid]
     mov     [rdx + rax * 4], ecx
-    mov     rdx, [dirty_cells]
-    mov     byte [rdx + rax], 1
+    mov     rcx, rax
+    MARK_DIRTY rcx, rdx
 .keep:
     ret
 .other:
@@ -647,8 +717,8 @@ cell_rewin:
     mov     ecx, [space_handle]
     mov     [rdx + rax * 4], ecx
 .dirty:
-    mov     rsi, [dirty_cells]
-    mov     byte [rsi + rax], 1
+    mov     rcx, rax
+    MARK_DIRTY rcx, rsi
     pop     r15
     ret
 
@@ -855,8 +925,9 @@ row_buffers:
     ret
 
 ; render_frame -> rax = frame length. The frame's rows are frame_iov[1] ..
-; frame_iov[grid_height], top row first; frame_iov[0] and the entry after the
-; rows are the caller's.
+; frame_iov[grid_height] (row_iov[0] ..), top row first; frame_iov[0] and the
+; entry after the rows are the caller's. The array is the rows' own record, so
+; it is written with writev_keep.
 render_frame:
     push    rbx
     push    rbp
@@ -870,15 +941,23 @@ render_frame:
     mov     rbx, [pool_base]
     test    rbp, rbp
     jz      .done
+    cmp     byte [all_dirty], 0
+    jne     .row
+    call    rows_marked
 .row:
     dec     rbp                         ; row index, counting down
     test    r14, r14
     jz      .scanned
     mov     rax, rbp
     imul    rax, r14
-    call    row_dirty
     cmp     byte [all_dirty], 0
-    jne     .full
+    jne     .whole
+    ; a row none of whose chunks changed is clean
+    mov     rcx, [dirty_rows]
+    cmp     byte [rcx + rbp], 0
+    je      .next
+    mov     byte [rcx + rbp], 0
+    call    row_dirty
     test    rax, rax
     jz      .next
     ; a mostly dirty row is cheaper to format whole
@@ -887,6 +966,9 @@ render_frame:
     jae     .full
     call    row_rebuild
     jmp     .next
+.whole:
+    call    row_dirty                   ; clears the row's marks
+    jmp     .full
 .scanned:
     cmp     byte [all_dirty], 0
     je      .next
@@ -895,18 +977,15 @@ render_frame:
 .next:
     test    rbp, rbp
     jnz     .row
-    ; the rows' iovecs (writev_all consumes its array, so it gets a copy)
-    mov     rsi, [row_iov]
-    mov     rdi, [frame_iov]
-    add     rdi, 16
-    mov     rcx, [grid_height]
-.iov:
-    LD32    0, 1, rsi
-    ST32    rdi, 0, 1
-    add     rsi, 32
-    add     rdi, 32
-    sub     rcx, 2
-    ja      .iov
+    cmp     byte [all_dirty], 0
+    je      .done
+    ; the chunk marks are spent
+    mov     rdi, [dirty_chunks]
+    mov     rcx, [grid_cells]
+    shr     rcx, CHUNK_SHIFT
+    inc     rcx
+    xor     eax, eax
+    rep     stosb
 .done:
     mov     byte [all_dirty], 0
     mov     rax, [frame_len]
@@ -919,6 +998,64 @@ render_frame:
     pop     r12
     pop     rbp
     pop     rbx
+    ret
+
+; rows_marked: flag in [dirty_rows] every row that a marked chunk touches,
+; and clear the chunk marks. One walk up the chunks and rows together.
+; r14 = width, nonzero. Clobbers rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11.
+rows_marked:
+    mov     rsi, [dirty_chunks]
+    mov     rdi, [dirty_rows]
+    mov     r10, [grid_cells]
+    add     r10, (1 << CHUNK_SHIFT) - 1
+    shr     r10, CHUNK_SHIFT            ; chunks
+    xor     ecx, ecx                    ; chunk
+    xor     r8d, r8d                    ; row
+    mov     r9, r14                     ; the row's end cell
+    mov     r11, [grid_height]
+.eight:
+    cmp     rcx, r10
+    jae     .done
+    cmp     qword [rsi + rcx], 0
+    jne     .bytes
+    add     rcx, 8
+    jmp     .eight
+.bytes:
+    lea     rdx, [rcx + 8]              ; the eight's end
+.byte:
+    cmp     byte [rsi + rcx], 0
+    je      .skip
+    mov     byte [rsi + rcx], 0
+    mov     rax, rcx
+    shl     rax, CHUNK_SHIFT            ; the chunk's first cell
+.find:
+    cmp     r9, rax
+    ja      .found
+    inc     r8
+    add     r9, r14
+    jmp     .find
+.found:
+    add     rax, (1 << CHUNK_SHIFT) - 1 ; its last
+    push    r8
+    push    r9
+.flag:
+    cmp     r8, r11
+    jae     .flagged
+    mov     byte [rdi + r8], 1
+    cmp     r9, rax
+    ja      .flagged
+    inc     r8
+    add     r9, r14
+    jmp     .flag
+.flagged:
+    pop     r9
+    pop     r8
+.skip:
+    inc     rcx
+    cmp     rcx, rdx
+    jb      .byte
+    jmp     .eight
+.done:
     ret
 
 ; row_end(rbp=row, rdi=end of the row's cells, rsi=block starts, r15 = the
@@ -1230,11 +1367,13 @@ render_emit:
     mov     rdi, [frame_iov]
     mov     rax, [rbx + FS_PREFIX]
     mov     [rdi], rax
-    mov     rax, [rbx + FS_PREFIX_LEN]
-    mov     [rdi + 8], rax
+    mov     rdx, [rbx + FS_PREFIX_LEN]
+    mov     [rdi + 8], rdx
+    add     rdx, [frame_len]
     mov     esi, [grid_height]
     inc     esi
-    call    writev_all
+    mov     rcx, [iov_scratch]
+    call    writev_keep
     pop     rbx
     ret
 
@@ -1246,11 +1385,19 @@ render_catch_up:
     mov     [log_ptr], rsi
     jmp     render_apply
 
-; pipeline_start: start the render thread when it can help: output that is
-; not paced on the real clock, at least two CPUs to run on, and no
-; TTFX_ASM_THREADS=1 (which keeps every run single-threaded, for testing).
-; Clobbers C.
-pipeline_start:
+; pipeline_plan: before the effect is built, decide whether the frames will
+; go to a render thread: output that is not paced on the real clock (and not
+; the parity dump), at least two CPUs to run on, and no TTFX_ASM_THREADS=1
+; (which keeps every run single-threaded, for testing). With one, visual
+; changes are logged for the renderer (log_handles), which keeps a visual
+; array of its own. Without, a visual change shows in the grid on the spot
+; (handle_direct), and the renderer reads ch_handle itself: it only ever
+; runs between frames. Clobbers C.
+pipeline_plan:
+    mov     rax, [ch_handle]
+    mov     [rs_handle], rax
+    cmp     byte [cfg_parity_dump], 0
+    jne     .done
     cmp     byte [clock_is_virtual], 0
     jne     .unpaced
     cmp     qword [cfg_frame_rate], 0
@@ -1292,6 +1439,18 @@ pipeline_start:
     add     rsp, 128
     cmp     ecx, 2
     jb      .done
+    mov     byte [log_handles], 1
+    mov     rdi, CHAR_LIMIT * 4
+    call    reserve_small
+    mov     [rs_handle], rax
+.done:
+    ret
+
+; pipeline_start: start the render thread planned for (pipeline_plan). Without
+; it, frames are rendered on the main thread. Clobbers C.
+pipeline_start:
+    cmp     byte [log_handles], 0
+    je      .done
     lea     rdi, [render_thread]
     lea     rsi, [render_tid]
     call    thread_start
@@ -1440,12 +1599,16 @@ offs_stride:    resq 1
 row_sel:        resq 1
 row_iov:        resq 1
 frame_iov:      resq 1
+iov_scratch:    resq 1
+dirty_chunks:   resq 1
+dirty_rows:     resq 1
 dirty_cells:    resq 1
 dirty_bits:     resq 1
 full_blocks:    resq 1
 row_blocks:     resq 1
 render_tid:     resq 1
 pipe_running:   resb 1                  ; frames go to the render thread
+log_handles:    resb 1                  ; visual changes are logged for it
 ; what each thread writes as it goes, each on lines of its own
 alignb 64
 log_ptr:        resq 1                  ; the main side's end of the open log

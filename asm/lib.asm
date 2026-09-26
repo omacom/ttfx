@@ -90,6 +90,7 @@ ttfx_asm_run:
     call    update_init
     call    render_init
     call    clock_init
+    call    pipeline_plan
     call    [effect_build]
     cmp     byte [cfg_parity_dump], 0
     jne     .dump
@@ -573,9 +574,12 @@ dump_effect:
     lea     rax, [newline]
     mov     [rdi + rcx], rax
     mov     qword [rdi + rcx + 8], 1
+    lea     rdx, [rax + 1]
+    add     rdx, [frame_len]
     mov     esi, [grid_height]
     add     esi, 2
-    call    writev_all
+    mov     rcx, [iov_scratch]
+    call    writev_keep
     test    rax, rax
     jnz     .failed
     inc     r15
