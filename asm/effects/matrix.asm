@@ -85,6 +85,11 @@ matrix_build:
     movsd   xmm0, [rbx + matrix_config.color_swap]
     call    rng_threshold
     mov     [mx_color_swap], rax
+    mov     [mx_swap_pairs + 8], rax
+    mov     [mx_swap_pairs + 24], rax
+    mov     rax, [mx_symbol_swap]
+    mov     [mx_swap_pairs], rax
+    mov     [mx_swap_pairs + 16], rax
     cvtsi2sd xmm0, qword [rbx + matrix_config.rain_time]
     movsd   [mx_rain_time], xmm0
     ; rain_colors = Gradient(*rain_color_gradient, steps=6).spectrum
@@ -648,6 +653,73 @@ column_tick:
 .each:
     cmp     r12d, [rbx + CO_VEND]
     jae     .done
+    ; Skip, straight from the RNG batch, the characters whose two draws both
+    ; miss: they draw nothing else and change nothing. The draw sequence is
+    ; the same; only the per-draw bookkeeping goes.
+    mov     rcx, [rng_pos]
+    mov     edx, RNG_BATCH - 1
+    sub     rdx, rcx                    ; draws left in the batch, minus one
+    jle     .single                     ; fewer than a pair: draw one by one
+    mov     r8d, [rbx + CO_VEND]
+    sub     r8d, r12d                   ; characters left
+    lea     r9, [rng_buf]
+    lea     r9, [r9 + rcx * 8]          ; next draw
+    lea     r10, [r9 + rdx * 8]         ; last pair starts before this
+    shl     r8, 4
+    add     r8, r9                      ; end of the characters' draws
+    cmp     r8, r10
+    cmova   r8, r10
+    mov     r10, [mx_symbol_swap]
+    mov     r11, [mx_color_swap]
+    mov     rdi, r9
+%if TIER >= 3
+    ; four characters (eight draws) per pass; draws >> 11 and the thresholds
+    ; are below 2^63, so the signed compare is exact
+    vmovdqu ymm2, [mx_swap_pairs]
+.skip_vec:
+    lea     rax, [rdi + 64]
+    cmp     rax, r8
+    ja      .skip_vec_done
+    vmovdqu ymm0, [rdi]
+    vmovdqu ymm1, [rdi + 32]
+    vpsrlq  ymm0, ymm0, 11
+    vpsrlq  ymm1, ymm1, 11
+    vpcmpgtq ymm0, ymm2, ymm0
+    vpcmpgtq ymm1, ymm2, ymm1
+    vpor    ymm0, ymm0, ymm1
+    vptest  ymm0, ymm0
+    jnz     .skip_vec_done
+    mov     rdi, rax
+    jmp     .skip_vec
+.skip_vec_done:
+    ZEROUPPER
+%endif
+.skip:
+    cmp     rdi, r8
+    jae     .skipped
+    mov     rax, [rdi]
+    shr     rax, 11
+    cmp     rax, r10
+    jb      .skipped
+    mov     rax, [rdi + 8]
+    shr     rax, 11
+    cmp     rax, r11
+    jb      .skipped
+    add     rdi, 16
+    jmp     .skip
+.skipped:
+    sub     rdi, r9
+    shr     rdi, 3                      ; draws skipped
+    add     rcx, rdi
+    mov     [rng_pos], rcx
+    shr     edi, 1
+    add     r12d, edi                   ; characters skipped
+    cmp     r12d, [rbx + CO_VEND]
+    jae     .done
+    cmp     rdi, 0
+    je      .single
+    jmp     .each                       ; batch ran out, or a hit next
+.single:
     xor     r13d, r13d                  ; next symbol, 0 = none
     mov     r14, NONE                   ; next color, NONE = none
     RNG_BITS53
@@ -1053,6 +1125,7 @@ mx_rain_time:       resq 1              ; f64
 mx_rain_start:      resq 1              ; f64
 mx_symbol_swap:     resq 1              ; rng_threshold of symbol_swap_chance
 mx_color_swap:      resq 1              ; rng_threshold of color_swap_chance
+mx_swap_pairs:      resq 4              ; symbol, color, symbol, color
 mx_columns:         resq 1
 mx_column_count:    resq 1
 mx_pending:         resq 1

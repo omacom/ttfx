@@ -146,11 +146,29 @@ brn_character:
     mov     rdx, [rax + BURN.starting_color]
     mov     rcx, NONE
     call    set_appearance
+    ; the burn scene is the same for every character whose input colors
+    ; don't enter it: later ones clone the first one's
+    mov     rax, [brn_template]
+    test    rax, rax
+    jz      .burn_fresh
+    cmp     qword [cfg_existing_colors], 0
+    jne     .burn_clone
+    mov     rcx, [ch_flags]
+    test    word [rcx + rbx * 2], CF_PREEXISTING
+    jnz     .burn_fresh
+.burn_clone:
+    mov     edi, ebx
+    lea     esi, [eax - 1]
+    mov     edx, BRN_BURN
+    call    scene_copy
+    jmp     .final_scene
+.burn_fresh:
     mov     edi, ebx
     mov     esi, BRN_BURN
     xor     edx, edx
     mov     ecx, NONE
     call    scene_new
+    mov     ebp, eax
     push    0
     push    0
     mov     edi, eax
@@ -161,6 +179,14 @@ brn_character:
     mov     r9, [brn_fire_len]
     call    scene_apply_gradient
     add     rsp, 16
+    cmp     qword [brn_template], 0
+    jne     .final_scene
+    SCENE_PTR rax, rbp
+    test    dword [rax + SC_FLAGS], SCF_PREEXISTING | SCF_PRE_BOLD
+    jnz     .final_scene
+    lea     eax, [ebp + 1]
+    mov     [brn_template], rax
+.final_scene:
     ; the final color scene takes the next auto id
     mov     edi, ebx
     mov     esi, AUTO
@@ -528,6 +554,7 @@ brn_codepoints:     dd "'", '.', 0x2596, 0x2599, 0x2588, 0x259C, 0x2580, 0x259D,
 
 section .tstate
 alignb 8
+brn_template:       resq 1              ; the burn scene to clone, + 1 (0 = none yet)
 brn_pool:           resb POOL_size
 alignb 8
 brn_char_order:     resq BRN_CHAR_ORDER

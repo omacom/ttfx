@@ -116,6 +116,7 @@ errorcorrect_build:
     inc     rcx
     jmp     .copy
 .copied:
+    call    ec_fen_init
     lea     rdi, [r14 * 4 + 8]
     call    alloc
     mov     [ec_swapped], rax
@@ -164,23 +165,75 @@ errorcorrect_build:
     ret
 
 ; ec_take -> eax = all_characters.remove(rng.randrange(0, len)), with
-; r12 = all_characters and r14 = its length (decremented).
+; r12 = the original list and r14 = len (decremented). Vec::remove keeps the
+; order, so the k-th remaining element is found in a Fenwick tree of the
+; present ones instead of shifting the list.
 ec_take:
     xor     edi, edi
     mov     rsi, r14
     call    rng_randrange
-    mov     ecx, [r12 + rax * 4]
-    push    rcx
     dec     r14
-.shift:
-    cmp     rax, r14
-    jae     .done
-    mov     edx, [r12 + rax * 4 + 4]
-    mov     [r12 + rax * 4], edx
-    inc     rax
-    jmp     .shift
+    mov     r8, [ec_fen]
+    mov     r9, [ec_fen_n]
+    lea     rdx, [rax + 1]
+    xor     eax, eax
+    mov     rcx, [ec_fen_top]
+.step:
+    test    rcx, rcx
+    jz      .found
+    lea     r10, [rax + rcx]
+    cmp     r10, r9
+    ja      .half
+    mov     r11d, [r8 + r10 * 4]
+    cmp     r11, rdx
+    jae     .half
+    mov     rax, r10
+    sub     rdx, r11
+.half:
+    shr     rcx, 1
+    jmp     .step
+.found:
+    mov     edx, [r12 + rax * 4]        ; the element
+    lea     r10, [rax + 1]
+.remove:
+    cmp     r10, r9
+    ja      .done
+    dec     dword [r8 + r10 * 4]
+    mov     r11, r10
+    neg     r11
+    and     r11, r10
+    add     r10, r11
+    jmp     .remove
 .done:
-    pop     rax
+    mov     eax, edx
+    ret
+
+; ec_fen_init(r14=n): the Fenwick tree of ec_take over n present elements.
+; Preserves r12-r15.
+ec_fen_init:
+    mov     [ec_fen_n], r14
+    lea     rdi, [r14 * 4 + 4]
+    call    alloc
+    mov     [ec_fen], rax
+    mov     ecx, 1
+.fill:
+    cmp     rcx, r14
+    ja      .top
+    mov     rdx, rcx
+    neg     rdx
+    and     rdx, rcx
+    mov     [rax + rcx * 4], edx
+    inc     rcx
+    jmp     .fill
+.top:
+    xor     eax, eax
+    test    r14, r14
+    jz      .done
+    bsr     rcx, r14
+    mov     eax, 1
+    shl     rax, cl
+.done:
+    mov     [ec_fen_top], rax
     ret
 
 ; ec_place(edi=slot, esi=other): the character starts at the other's input
@@ -671,4 +724,7 @@ ec_pair_stops:      resq 2
 ec_correcting:      resq 16
 ec_fg_spectrum:     resq 16
 ec_bg_spectrum:     resq 16
+ec_fen:             resq 1              ; Fenwick tree (1-based u32 counts)
+ec_fen_n:           resq 1
+ec_fen_top:         resq 1
 ec_dynamic:         resb 1

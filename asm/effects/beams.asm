@@ -50,6 +50,10 @@ beams_build:
     mov [beams_wipe], rax
     mov [beams_wipe_count], rdx
     call beams_color_map
+    cmp qword [cfg_existing_colors], 0
+    je .no_cache                    ; input colors enter the frames
+    call beams_cache_init
+.no_cache:
     mov rbx, [effect_config]
     mov rdi, [rbx + BEAMS.steps]
     mov rcx, [rbx + BEAMS.step_count]
@@ -176,6 +180,94 @@ beams_scenes:
     push r15
     mov r12d, edi
     mov rbx, [effect_config]
+    ; the character's symbol and colors, which with the (shared) beam
+    ; gradients determine all three scenes
+    mov rax, [ch_sym]
+    mov rax, [rax + r12*8]
+    mov [beams_symbol], rax
+    xor r13d, r13d
+    mov r14, NONE
+    mov rax, [ch_flags]
+    test word [rax + r12*2], CF_FILL
+    jnz .keyed
+    cmp qword [cfg_existing_colors], 1
+    jne .mapped
+    mov rax, [ch_fg]
+    mov r13, [rax + r12*8]
+    mov rax, [ch_bg]
+    mov r14, [rax + r12*8]
+    jmp .keyed
+.mapped:
+    mov rax, [ch_irow]
+    movsxd rax, dword [rax + r12*4]
+    sub rax, [text_bottom]
+    imul rax, [beams_map_width]
+    mov rcx, [ch_icol]
+    movsxd rcx, dword [rcx + r12*4]
+    add rax, rcx
+    sub rax, [text_left]
+    mov rcx, [beams_map]
+    mov r13, [rcx + rax*8]
+.keyed:
+    ; a character with the same (symbol, fg, bg) as an earlier one gets
+    ; clones of that one's scenes
+    xor r15d, r15d                  ; cache entry to fill, 0 = none
+    mov rsi, [beams_cache]
+    test rsi, rsi
+    jz .new_scenes
+    mov rdi, [beams_symbol]
+    mov rax, r13
+    mov rcx, 0x9E3779B97F4A7C15
+    imul rax, rcx
+    xor rax, rdi
+    mov rcx, 0xBF58476D1CE4E5B9
+    imul rax, rcx
+    xor rax, r14
+    imul rax, rcx
+    mov rcx, [beams_cache_shift]
+    shr rax, cl
+.probe:
+    mov rdx, rax
+    shl rdx, 5
+    add rdx, rsi
+    cmp qword [rdx], 0
+    je .miss
+    cmp [rdx], rdi
+    jne .probe_next
+    cmp [rdx + 8], r13
+    jne .probe_next
+    cmp [rdx + 16], r14
+    je .hit
+.probe_next:
+    inc rax
+    and rax, [beams_cache_mask]
+    jmp .probe
+.miss:
+    mov [rdx], rdi
+    mov [rdx + 8], r13
+    mov [rdx + 16], r14
+    mov r15, rdx
+    jmp .new_scenes
+.hit:
+    mov r15d, [rdx + 24]            ; the earlier character
+    xor ebp, ebp
+.copy:
+    mov edi, r15d
+    lea esi, [BEAM_ROW + rbp]
+    call scene_find
+    mov esi, eax
+    mov edi, r12d
+    lea edx, [BEAM_ROW + rbp]
+    call scene_copy
+    inc ebp
+    cmp ebp, 3
+    jb .copy
+    jmp .out
+.new_scenes:
+    test r15, r15
+    jz .fresh
+    mov [r15 + 24], r12d
+.fresh:
     xor ebp, ebp
 .new:
     mov edi, r12d
@@ -206,32 +298,6 @@ beams_scenes:
     inc ebp
     cmp ebp, 2
     jb .beam
-    mov rax, [ch_sym]
-    mov rax, [rax + r12*8]
-    mov [beams_symbol], rax
-    xor r13d, r13d
-    mov r14, NONE
-    mov rax, [ch_flags]
-    test word [rax + r12*2], CF_FILL
-    jnz .colors
-    cmp qword [cfg_existing_colors], 1
-    jne .mapped
-    mov rax, [ch_fg]
-    mov r13, [rax + r12*8]
-    mov rax, [ch_bg]
-    mov r14, [rax + r12*8]
-    jmp .colors
-.mapped:
-    mov rax, [ch_irow]
-    movsxd rax, dword [rax + r12*4]
-    sub rax, [text_bottom]
-    imul rax, [beams_map_width]
-    mov rcx, [ch_icol]
-    movsxd rcx, dword [rcx + r12*4]
-    add rax, rcx
-    sub rax, [text_left]
-    mov rcx, [beams_map]
-    mov r13, [rcx + rax*8]
 .colors:
     mov qword [beams_fg_count], 0
     mov qword [beams_bg_count], 0
@@ -292,6 +358,7 @@ beams_scenes:
     inc ebp
     cmp ebp, 3
     jb .fade
+.out:
     pop r15
     pop r14
     pop r13
@@ -491,6 +558,32 @@ beams_next_frame:
     pop rbp
     pop rbx
     ret
+; beams_cache_init: the (symbol, fg, bg) -> character table of beams_scenes,
+; 32-byte entries (symbol 0 = empty), at least twice the character count.
+beams_cache_init:
+    mov eax, [char_count]
+    add rax, rax
+    mov ecx, 16
+    xor edx, edx
+.size:
+    cmp rcx, rax
+    jae .sized
+    add rcx, rcx
+    inc edx
+    jmp .size
+.sized:
+    lea rax, [rcx - 1]
+    mov [beams_cache_mask], rax
+    add edx, 4
+    mov eax, 64
+    sub eax, edx
+    mov [beams_cache_shift], rax
+    shl rcx, 5
+    lea rdi, [rcx + 64]
+    call alloc
+    mov [beams_cache], rax
+    ret
+
 ; beams_color_map: Gradient::new(final stops, final steps) and its
 ; coordinate mapping over the text rectangle.
 beams_color_map:
@@ -551,6 +644,9 @@ beams_map: resq 1
 beams_map_width: resq 1
 beams_scene_ids: resd 3
 alignb 8
+beams_cache: resq 1
+beams_cache_mask: resq 1
+beams_cache_shift: resq 1
 beams_symbol: resq 1
 beams_pair: resq 2
 beams_fg_count: resq 1
