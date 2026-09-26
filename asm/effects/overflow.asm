@@ -86,6 +86,9 @@ overflow_build:
     call    reserve
     mov     [of_active], rax
     mov     qword [of_row_count], 0
+    cmp     qword [cfg_existing_colors], 0
+    je      .cycle                      ; input colors win: no visual cache
+    call    of_symbol_ids
 .cycle:
     test    r15, r15
     jz      .final_rows
@@ -130,6 +133,12 @@ overflow_build:
     mov     rcx, [ch_bg]
     mov     rdx, [rcx + r12 * 8]
     mov     [rcx + rax * 8], rdx
+    mov     rcx, [of_symid]
+    test    rcx, rcx
+    jz      .copy_next
+    mov     edx, [rcx + r12 * 4]        ; the copy has the source's symbol
+    mov     [rcx + rax * 4], edx
+.copy_next:
     inc     rbx
     jmp     .copy_char
 .copied:
@@ -232,6 +241,14 @@ overflow_build:
     call    gradient_new
     mov     eax, eax
     mov     [of_spectrum_len], rax
+    cmp     qword [of_symid], 0
+    je      .no_cache
+    ; the visual cache: one handle per (spectrum index, symbol id), 0 = unmade
+    imul    rax, [of_nsym]
+    lea     rdi, [rax * 4 + 64]
+    call    alloc
+    mov     [of_hcache], rax
+.no_cache:
     mov     qword [of_delay], 0
     mov     qword [of_next], 0
     mov     qword [of_active_count], 0
@@ -240,6 +257,100 @@ overflow_build:
     pop     r14
     pop     r13
     pop     r12
+    pop     rbp
+    pop     rbx
+    ret
+
+; of_symbol_ids(r15=cycles): number the distinct input symbols of the
+; input characters (r12=groups, r13=group count) into of_symid, a per-slot
+; array sized for the copies still to come. Preserves rbx, r12-r15.
+of_symbol_ids:
+    push    rbx
+    push    rbp
+    push    r14
+    ; slots: every current one plus cycles copies of the input
+    mov     rax, r15
+    inc     rax
+    mov     ecx, [char_count]
+    imul    rax, rcx
+    lea     rdi, [rax * 4 + 64]
+    call    alloc
+    mov     [of_symid], rax
+    ; open-addressed symbol table: 16-byte (symbol, id) entries, at least
+    ; twice as many as there are input characters
+    mov     eax, [char_count]
+    add     rax, rax
+    mov     ecx, 16
+    xor     edx, edx
+.size:
+    cmp     rcx, rax
+    jae     .sized
+    add     rcx, rcx
+    inc     edx
+    jmp     .size
+.sized:
+    add     edx, 4                      ; log2 of the entry count
+    mov     ecx, 64
+    sub     ecx, edx
+    mov     [of_symshift], rcx
+    mov     rdi, 16
+    mov     ecx, edx
+    shl     rdi, cl
+    mov     [of_symmask], rdi
+    shr     qword [of_symmask], 4
+    dec     qword [of_symmask]
+    add     rdi, 64
+    call    alloc
+    mov     [of_symtab], rax
+    mov     qword [of_nsym], 0
+    xor     ebp, ebp                    ; group
+.group:
+    cmp     rbp, r13
+    jae     .done
+    mov     r14, rbp
+    shl     r14, 4
+    add     r14, r12
+    xor     ebx, ebx
+.char:
+    cmp     rbx, [r14 + 8]
+    jae     .next_group
+    mov     rax, [r14]
+    mov     r8d, [rax + rbx * 4]        ; slot
+    mov     rax, [ch_sym]
+    mov     rdi, [rax + r8 * 8]
+    ; probe
+    mov     rax, 0x9E3779B97F4A7C15
+    imul    rax, rdi
+    mov     rcx, [of_symshift]
+    shr     rax, cl
+    mov     rsi, [of_symtab]
+.probe:
+    mov     rdx, rax
+    shl     rdx, 4
+    mov     rcx, [rsi + rdx]
+    test    rcx, rcx
+    jz      .new
+    cmp     rcx, rdi
+    je      .found
+    inc     rax
+    and     rax, [of_symmask]
+    jmp     .probe
+.new:
+    mov     [rsi + rdx], rdi
+    mov     rcx, [of_nsym]
+    mov     [rsi + rdx + 8], rcx
+    inc     qword [of_nsym]
+.found:
+    mov     ecx, [rsi + rdx + 8]
+    mov     rax, [of_symid]
+    mov     [rax + r8 * 4], ecx
+    inc     rbx
+    jmp     .char
+.next_group:
+    inc     rbp
+    jmp     .group
+.done:
+    pop     r14
     pop     rbp
     pop     rbx
     ret
@@ -480,6 +591,43 @@ of_set_color:
     mov     rax, [of_spectrum]
     mov     r13, [rax + rsi * 8]        ; color
     xor     r12d, r12d
+    mov     rax, [of_hcache]
+    test    rax, rax
+    jz      .char
+    ; set_appearance through the (index, symbol) cache: the visual is
+    ; (input symbol, color, no bg, no attributes) for every copy here
+    push    r14
+    push    r15
+    imul    rsi, [of_nsym]
+    lea     r14, [rax + rsi * 4]        ; this index's handles
+.cached:
+    cmp     r12, [rbx + OF_COUNT]
+    jae     .cached_done
+    mov     rax, [rbx + OF_SLOTS]
+    mov     edi, [rax + r12 * 4]
+    mov     rax, [of_symid]
+    mov     r15d, [rax + rdi * 4]
+    mov     eax, [r14 + r15 * 4]
+    test    eax, eax
+    jnz     .have
+    mov     rax, [ch_sym]
+    mov     rdx, [rax + rdi * 8]
+    mov     rdi, r13
+    mov     rsi, NONE
+    xor     ecx, ecx
+    call    visual_make
+    mov     [r14 + r15 * 4], eax
+    mov     rcx, [rbx + OF_SLOTS]
+    mov     edi, [rcx + r12 * 4]
+.have:
+    ; (no doze_wake: a copy never joins the active set, so never dozes)
+    SET_HANDLE
+    inc     r12
+    jmp     .cached
+.cached_done:
+    pop     r15
+    pop     r14
+    jmp     .done
 .char:
     cmp     r12, [rbx + OF_COUNT]
     jae     .done
@@ -513,3 +661,9 @@ of_final_spectrum:  resq 1
 of_map:             resq 1
 of_map_width:       resq 1
 of_map_height:      resq 1
+of_symid:           resq 1              ; u32 symbol id per slot, or 0 = no cache
+of_symtab:          resq 1              ; (symbol, id) entries
+of_symshift:        resq 1
+of_symmask:         resq 1
+of_nsym:            resq 1
+of_hcache:          resq 1              ; u32 handles [index * nsym + id]

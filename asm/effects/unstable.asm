@@ -76,6 +76,10 @@ unstable_build:
     mov     [un_recs], rax
     mov     rdi, r14
     call    un_fen_init
+    cmp     qword [cfg_existing_colors], 0
+    je      .no_cache                   ; input colors enter the frames
+    call    un_cache_init
+.no_cache:
     mov     r15, [effect_config]
     xor     ebx, ebx
 .char:
@@ -163,15 +167,46 @@ unstable_build:
     mov     rax, [ch_sym]
     mov     rax, [rax + r12 * 8]
     mov     [un_symbol], rax
+    cmp     qword [cfg_existing_colors], 1
+    je      .dynamic_new
+    call    un_mapped_color
+    ; a character with an earlier one's (symbol, color) clones its scenes
+    call    un_cache_find
+    test    rax, rax
+    jz      .static
+    cmp     dword [rax + 16], NONE
+    je      .static_fill
+    mov     r8d, [rax + 16]             ; the earlier character
+    push    r8
+    push    r8
+    mov     edi, r8d
+    mov     esi, UN_S_RUMBLE
+    call    scene_find
+    mov     edi, r12d
+    mov     esi, eax
+    mov     edx, UN_S_RUMBLE
+    call    scene_copy
+    mov     [un_rumble_scene], eax
+    pop     r8
+    pop     r8
+    mov     edi, r8d
+    mov     esi, UN_S_FINAL
+    call    scene_find
+    mov     edi, r12d
+    mov     esi, eax
+    mov     edx, UN_S_FINAL
+    call    scene_copy
+    mov     [rbp + UR_FINAL], eax
+    jmp     .activate_rumble
+.static_fill:
+    mov     [rax + 16], r12d
+.static:
     mov     edi, r12d
     mov     esi, UN_S_RUMBLE
     xor     edx, edx
     mov     ecx, NONE
     call    scene_new
     mov     [un_rumble_scene], eax
-    cmp     qword [cfg_existing_colors], 1
-    je      .dynamic
-    call    un_mapped_color
     call    un_static_spectra
     mov     edi, [un_rumble_scene]
     mov     ecx, 10
@@ -189,11 +224,18 @@ unstable_build:
     lea     r8, [un_final_spec]
     mov     r9, [un_final_len]
     call    un_apply_fg
+.activate_rumble:
     mov     edi, r12d
     mov     esi, [un_rumble_scene]
     call    scene_activate
     jmp     .visible
-.dynamic:
+.dynamic_new:
+    mov     edi, r12d
+    mov     esi, UN_S_RUMBLE
+    xor     edx, edx
+    mov     ecx, NONE
+    call    scene_new
+    mov     [un_rumble_scene], eax
     call    un_dynamic_scenes
 .visible:
     mov     edi, r12d
@@ -212,6 +254,78 @@ unstable_build:
     pop     r12
     pop     rbp
     pop     rbx
+    ret
+
+; un_cache_init: the (symbol, color) -> character table of unstable_build,
+; 32-byte entries (symbol 0 = empty), at least twice the character count.
+un_cache_init:
+    mov     eax, [char_count]
+    add     rax, rax
+    mov     ecx, 16
+    xor     edx, edx
+.size:
+    cmp     rcx, rax
+    jae     .sized
+    add     rcx, rcx
+    inc     edx
+    jmp     .size
+.sized:
+    lea     rax, [rcx - 1]
+    mov     [un_cache_mask], rax
+    add     edx, 4
+    mov     eax, 64
+    sub     eax, edx
+    mov     [un_cache_shift], rax
+    shl     rcx, 5
+    lea     rdi, [rcx + 64]
+    sub     rsp, 8
+    call    alloc
+    add     rsp, 8
+    mov     [un_cache], rax
+    ret
+
+; un_cache_find -> rax = the entry of ([un_symbol], [un_fg]), created with
+; character NONE when new, or 0 when the cache is off. Clobbers rcx, rdx,
+; rsi, rdi.
+un_cache_find:
+    mov     rsi, [un_cache]
+    test    rsi, rsi
+    jz      .off
+    mov     rdi, [un_symbol]
+    mov     rax, [un_fg]
+    mov     rcx, 0x9E3779B97F4A7C15
+    imul    rax, rcx
+    xor     rax, rdi
+    mov     rcx, 0xBF58476D1CE4E5B9
+    imul    rax, rcx
+    mov     rcx, [un_cache_shift]
+    shr     rax, cl
+.probe:
+    mov     rdx, rax
+    shl     rdx, 5
+    add     rdx, rsi
+    mov     rcx, [rdx]
+    test    rcx, rcx
+    jz      .new
+    cmp     rcx, rdi
+    jne     .next
+    mov     rcx, [un_fg]
+    cmp     [rdx + 8], rcx
+    je      .found
+.next:
+    inc     rax
+    and     rax, [un_cache_mask]
+    jmp     .probe
+.new:
+    mov     [rdx], rdi
+    mov     rcx, [un_fg]
+    mov     [rdx + 8], rcx
+    mov     dword [rdx + 16], NONE
+.found:
+    mov     rax, rdx
+    ret
+.off:
+    xor     eax, eax
     ret
 
 ; un_mapped_color (r12d = slot): [un_fg] = final_gradient_mapping[input_coord].
@@ -556,27 +670,50 @@ un_restore:
     pop     rbx
     ret
 
+; UN_BIT_POP dest, bits: dest = the lowest set bit's index, cleared from
+; bits (bits != 0). Clobbers rcx below TIER 3.
+%macro UN_BIT_POP 2
+%if TIER >= 3
+    tzcnt   %1, %2
+    blsr    %2, %2
+%else
+    bsf     %1, %2
+    lea     rcx, [%2 - 1]
+    and     %2, rcx
+%endif
+%endmacro
+
 ; un_tick_active: tick every active character in ascending slot order (no
-; callbacks here, so the live set is its own snapshot).
+; callbacks here, so the live set is its own snapshot). Walks the bitmap a
+; word at a time; a tick only touches its own slot's bit.
 un_tick_active:
     push    rbx
+    push    r12
+    push    r13
+    mov     r13d, [char_count]
+    add     r13, 63
+    shr     r13, 6
     xor     ebx, ebx
-.slot:
-    cmp     ebx, [char_count]
+.word:
+    cmp     rbx, r13
     jae     .done
     mov     rax, [active_bits]
-    mov     ecx, ebx
-    shr     ecx, 6
-    mov     edx, ebx
-    and     edx, 63
-    bt      qword [rax + rcx * 8], rdx
-    jnc     .next
-    mov     edi, ebx
+    mov     r12, [rax + rbx * 8]
+.bit:
+    test    r12, r12
+    jz      .next
+    UN_BIT_POP rdi, r12
+    mov     rax, rbx
+    shl     rax, 6
+    add     rdi, rax
     call    tick
+    jmp     .bit
 .next:
-    inc     ebx
-    jmp     .slot
+    inc     rbx
+    jmp     .word
 .done:
+    pop     r13
+    pop     r12
     pop     rbx
     ret
 
@@ -584,20 +721,29 @@ un_tick_active:
 ; reached the phase's waypoint (and, reassembling, finished their scene).
 un_retain:
     push    rbx
+    push    rbp
     push    r12
     push    r13
+    push    r14
+    push    r15
+    sub     rsp, 8
     mov     r12d, edi
-    xor     ebx, ebx
-.slot:
-    cmp     ebx, [char_count]
+    mov     r15d, [char_count]
+    add     r15, 63
+    shr     r15, 6
+    xor     ebp, ebp                    ; word index
+.word:
+    cmp     rbp, r15
     jae     .done
     mov     rax, [active_bits]
-    mov     ecx, ebx
-    shr     ecx, 6
-    mov     edx, ebx
-    and     edx, 63
-    bt      qword [rax + rcx * 8], rdx
-    jnc     .next
+    mov     r14, [rax + rbp * 8]
+.slot:
+    test    r14, r14
+    jz      .next_word
+    UN_BIT_POP rbx, r14
+    mov     rax, rbp
+    shl     rax, 6
+    add     rbx, rax
     mov     edi, ebx
     call    char_coord
     mov     r13, rax
@@ -607,26 +753,31 @@ un_retain:
     shl     rax, 5
     add     rax, [un_recs]
     cmp     r13, [rax + UR_TARGET]
-    jne     .next
+    jne     .slot
     jmp     .remove
 .home:
     mov     edi, ebx
     call    char_input_coord
     cmp     r13, rax
-    jne     .next
+    jne     .slot
     mov     edi, ebx
     call    scene_is_complete
     test    eax, eax
-    jz      .next
+    jz      .slot
 .remove:
     mov     edi, ebx
     call    active_remove
-.next:
-    inc     ebx
     jmp     .slot
+.next_word:
+    inc     rbp
+    jmp     .word
 .done:
+    add     rsp, 8
+    pop     r15
+    pop     r14
     pop     r13
     pop     r12
+    pop     rbp
     pop     rbx
     ret
 
@@ -820,4 +971,7 @@ un_final_spec:      resq 16
 un_final_len:       resq 1
 un_bg_spec:         resq 16
 un_bg_len:          resq 1
+un_cache:           resq 1              ; (symbol, fg) -> character, or 0
+un_cache_mask:      resq 1
+un_cache_shift:     resq 1
 un_restore_pending: resb 1

@@ -96,7 +96,19 @@ exit:
 ; Regions are sized far beyond need and never move, so pointers into them
 ; stay valid for the whole run (plan §7.1). They are recorded so the next run
 ; (after a terminal resize) can release them first.
+;
+; The regions are huge and mmap packs them together, so without care every
+; region's base has the same low 28 bits: a slot's entries in all the
+; character field arrays would share one cache set, and a load from one
+; array would wait on a store to another (4K aliasing). Each region's base
+; is therefore staggered by region_index * (4096 + 192) bytes, which gives
+; every region its own 64-byte line offset within a page.
+%define REGION_STAGGER  (4096 + 192)
 reserve:
+    mov     eax, [region_count]
+    imul    eax, eax, REGION_STAGGER
+    add     rdi, rax                    ; the stagger comes out of the region
+    push    rax
     push    rdi
     mov     rsi, rdi
     xor     edi, edi
@@ -106,6 +118,7 @@ reserve:
     xor     r9d, r9d
     SYSCALL SYS_mmap
     pop     rdi
+    pop     rsi                         ; stagger
     cmp     rax, -4096
     ja      .fail
     mov     ecx, [region_count]
@@ -116,6 +129,7 @@ reserve:
     mov     [rdx + rcx], rax
     mov     [rdx + rcx + 8], rdi
     inc     dword [region_count]
+    add     rax, rsi
     ret
 .fail:
     lea     rdi, [msg_oom]

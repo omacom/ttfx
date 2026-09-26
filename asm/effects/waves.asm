@@ -83,7 +83,24 @@ waves_build:
     cmp     rbp, r13
     jae     .grouped
     mov     r15d, [r12 + rbp * 4]       ; slot
-    ; --- the eased wave scene
+    ; --- the eased wave scene: the same for every character whose input
+    ; colors don't enter it, so later ones clone the first one's
+    mov     rax, [wv_template_scene]
+    test    rax, rax
+    jz      .wave_fresh
+    cmp     qword [cfg_existing_colors], 0
+    jne     .wave_clone
+    mov     rcx, [ch_flags]
+    test    word [rcx + r15 * 2], CF_PREEXISTING
+    jnz     .wave_fresh
+.wave_clone:
+    mov     edi, r15d
+    lea     esi, [eax - 1]
+    mov     edx, WV_WAVE
+    call    scene_copy
+    mov     r14d, eax
+    jmp     .final
+.wave_fresh:
     mov     edi, r15d
     mov     esi, WV_WAVE
     xor     edx, edx
@@ -92,6 +109,16 @@ waves_build:
     mov     r14d, eax
     mov     edi, eax
     call    wv_wave_frames
+    cmp     qword [wv_template_scene], 0
+    jne     .final
+    mov     rax, r14
+    shl     rax, SCENE_SHIFT
+    add     rax, [scenes]
+    test    dword [rax + SC_FLAGS], SCF_PREEXISTING | SCF_PRE_BOLD
+    jnz     .final
+    lea     eax, [r14d + 1]
+    mov     [wv_template_scene], rax
+.final:
     ; --- the final scene
     mov     edi, r15d
     mov     esi, WV_FINAL
@@ -149,40 +176,16 @@ waves_build:
     ret
 
 ; wv_wave_frames(edi=scene), rbx = config: wave_count times
-; apply_gradient_to_symbols(wave symbols, wave_length, wave gradient), or a
-; copy of the template frames once they exist.
+; apply_gradient_to_symbols(wave symbols, wave_length, wave gradient).
 wv_wave_frames:
     push    rbp
     push    r12
     push    r13
     mov     ebp, edi
-    mov     r13, rbp
-    shl     r13, SCENE_SHIFT
-    add     r13, [scenes]               ; the scene record
-    test    dword [r13 + SC_FLAGS], SCF_PREEXISTING | SCF_PRE_BOLD
-    jnz     .build
-    mov     rax, [wv_template]
-    test    rax, rax
-    jz      .build
-    ; copy: the frames append in place at the end of the frame region
-    mov     r12, [wv_template_count]
-.copy:
-    test    r12, r12
-    jz      .done
-    mov     rax, [wv_template]
-    mov     rcx, [wv_template_count]
-    sub     rcx, r12
-    mov     edx, [rax + rcx * 8 + FR_DURATION]
-    mov     eax, [rax + rcx * 8 + FR_HANDLE]
-    mov     r8, r13
-    call    scene_append_frame
-    dec     r12
-    jmp     .copy
-.build:
     mov     r12, [rbx + WAVES.wave_count]
 .wave:
     test    r12, r12
-    jz      .built
+    jz      .done
     push    0                           ; no bg gradient
     push    0
     mov     edi, ebp
@@ -195,22 +198,6 @@ wv_wave_frames:
     add     rsp, 16
     dec     r12
     jmp     .wave
-.built:
-    test    dword [r13 + SC_FLAGS], SCF_PREEXISTING | SCF_PRE_BOLD
-    jnz     .done
-    cmp     qword [wv_template], 0
-    jne     .done
-    ; keep this scene's frames as the template (a private copy, since the
-    ; frame region moves a scene's frames when it grows elsewhere)
-    mov     eax, [r13 + SC_COUNT]
-    mov     [wv_template_count], rax
-    lea     rdi, [rax * 8]
-    call    alloc
-    mov     [wv_template], rax
-    mov     rdi, rax
-    mov     rsi, [r13 + SC_FRAMES]
-    mov     rcx, [wv_template_count]
-    rep     movsq
 .done:
     pop     r13
     pop     r12
@@ -447,8 +434,7 @@ wv_map:                 resq 1
 wv_map_width:           resq 1
 wv_wave_spectrum:       resq 1
 wv_wave_len:            resq 1
-wv_template:            resq 1
-wv_template_count:      resq 1
+wv_template_scene:      resq 1          ; the wave scene to clone, + 1 (0 = none yet)
 wv_pair_stops:          resq 2
 wv_pair_bytes:          resq 1
 wv_pair_spectrum:       resq 1
