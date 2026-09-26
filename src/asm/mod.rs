@@ -13,8 +13,8 @@
 //! v4 = AVX-512), and the best one the CPU supports runs; every tier's output
 //! is byte-identical. `TTFX_ASM_TIER=1|2|3|4` forces a lower tier for testing:
 //! a tier above the CPU's, or one the build left out, is a decline (exit 3
-//! under `TTFX_ASM=force`). `TTFX_ASM_SHOW_TIER=1` prints the tier chosen on
-//! stderr. See asm/PORTING.md, "CPU tiers".
+//! under `TTFX_ASM=force`). `TTFX_ASM_SHOW_TIER=1` prints on stderr which
+//! engine ran: the asm tier chosen, or why the Rust engine ran instead. See asm/PORTING.md, "CPU tiers".
 
 use crate::effects::EffectCommand;
 use crate::engine::effect::RunOutcome;
@@ -43,14 +43,22 @@ pub struct Run<'a> {
 /// Rust engine must run it (nothing was written and the RNG is untouched).
 pub fn try_run(run: Run<'_>) -> Option<Result<RunOutcome, EngineError>> {
     let mode = std::env::var("TTFX_ASM").unwrap_or_default();
+    let show = std::env::var_os("TTFX_ASM_SHOW_TIER").is_some();
     if mode == "0" || mode == "off" {
+        if show {
+            crate::errln!("ttfx: Rust engine (TTFX_ASM={mode})");
+        }
         return None;
     }
     let result = offer(run);
-    if result.is_err() && mode == "force" {
-        let reason = result.as_ref().err().unwrap();
-        crate::errln!("ttfx: TTFX_ASM=force, but the assembly engine declined: {reason}");
-        std::process::exit(3);
+    if let Err(reason) = &result {
+        if mode == "force" {
+            crate::errln!("ttfx: TTFX_ASM=force, but the assembly engine declined: {reason}");
+            std::process::exit(3);
+        }
+        if show {
+            crate::errln!("ttfx: Rust engine (the assembly engine declined: {reason})");
+        }
     }
     result.ok()
 }
