@@ -28,6 +28,11 @@
 %define SCF_SHAPE           (SCF_SHAPE_SAME | SCF_SHAPE_TAG)
 %define EASED_MEMO_LIMIT    (1 << 16)
 
+; a synced scene's last shown frame: its position + 1 (0 = none) and
+; visual, in the plain-stepping fields synced scenes never use
+%define SC_SYNC_POS         SC_TICKS
+%define SC_SYNC_HANDLE      SC_HEAD_DURATION
+
 ; shared frame lists (see scene_share)
 %define SCF_SHARED          (1 << 16)   ; looked up since the last append
 %define SHARE_MAX_FRAMES    64
@@ -307,6 +312,7 @@ scene_append_frame:
     jne     .done
     mov     [r8 + SC_HEAD_HANDLE], ebx
     mov     [r8 + SC_HEAD_DURATION], edx
+    mov     dword [r8 + SC_TICKS], 0    ; (so no synced frame is cached)
 .done:
     pop     rbx
     ret
@@ -1018,9 +1024,22 @@ step_synced_scene:
     test    rax, rax
     cmovs   rax, rcx
     add     eax, [r8 + SC_HEAD]
+    ; the frame shown last time is cached (SC_SYNC_POS/SC_SYNC_HANDLE): a
+    ; character usually takes several steps per frame, and the frame lists
+    ; are out of cache by the next tick. A position's frame never changes
+    ; (lists are only appended to, and shared lists are equal).
+    lea     ecx, [eax + 1]
+    cmp     ecx, [r8 + SC_SYNC_POS]
+    jne     .load
+    mov     eax, [r8 + SC_SYNC_HANDLE]
+    jmp     .loaded
+.load:
+    mov     [r8 + SC_SYNC_POS], ecx
     shl     rax, FRAME_SHIFT
     add     rax, [r8 + SC_FRAMES]
     mov     eax, [rax + FR_HANDLE]
+    mov     [r8 + SC_SYNC_HANDLE], eax
+.loaded:
     mov     rcx, [ch_handle]
     cmp     [rcx + rdi * 4], eax
     je      .same
