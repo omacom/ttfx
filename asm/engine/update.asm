@@ -6,7 +6,10 @@
 ; ticks a snapshot and then prunes. Only candidates can have left the set:
 ; characters inserted since the last prune and characters whose scene or
 ; path ended or was deactivated (every such engine path does MARK_CANDIDATE).
-; Pruning those equals Rust's retain over the whole set.
+; Pruning those equals Rust's retain over the whole set. The passes only
+; visit the window of bitmap words [active_lo, active_hi), which
+; active_insert widens and each prune narrows: most effects keep a band of
+; active characters, not the whole store.
 ;
 ; Dozing. Most ticks only count down: no path, the visual unchanged, no
 ; event - a plain scene's head frame ticking (and retiring, but for the
@@ -182,6 +185,24 @@ active_insert:
     bts     qword [rax + rcx * 8], rdx
     mov     rax, [candidate_bits]
     bts     qword [rax + rcx * 8], rdx
+    ; widen the window of words that can hold active characters
+    mov     eax, [active_hi]
+    cmp     eax, [active_lo]
+    jbe     .first
+    cmp     ecx, [active_lo]
+    jae     .above
+    mov     [active_lo], ecx
+.above:
+    inc     ecx
+    cmp     ecx, eax
+    jbe     .done
+    mov     [active_hi], ecx
+.done:
+    ret
+.first:
+    mov     [active_lo], ecx
+    inc     ecx
+    mov     [active_hi], ecx
     ret
 
 ; active_remove(edi=slot)
@@ -236,6 +257,8 @@ active_clear:
     mov     rcx, r13
     xor     eax, eax
     rep     stosq
+    mov     [active_lo], eax
+    mov     [active_hi], eax
     pop     r13
     pop     r12
     pop     rbx
@@ -370,7 +393,9 @@ update:
     sub     rsp, 8
     mov     r12, [active_bits]
     mov     r13, [snapshot_bits]
-    ACTIVE_WORDS r14, r14d
+    ; only the window of words that can hold active characters
+    mov     r14d, [active_hi]
+    mov     ebp, [active_lo]
     ; the snapshot (callbacks may change the live set while we tick): this
     ; update's dozers wake, the others stay out
     mov     eax, [upd_count]
@@ -386,8 +411,10 @@ update:
     pshufd  xmm7, xmm7, 0
 %endif
     mov     r8, [doze_bits]
-    mov     rsi, [ch_wake]
-    xor     ebx, ebx
+    mov     rsi, rbp
+    shl     rsi, 6
+    add     rsi, [ch_wake]
+    mov     ebx, ebp
 .snap_word:
     cmp     rbx, r14
     jae     .snapped
@@ -410,7 +437,7 @@ update:
 %if TIER >= 4
     vzeroupper
 %endif
-    xor     ebx, ebx
+    mov     ebx, ebp
 .tick_word:
     cmp     rbx, r14
     jae     .prune
@@ -438,7 +465,10 @@ update:
     mov     dword [doze_slot], -1
     jmp     .ticked
 .moving:
-    call    tick_awake
+    ; tick_awake, inline
+    call    motion_move
+    mov     edi, [upd_cursor]
+    call    step_animation_awake
 .ticked:
     ; re-read: a character woken during the pass may have joined this word
     mov     r15, [r13 + rbx * 8]
@@ -460,13 +490,14 @@ update:
     jmp     .tick_word
 .prune:
     mov     dword [upd_cursor], -1
-    ; the set may have grown during the pass (new characters)
-    ACTIVE_WORDS r14, r14d
+    ; the set may have grown during the pass (new characters); candidates
+    ; outside the window are not active
+    mov     r14d, [active_hi]
     mov     r13, [candidate_bits]
-    xor     ebx, ebx
+    mov     ebx, [active_lo]
 .prune_word:
     cmp     rbx, r14
-    jae     .done
+    jae     .shrink
     mov     r15, [r13 + rbx * 8]
     test    r15, r15
     jz      .prune_next
@@ -491,6 +522,27 @@ update:
 .prune_next:
     inc     rbx
     jmp     .prune_word
+.shrink:
+    ; narrow the window to the words still in use
+    mov     eax, [active_lo]
+.shrink_lo:
+    cmp     eax, r14d
+    jae     .empty
+    cmp     qword [r12 + rax * 8], 0
+    jne     .shrink_hi
+    inc     eax
+    jmp     .shrink_lo
+.shrink_hi:
+    cmp     qword [r12 + r14 * 8 - 8], 0
+    jne     .narrowed
+    dec     r14d
+    jmp     .shrink_hi
+.empty:
+    xor     eax, eax
+    xor     r14d, r14d
+.narrowed:
+    mov     [active_lo], eax
+    mov     [active_hi], r14d
 .done:
     add     rsp, 8
     pop     r15
@@ -508,6 +560,8 @@ snapshot_bits:  resq 1
 candidate_bits: resq 1
 doze_bits:      resq 1              ; characters dozing through pure ticks
 ch_wake:        resq 1              ; u8 per slot: the update that wakes it
+active_lo:      resd 1              ; words [lo, hi) hold every active
+active_hi:      resd 1              ; character (empty when hi <= lo)
 upd_count:      resd 1              ; updates started
 upd_cursor:     resd 1              ; the slot ticking now, or -1
 doze_slot:      resd 1              ; the slot whose update tick is running, or -1
