@@ -5,6 +5,11 @@
 
 section .text
 
+extern pthread_create
+extern pthread_join
+extern pthread_sigmask
+extern getenv
+
 ; write_all(edi=fd, rsi=ptr, rdx=len) -> rax = 0, or -errno on failure.
 ; Retries short writes and EINTR, like Write::write_all.
 write_all:
@@ -157,8 +162,14 @@ release_regions:
     ret
 
 ; fatal(rdi=message, esi=length): an internal limit was hit; there is no
-; sensible way to continue, so report it and exit like a Rust panic would.
+; sensible way to continue, so report it and exit like a Rust panic would
+; (after the frames already handed to the render thread are out).
 fatal:
+    push    rdi
+    push    rsi
+    call    pipeline_finish
+    pop     rsi
+    pop     rdi
     mov     rdx, rsi
     mov     rsi, rdi
     mov     edi, 2
@@ -252,6 +263,74 @@ sleep_ns:
     jmp     .again
 .done:
     add     rsp, 32
+    ret
+
+; ------------------------------------------------------------------ threads
+; The render thread (render.asm) is a pthread: glibc is linked, and a raw
+; clone would bypass its thread setup inside the Rust process.
+
+; futex_wait(rdi=32-bit word, esi=expected): sleep while the word holds the
+; expected value, until a futex_wake. May return early (a signal, a race);
+; callers recheck.
+futex_wait:
+    mov     edx, esi
+    mov     esi, FUTEX_WAIT_PRIVATE
+    xor     r10d, r10d
+    SYSCALL SYS_futex
+    ret
+
+; futex_wake(rdi=32-bit word): wake a thread sleeping on it.
+futex_wake:
+    mov     esi, FUTEX_WAKE_PRIVATE
+    mov     edx, 1
+    SYSCALL SYS_futex
+    ret
+
+; thread_start(rdi=start routine, rsi=pthread_t out) -> eax = 0, or an
+; error number. The thread starts with every asynchronous signal blocked:
+; the Rust handlers only set flags that the main thread's stop checks read,
+; so SIGINT, SIGTERM and SIGWINCH must reach the main thread. Signals the
+; thread raises itself stay deliverable: SIGPIPE from a write to a closed
+; pipe must still end the process by default, as it does single-threaded,
+; and faults must not be held pending. Clobbers C.
+thread_start:
+    push    rbx
+    push    r12
+    sub     rsp, 264                    ; the thread's mask, then main's
+    mov     rbx, rdi
+    mov     r12, rsi
+    mov     rdi, rsp
+    mov     rax, -1
+    mov     ecx, 16
+    rep     stosq
+    mov     rax, ~((1 << (SIGPIPE - 1)) | (1 << (SIGSEGV - 1)) | (1 << (SIGBUS - 1)) | (1 << (SIGILL - 1)) | (1 << (SIGFPE - 1)) | (1 << (SIGTRAP - 1)))
+    and     [rsp], rax
+    mov     edi, SIG_SETMASK
+    mov     rsi, rsp
+    lea     rdx, [rsp + 128]
+    ZEROUPPER
+    CCALL   pthread_sigmask
+    mov     rdi, r12
+    xor     esi, esi
+    mov     rdx, rbx
+    xor     ecx, ecx
+    CCALL   pthread_create
+    mov     ebx, eax
+    mov     edi, SIG_SETMASK
+    lea     rsi, [rsp + 128]
+    xor     edx, edx
+    CCALL   pthread_sigmask
+    mov     eax, ebx
+    add     rsp, 264
+    pop     r12
+    pop     rbx
+    ret
+
+; thread_join(rdi=pthread_t): wait for the thread to end. Clobbers C.
+thread_join:
+    xor     esi, esi
+    ZEROUPPER
+    CCALL   pthread_join
     ret
 
 ; ----------------------------------------------------------------- utilities

@@ -3,14 +3,22 @@
 ;
 ; The cell grid keeps, per cell, the winning slot (maximum (layer,
 ; character_id), exactly Rust's painter order) and that winner's visual
-; handle. Rust rebuilds it every frame; here it is maintained incrementally:
+; handle. Rust rebuilds it every frame; here it is maintained incrementally,
+; by the renderer alone. The effect's side (set_visibility,
+; coordinate_changed, layer_changed, SET_HANDLE) only appends records to the
+; frame's change log (ttfx.inc), and the renderer replays the log before it
+; formats the frame (render_apply):
 ;
-;   * a visual change writes through to the grid when its character owns the
-;     cell (set_handle), which covers scene playback - the common case;
-;   * a newly visible character is painted into its cell on the spot;
+;   * a visual change reaches the grid when its character owns the cell;
+;   * a character entering a cell competes for it on the spot;
 ;   * movement, layer changes and hiding move the character between the
 ;     cells' occupant lists, and a cell whose owner left picks the best of the
-;     rest (cell_rewin).
+;     rest (cell_rewin) once the log is replayed.
+;
+; Replaying the log in order gives the grid a direct update would, since the
+; winner of a cell depends only on its occupants. That lets the renderer run
+; on a thread of its own (the frame ring, below). Nothing outside this file
+; reads the grid.
 ;
 ; Character ids ascend with slots (chars.asm), so the character_id tie-break
 ; compares slots.
@@ -24,12 +32,20 @@
 ; from the handle grid.
 
 %define EMPTY_SLOT      0xffffffff
-; per-cell record (cell_rec): the occupant list's head, the owner (also in
-; slot_grid, which SET_HANDLE reads) and the owner's layer, so a character
-; competing for a cell reads one line
+; an owner to be chosen again once the frame's log is replayed
+%define PENDING_SLOT    0xfffffffe
+; per-cell record (cell_rec, 8 bytes): the occupant list's head and the
+; owner's layer; the owner itself is in [owner_grid], a dense array that
+; the common visual change checks alone
 %define CR_HEAD         0
-%define CR_OWNER        4
-%define CR_LAYER        8
+%define CR_LAYER        4
+; the renderer's per-character pairs (8 bytes per slot)
+%define RL_NEXT         0               ; [rs_link]: the cell's next occupant
+%define RL_LAYER        4
+%define RC_PREV         0               ; [rs_cell]: its previous occupant
+%define RC_CELL         4               ; cell + 1, 0 = none
+; spins before an idle renderer sleeps
+%define RENDER_SPIN     256
 ; cells per dirty block (one emission quad)
 %define BLOCK           4
 %define BLOCK_SHIFT     2
@@ -172,34 +188,78 @@ render_init:
     add     rax, [col_offset]
     dec     rax
     mov     [co_cell0], rax
-    mov     rbx, [grid_cells]
-    lea     rbx, [rbx * 4 + 64]
-    mov     rdi, rbx
-    call    alloc
-    mov     [slot_grid], rax
-    mov     rdi, rbx
+    mov     rdi, [grid_cells]
+    lea     rdi, [rdi * 4 + 64]
     call    alloc
     mov     [handle_grid], rax
+    mov     rdi, CHAR_LIMIT * 8
+    call    reserve
+    mov     [rs_link], rax
+    mov     rdi, CHAR_LIMIT * 8
+    call    reserve
+    mov     [rs_cell], rax
     mov     rdi, CHAR_LIMIT * 4
     call    reserve
-    mov     [ch_cnext], rax
-    mov     rdi, CHAR_LIMIT * 4
-    call    reserve
-    mov     [ch_cprev], rax
+    mov     [rs_handle], rax
     mov     rdi, [grid_cells]
-    shl     rdi, 4
-    add     rdi, 64
+    lea     rdi, [rdi * 8 + 64]
     call    reserve
     mov     [cell_rec], rax
-    mov     rdi, CHAR_LIMIT * 4
+    mov     rdi, [grid_cells]
+    lea     rdi, [rdi * 4 + 64]
     call    reserve
-    mov     [visible_list], rax
-    mov     rdi, CHAR_LIMIT * 4
+    mov     [owner_grid], rax
+    ; the empty grid: no occupants, no owners, blank cells, all to be drawn
+    mov     rdi, [cell_rec]
+    mov     rcx, [grid_cells]
+    mov     rax, NONE
+.records:
+    test    rcx, rcx
+    jz      .owners
+    mov     [rdi + CR_HEAD], eax
+    add     rdi, 8
+    dec     rcx
+    jmp     .records
+.owners:
+    mov     rdi, [owner_grid]
+    mov     rcx, [grid_cells]
+    rep     stosd
+    mov     rdi, [handle_grid]
+    mov     eax, [space_handle]
+    mov     rcx, [grid_cells]
+    rep     stosd
+    mov     byte [all_dirty], 1
+    ; the change logs, one per ring entry, and the first one open
+    mov     rdi, FRAME_RING << LOG_SHIFT
     call    reserve
-    mov     [visible_pos], rax
+    mov     [log_ptr], rax
+    mov     rsi, FRAME_RING << LOG_SHIFT
+    call    small_pages
+    lea     rcx, [ring]
+    xor     edx, edx
+.logs:
+    mov     [rcx + FS_LOG], rax
+    add     rax, 1 << LOG_SHIFT
+    add     rcx, FS_SIZE
+    inc     edx
+    cmp     edx, FRAME_RING
+    jb      .logs
     mov     rdi, OUTPUT_RESERVE
     call    reserve
     mov     [out_base], rax
+    mov     rsi, OUTPUT_RESERVE
+    call    small_pages
+    ; each ring entry's pending bytes (a frame's prefix) get an equal share
+    lea     rcx, [ring]
+    xor     edx, edx
+.prefixes:
+    mov     [rcx + FS_PREFIX], rax
+    mov     rdi, OUTPUT_RESERVE / FRAME_RING
+    add     rax, rdi
+    add     rcx, FS_SIZE
+    inc     edx
+    cmp     edx, FRAME_RING
+    jb      .prefixes
     ; per-row storage, two buffers per row: width * VISUAL_MAX bytes +
     ; newline + copy slack
     mov     rax, [grid_width]
@@ -246,13 +306,29 @@ render_init:
     add     rdi, 128
     call    alloc
     mov     [dirty_cells], rax
+    mov     rdi, [grid_cells]
+    lea     rdi, [rdi * 4 + 64]
+    call    alloc
+    mov     [pending_cells], rax
     mov     rdi, [grid_width]
     shr     rdi, 6
     add     rdi, 64
     call    alloc
     mov     [dirty_bits], rax
-    mov     byte [grid_valid], 0
     pop     rbx
+    ret
+
+; small_pages(rax=region, rsi=bytes) -> rax kept: no transparent huge pages
+; for a region that is touched sparsely (one stretch per ring entry): each
+; stretch would otherwise cost a zeroed 2 MB page. Clobbers rcx, rdx, rdi,
+; r11.
+small_pages:
+    push    rax
+    mov     rdi, rax
+    and     rdi, -4096                  ; reserve staggers the base
+    mov     edx, MADV_NOHUGEPAGE
+    SYSCALL SYS_madvise
+    pop     rax
     ret
 
 ; cell_of(edi=slot) -> eax = grid cell of the character's current coordinate,
@@ -261,163 +337,35 @@ cell_of:
     CELL_OF
     ret
 
-; paint(edi=slot, eax=cell): take the cell when empty or when this character
-; outranks its owner on (layer, character_id). Clobbers rcx, rdx, rsi, r8.
-paint:
-    mov     r8, rax
-    shl     r8, 4
-    add     r8, [cell_rec]
-; paint_rec: paint with r8 = the cell's record.
-paint_rec:
-    mov     rsi, [ch_layer]
-    mov     ecx, [rsi + rdi * 4]
-    mov     edx, [r8 + CR_OWNER]
-    cmp     edx, EMPTY_SLOT
-    je      .take
-    cmp     ecx, [r8 + CR_LAYER]
-    jg      .take
-    jl      .keep
-    cmp     edi, edx
-    jbe     .keep
-.take:
-    mov     [r8 + CR_OWNER], edi
-    mov     [r8 + CR_LAYER], ecx
-    mov     rsi, [slot_grid]
-    mov     [rsi + rax * 4], edi
-    mov     rsi, [ch_handle]
-    mov     ecx, [rsi + rdi * 4]
-    mov     rsi, [handle_grid]
-    mov     [rsi + rax * 4], ecx
-    mov     rsi, [dirty_cells]
-    mov     byte [rsi + rax], 1
-.keep:
-    ret
+; ------------------------------------------------------------ the main side
+; These run with the effect: they keep ch_cell and append to the frame's
+; change log (ttfx.inc), and never touch the grid itself.
 
-; cell_link(edi=slot, eax=cell): put a visible character into a cell's list
-; and let it compete for the cell. Clobbers rcx, rdx, rsi, r8.
-cell_link:
-    mov     rcx, [ch_cell]
-    mov     [rcx + rdi * 4], eax
-    mov     r8, rax
-    shl     r8, 4
-    add     r8, [cell_rec]
-    mov     edx, [r8 + CR_HEAD]
-    mov     rcx, [ch_cnext]
-    mov     [rcx + rdi * 4], edx
-    mov     rcx, [ch_cprev]
-    mov     dword [rcx + rdi * 4], NONE
-    cmp     edx, NONE
-    je      .head
-    mov     [rcx + rdx * 4], edi
-.head:
-    mov     [r8 + CR_HEAD], edi
-    jmp     paint_rec
-
-; cell_unlink(edi=slot): take a character out of its cell; if it owned the
-; cell, the best remaining character (or nobody) takes over.
-; Clobbers rax, rcx, rdx, rsi, r8, r9.
-cell_unlink:
-    mov     rax, [ch_cell]
-    mov     r9d, [rax + rdi * 4]
-    cmp     r9d, NONE
-    je      .done
-    mov     dword [rax + rdi * 4], NONE
-    mov     r8, r9
-    shl     r8, 4
-    add     r8, [cell_rec]
-    mov     rcx, [ch_cnext]
-    mov     edx, [rcx + rdi * 4]        ; next
-    mov     rsi, [ch_cprev]
-    mov     eax, [rsi + rdi * 4]        ; previous
-    cmp     eax, NONE
-    je      .was_head
-    mov     [rcx + rax * 4], edx
-    jmp     .fix_next
-.was_head:
-    mov     [r8 + CR_HEAD], edx
-.fix_next:
-    cmp     edx, NONE
-    je      .owner
-    mov     [rsi + rdx * 4], eax
-.owner:
-    cmp     [r8 + CR_OWNER], edi
-    jne     .done
-    mov     eax, r9d
-    jmp     cell_rewin
-.done:
-    ret
-
-; cell_rewin(eax=cell): the cell's owner is the best of its list, or nobody.
-; Clobbers rcx, rdx, rsi, r8, r9.
-cell_rewin:
-    push    rbx
-    mov     r9, rax
-    shl     r9, 4
-    add     r9, [cell_rec]
-    mov     ecx, [r9 + CR_HEAD]         ; candidate
-    mov     ebx, NONE                   ; best so far
-    mov     rsi, [ch_layer]
-    mov     r8, [ch_cnext]
-.scan:
-    cmp     ecx, NONE
-    je      .chosen
-    cmp     ebx, NONE
-    je      .take
-    mov     edx, [rsi + rcx * 4]
-    cmp     edx, [rsi + rbx * 4]
-    jg      .take
-    jl      .next
-    cmp     ecx, ebx
-    jbe     .next
-.take:
-    mov     ebx, ecx
-.next:
-    mov     ecx, [r8 + rcx * 4]
-    jmp     .scan
-.chosen:
-    mov     [r9 + CR_OWNER], ebx
-    mov     rdx, [handle_grid]
-    cmp     ebx, NONE
-    je      .empty
-    mov     ecx, [rsi + rbx * 4]
-    mov     [r9 + CR_LAYER], ecx
-    mov     rsi, [slot_grid]
-    mov     [rsi + rax * 4], ebx
-    mov     rsi, [ch_handle]
-    mov     ecx, [rsi + rbx * 4]
-    mov     [rdx + rax * 4], ecx
-    jmp     .dirty
-.empty:
-    mov     rsi, [slot_grid]
-    mov     dword [rsi + rax * 4], EMPTY_SLOT
-    mov     ecx, [space_handle]
-    mov     [rdx + rax * 4], ecx
-.dirty:
-    mov     rsi, [dirty_cells]
-    mov     byte [rsi + rax], 1
-    pop     rbx
-    ret
+; LOG_REC op, value register: append (slot edi | op, value). Clobbers rcx, rdx.
+%macro LOG_REC 2
+    mov     rcx, [log_ptr]
+    mov     edx, edi
+    or      edx, %1
+    mov     [rcx], edx
+    mov     [rcx + 4], %2
+    add     rcx, 8
+    mov     [log_ptr], rcx
+%endmacro
 
 ; set_visibility(edi=slot, esi=visible): Terminal.set_character_visibility.
 set_visibility:
     test    esi, esi
     jnz     set_visible
-    ; hide: swap-remove from the visible list and leave the cell
     mov     rax, [ch_flags]
     test    word [rax + rdi * 2], CF_VISIBLE
     jz      .done
     and     word [rax + rdi * 2], ~CF_VISIBLE
-    mov     rax, [visible_pos]
-    mov     ecx, [rax + rdi * 4]        ; position of the hidden character
-    dec     dword [visible_count]
-    mov     edx, [visible_count]        ; last position
-    mov     r8, [visible_list]
-    mov     r9d, [r8 + rdx * 4]         ; the character moved into the hole
-    mov     [r8 + rcx * 4], r9d
-    mov     [rax + r9 * 4], ecx
-    cmp     byte [grid_valid], 0
+    mov     rax, [ch_cell]
+    cmp     dword [rax + rdi * 4], NONE
     je      .done
-    jmp     cell_unlink
+    mov     dword [rax + rdi * 4], NONE
+    mov     eax, NONE
+    LOG_REC LOG_MOVE, eax
 .done:
     ret
 
@@ -427,64 +375,63 @@ set_visible:
     test    word [rax + rdi * 2], CF_VISIBLE
     jnz     .done
     or      word [rax + rdi * 2], CF_VISIBLE
-    mov     ecx, [visible_count]
-    mov     rax, [visible_list]
-    mov     [rax + rcx * 4], edi
-    mov     rax, [visible_pos]
-    mov     [rax + rdi * 4], ecx
-    inc     dword [visible_count]
-    cmp     byte [grid_valid], 0
-    je      .done
     CELL_OF
     cmp     eax, NONE
-    je      .done
-    jmp     cell_link
+    jne     enter_cell
 .done:
     ret
 
+; enter_cell(edi=slot, eax=cell): a character without a cell takes one. The
+; renderer learns its visual and layer first. Clobbers rcx, rdx.
+enter_cell:
+    mov     rcx, [ch_cell]
+    mov     [rcx + rdi * 4], eax
+    mov     rcx, [log_ptr]
+    mov     rdx, [ch_handle]
+    mov     edx, [rdx + rdi * 4]
+    mov     [rcx], edi                  ; LOG_HANDLE
+    mov     [rcx + 4], edx
+    mov     rdx, [ch_layer]
+    mov     edx, [rdx + rdi * 4]
+    mov     [rcx + 12], edx
+    mov     edx, edi
+    or      edx, LOG_LAYER
+    mov     [rcx + 8], edx
+    xor     edx, LOG_LAYER | LOG_MOVE
+    mov     [rcx + 16], edx
+    mov     [rcx + 20], eax
+    add     rcx, 24
+    mov     [log_ptr], rcx
+    ret
+
 ; coordinate_changed(edi=slot): the character's current coordinate changed;
-; a visible character that changes cells leaves the old one and joins the
-; new one.
+; a visible character that changes cells logs the move. Clobbers rax, rcx,
+; rdx.
 coordinate_changed:
     mov     rax, [ch_flags]
     test    word [rax + rdi * 2], CF_VISIBLE
     jz      .done
-    cmp     byte [grid_valid], 0
-    je      .done
     CELL_OF
     mov     rcx, [ch_cell]
-    cmp     [rcx + rdi * 4], eax
+    mov     edx, [rcx + rdi * 4]
+    cmp     edx, eax
     je      .done
-    ; the new cell's record is needed after the unlink: start its load now
-    cmp     eax, NONE
-    je      .unlink
-    mov     rcx, rax
-    shl     rcx, 4
-    add     rcx, [cell_rec]
-    prefetcht0 [rcx]
-.unlink:
-    push    rax
-    call    cell_unlink
-    pop     rax
-    cmp     eax, NONE
-    je      .done
-    jmp     cell_link
+    cmp     edx, NONE
+    je      enter_cell
+    mov     [rcx + rdi * 4], eax
+    LOG_REC LOG_MOVE, eax
 .done:
     ret
 
-; layer_changed(edi=slot): a visible character's layer changed; its cell
-; picks its owner again.
+; layer_changed(edi=slot): the character's layer changed. Clobbers rax, rcx,
+; rdx.
 layer_changed:
-    mov     rax, [ch_flags]
-    test    word [rax + rdi * 2], CF_VISIBLE
-    jz      .done
-    cmp     byte [grid_valid], 0
-    je      .done
     mov     rax, [ch_cell]
-    mov     eax, [rax + rdi * 4]
-    cmp     eax, NONE
+    cmp     dword [rax + rdi * 4], NONE
     je      .done
-    jmp     cell_rewin
+    mov     rax, [ch_layer]
+    mov     eax, [rax + rdi * 4]
+    LOG_REC LOG_LAYER, eax
 .done:
     ret
 
@@ -493,53 +440,233 @@ set_handle:
     SET_HANDLE
     ret
 
-; repaint: rebuild both grids from the visible list (update_render_cells).
-repaint:
+; ------------------------------------------------------------ the render side
+; The renderer's own copy of what it needs per character, in dense arrays
+; indexed by slot like the ch_* fields: [rs_link] holds (next occupant of
+; the cell, layer), the pair a cell's scan reads; [rs_cell] holds (previous
+; occupant, cell + 1, 0 = none), so the zeroed reservation starts out right
+; for every slot; [rs_handle] the visual.
+
+; render_apply(rsi=log start, rdi=log end): replay a change log onto the
+; grid. Clobbers C but rbx, rbp, r12-r15.
+render_apply:
     push    rbx
     push    r12
     push    r13
-    mov     rdx, [grid_cells]
-    mov     rdi, [slot_grid]
-    mov     eax, EMPTY_SLOT
-    mov     rcx, rdx
-    rep     stosd
-    mov     rdi, [cell_rec]
-    mov     rcx, rdx
-    mov     rax, -1
-.records:
-    test    rcx, rcx
-    jz      .handles
-    mov     [rdi], rax                  ; no head, no owner
-    mov     qword [rdi + 8], 0
-    add     rdi, 16
-    dec     rcx
-    jmp     .records
-.handles:
-    mov     rdi, [handle_grid]
-    mov     eax, [space_handle]
-    mov     rcx, rdx
-    rep     stosd
-    mov     r12, [visible_list]
-    mov     r13d, [visible_count]
-    xor     ebx, ebx
+    push    r14
+    mov     r12, rsi
+    mov     r13, rdi
+    mov     rbx, [rs_link]
+    mov     r14, [rs_cell]
 .next:
-    cmp     ebx, r13d
+    cmp     r12, r13
     jae     .done
-    mov     edi, [r12 + rbx * 4]
-    inc     ebx
-    CELL_OF
-    mov     rcx, [ch_cell]
-    mov     [rcx + rdi * 4], eax
-    cmp     eax, NONE
+    mov     edi, [r12]
+    mov     eax, [r12 + 4]
+    add     r12, 8
+    mov     ecx, edi
+    and     edi, LOG_SLOT_MASK
+    shr     ecx, 30
+    cmp     ecx, 1
+    jb      .handle
+    je      .layer
+    ; a move: leave the old cell, join the new one
+    mov     r11d, eax
+    call    cell_unlink
+    cmp     r11d, NONE
     je      .next
+    mov     eax, r11d
     call    cell_link
     jmp     .next
+.handle:
+    ; the owner of a cell shows its new visual at once
+    mov     rdx, [rs_handle]
+    mov     [rdx + rdi * 4], eax
+    mov     ecx, [r14 + rdi * 8 + RC_CELL]
+    test    ecx, ecx
+    jz      .next
+    dec     ecx
+    mov     rdx, [owner_grid]
+    cmp     [rdx + rcx * 4], edi
+    jne     .next
+    mov     rdx, [handle_grid]
+    cmp     [rdx + rcx * 4], eax
+    je      .next
+    mov     [rdx + rcx * 4], eax
+    mov     rdx, [dirty_cells]
+    mov     byte [rdx + rcx], 1
+    jmp     .next
+.layer:
+    ; the cell picks its owner again
+    mov     [rbx + rdi * 8 + RL_LAYER], eax
+    mov     eax, [r14 + rdi * 8 + RC_CELL]
+    test    eax, eax
+    jz      .next
+    dec     eax
+    call    cell_pending
+    jmp     .next
 .done:
-    mov     byte [grid_valid], 1
-    mov     byte [all_dirty], 1
+    ; the crowded cells whose owner left choose again, once each
+    mov     r12, [pending_cells]
+    mov     r13d, [pending_count]
+    mov     dword [pending_count], 0
+.pending:
+    test    r13d, r13d
+    jz      .applied
+    dec     r13d
+    mov     eax, [r12 + r13 * 4]
+    call    cell_rewin
+    jmp     .pending
+.applied:
+    pop     r14
     pop     r13
     pop     r12
     pop     rbx
+    ret
+
+; cell_link(edi=slot, eax=cell): put a visible character into a cell's list
+; and let it compete for the cell. rbx = [rs_link], r14 = [rs_cell].
+; Clobbers rcx, rdx, r8.
+cell_link:
+    lea     ecx, [rax + 1]
+    mov     [r14 + rdi * 8 + RC_CELL], ecx
+    mov     dword [r14 + rdi * 8 + RC_PREV], NONE
+    mov     r8, [cell_rec]
+    lea     r8, [r8 + rax * 8]
+    mov     edx, [r8 + CR_HEAD]
+    mov     [rbx + rdi * 8 + RL_NEXT], edx
+    mov     [r8 + CR_HEAD], edi
+    cmp     edx, NONE
+    je      paint_rec
+    mov     [r14 + rdx * 8 + RC_PREV], edi
+; paint_rec(edi=slot, eax=cell, r8=the cell's record): take the cell when
+; empty or when this character outranks its owner on (layer, character_id);
+; a cell whose owner is pending chooses later. Clobbers rcx, rdx.
+paint_rec:
+    mov     ecx, [rbx + rdi * 8 + RL_LAYER]
+    mov     rdx, [owner_grid]
+    mov     edx, [rdx + rax * 4]
+    cmp     edx, PENDING_SLOT
+    jae     .other
+    cmp     ecx, [r8 + CR_LAYER]
+    jg      .take
+    jl      .keep
+    cmp     edi, edx
+    jbe     .keep
+.take:
+    mov     rdx, [owner_grid]
+    mov     [rdx + rax * 4], edi
+    mov     [r8 + CR_LAYER], ecx
+    mov     rcx, [rs_handle]
+    mov     ecx, [rcx + rdi * 4]
+    mov     rdx, [handle_grid]
+    mov     [rdx + rax * 4], ecx
+    mov     rdx, [dirty_cells]
+    mov     byte [rdx + rax], 1
+.keep:
+    ret
+.other:
+    je      .keep                       ; pending
+    jmp     .take                       ; empty
+
+; cell_unlink(edi=slot): take a character out of its cell; if it owned the
+; cell, the best remaining character (or nobody) takes over: at once when
+; one or none is left, else once the log is replayed. rbx = [rs_link],
+; r14 = [rs_cell]. Clobbers rax, rcx, rdx, rsi, r8, r9.
+cell_unlink:
+    mov     r9d, [r14 + rdi * 8 + RC_CELL]
+    test    r9d, r9d
+    jz      .done
+    mov     dword [r14 + rdi * 8 + RC_CELL], 0
+    dec     r9d
+    mov     r8, [cell_rec]
+    lea     r8, [r8 + r9 * 8]
+    mov     edx, [rbx + rdi * 8 + RL_NEXT]
+    mov     eax, [r14 + rdi * 8 + RC_PREV]
+    cmp     eax, NONE
+    je      .was_head
+    mov     [rbx + rax * 8 + RL_NEXT], edx
+    jmp     .fix_next
+.was_head:
+    mov     [r8 + CR_HEAD], edx
+.fix_next:
+    cmp     edx, NONE
+    je      .owner
+    mov     [r14 + rdx * 8 + RC_PREV], eax
+.owner:
+    mov     rcx, [owner_grid]
+    cmp     [rcx + r9 * 4], edi
+    jne     .done
+    mov     eax, r9d
+    mov     ecx, [r8 + CR_HEAD]
+    cmp     ecx, NONE
+    je      cell_rewin                  ; empty now
+    cmp     dword [rbx + rcx * 8 + RL_NEXT], NONE
+    je      cell_rewin                  ; one left
+    jmp     cell_pending
+.done:
+    ret
+
+; cell_pending(eax=cell): the cell's owner is chosen again (cell_rewin) once
+; the log is replayed: a crowded cell that many leave in one frame is
+; scanned once, not once per departure. Clobbers rcx, rdx.
+cell_pending:
+    mov     rcx, [owner_grid]
+    cmp     dword [rcx + rax * 4], PENDING_SLOT
+    je      .done
+    mov     dword [rcx + rax * 4], PENDING_SLOT
+    mov     rcx, [pending_cells]
+    mov     edx, [pending_count]
+    mov     [rcx + rdx * 4], eax
+    inc     dword [pending_count]
+.done:
+    ret
+
+; cell_rewin(eax=cell): the cell's owner is the best of its list, or nobody;
+; the cell shows it and is marked changed. rbx = [rs_link]. Clobbers rcx,
+; rdx, rsi, r8, r9.
+cell_rewin:
+    push    r15
+    mov     r9, [cell_rec]
+    lea     r9, [r9 + rax * 8]
+    mov     ecx, [r9 + CR_HEAD]         ; candidate
+    mov     r15d, NONE                  ; best so far, esi its layer
+.scan:
+    cmp     ecx, NONE
+    je      .chosen
+    mov     r8d, [rbx + rcx * 8 + RL_LAYER]
+    mov     edx, [rbx + rcx * 8 + RL_NEXT]
+    cmp     r15d, NONE
+    je      .take
+    cmp     r8d, esi
+    jg      .take
+    jl      .next
+    cmp     ecx, r15d
+    jbe     .next
+.take:
+    mov     r15d, ecx
+    mov     esi, r8d
+.next:
+    mov     ecx, edx
+    jmp     .scan
+.chosen:
+    mov     rdx, [owner_grid]
+    mov     [rdx + rax * 4], r15d
+    mov     rdx, [handle_grid]
+    cmp     r15d, NONE
+    je      .empty
+    mov     [r9 + CR_LAYER], esi
+    mov     rcx, [rs_handle]
+    mov     ecx, [rcx + r15 * 4]
+    mov     [rdx + rax * 4], ecx
+    jmp     .dirty
+.empty:
+    mov     ecx, [space_handle]
+    mov     [rdx + rax * 4], ecx
+.dirty:
+    mov     rsi, [dirty_cells]
+    mov     byte [rsi + rax], 1
+    pop     r15
     ret
 
 ; row_dirty(rax=first cell of the row) -> rax = the number of the row's
@@ -754,10 +881,6 @@ render_frame:
     push    r13
     push    r14
     push    r15
-    cmp     byte [grid_valid], 0
-    jne     .rows
-    call    repaint
-.rows:
     mov     r13, [handle_grid]
     mov     r14, [grid_width]
     mov     rbp, [grid_height]
@@ -1100,27 +1223,232 @@ emit_blocks:
     pop     r12
     ret
 
+; ------------------------------------------------------------ the frame ring
+; Unpaced runs render on a thread of their own: the main thread runs the
+; effect and logs its grid changes; the render thread replays frame N's log,
+; formats and writes frame N while the main thread computes frame N+1. A
+; frame is handed over through a ring of FRAME_RING entries (its log and its
+; prefix bytes); r_submitted and r_completed count frames through it. Each
+; side sleeps on a futex word of its own (render_seq, main_seq) with a
+; *_sleeping flag the other side checks after a locked update, so a wake is
+; only a syscall when someone sleeps. Without the thread, the main thread
+; renders each frame itself from ring entry 0 (frame_submit, lib.asm).
+
+; render_emit(rdi=ring entry) -> rax = 0 or -errno: replay the entry's log,
+; format the frame, and write it with the entry's prefix bytes first.
+; Clobbers C but rbx, rbp, r12-r15.
+render_emit:
+    push    rbx
+    mov     rbx, rdi
+    mov     rsi, [rbx + FS_LOG]
+    mov     rdi, [rbx + FS_LOG_END]
+    call    render_apply
+    call    render_frame
+    mov     rdi, [frame_iov]
+    mov     rax, [rbx + FS_PREFIX]
+    mov     [rdi], rax
+    mov     rax, [rbx + FS_PREFIX_LEN]
+    mov     [rdi + 8], rax
+    mov     esi, [grid_height]
+    inc     esi
+    call    writev_all
+    pop     rbx
+    ret
+
+; render_catch_up: replay the open log (ring entry 0's) and empty it, for a
+; caller that renders on the main thread. Clobbers C but rbx, rbp, r12-r15.
+render_catch_up:
+    mov     rsi, [ring + FS_LOG]
+    mov     rdi, [log_ptr]
+    mov     [log_ptr], rsi
+    jmp     render_apply
+
+; pipeline_start: start the render thread when it can help: output that is
+; not paced on the real clock, at least two CPUs to run on, and no
+; TTFX_ASM_THREADS=1 (which keeps every run single-threaded, for testing).
+; Clobbers C.
+pipeline_start:
+    cmp     byte [clock_is_virtual], 0
+    jne     .unpaced
+    cmp     qword [cfg_frame_rate], 0
+    jne     .done
+.unpaced:
+    lea     rdi, [env_threads]
+    ZEROUPPER
+    CCALL   getenv
+    test    rax, rax
+    jz      .cpus
+    cmp     word [rax], '1'             ; "1", NUL
+    je      .done
+.cpus:
+    ; the CPUs this thread may run on: two or more (as far as it matters)
+    sub     rsp, 128
+    xor     edi, edi
+    mov     esi, 128
+    mov     rdx, rsp
+    SYSCALL SYS_sched_getaffinity
+    xor     ecx, ecx
+    test    rax, rax
+    jle     .counted
+    shr     rax, 3
+    xor     edx, edx
+.word:
+    mov     r8, [rsp + rdx * 8]
+    test    r8, r8
+    jz      .skip
+    inc     ecx
+    lea     r9, [r8 - 1]
+    test    r8, r9
+    jz      .skip
+    inc     ecx                         ; two or more in this word
+.skip:
+    inc     rdx
+    cmp     rdx, rax
+    jb      .word
+.counted:
+    add     rsp, 128
+    cmp     ecx, 2
+    jb      .done
+    lea     rdi, [render_thread]
+    lea     rsi, [render_tid]
+    call    thread_start
+    test    eax, eax
+    jnz     .done                       ; no thread: render here
+    mov     byte [pipe_running], 1
+.done:
+    ret
+
+; pipeline_finish -> rax = -errno of the first frame that failed to write, or
+; 0. Every frame handed over is written (or, after a failure, dropped) and
+; the render thread has ended. Safe to call when there is none. Clobbers C.
+pipeline_finish:
+    cmp     byte [pipe_running], 0
+    je      .done
+    mov     byte [render_quit], 1
+    xor     eax, eax
+    xchg    [render_sleeping], al       ; locked: orders the store above
+    test    al, al
+    jz      .join
+    lock inc dword [render_seq]
+    lea     rdi, [render_seq]
+    call    futex_wake
+.join:
+    mov     rdi, [render_tid]
+    call    thread_join
+    mov     byte [pipe_running], 0
+.done:
+    mov     rax, [render_err]
+    ret
+
+; render_thread: the render thread's start routine. Renders the frames
+; handed over, in order, until told to quit with none left. After a failed
+; write it only drops frames (the run is ending).
+render_thread:
+    push    rbx
+    push    rbp
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    sub     rsp, 8
+.loop:
+    mov     eax, [r_completed]
+    cmp     eax, [r_submitted]
+    jne     .work
+    cmp     byte [render_quit], 0
+    jne     .quitting
+    mov     ebx, RENDER_SPIN
+.spin:
+    pause
+    mov     eax, [r_completed]
+    cmp     eax, [r_submitted]
+    jne     .work
+    cmp     byte [render_quit], 0
+    jne     .quitting
+    dec     ebx
+    jnz     .spin
+    ; sleep: the futex word first, then the flag, then a last look
+    mov     esi, [render_seq]
+    mov     al, 1
+    xchg    [render_sleeping], al
+    mov     eax, [r_completed]
+    cmp     eax, [r_submitted]
+    jne     .awake
+    cmp     byte [render_quit], 0
+    jne     .awake
+    lea     rdi, [render_seq]
+    call    futex_wait
+.awake:
+    mov     byte [render_sleeping], 0
+    jmp     .loop
+.quitting:
+    ; quit comes after the last frame: one more look at the count
+    mov     eax, [r_completed]
+    cmp     eax, [r_submitted]
+    jne     .work
+    add     rsp, 8
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbp
+    pop     rbx
+    xor     eax, eax
+    ZEROUPPER
+    ret
+.work:
+    and     eax, FRAME_RING - 1
+    shl     eax, FS_SHIFT
+    lea     rdi, [ring]
+    add     rdi, rax
+    cmp     qword [render_err], 0
+    jne     .done
+    call    render_emit
+    test    rax, rax
+    jz      .done
+    mov     [render_err], rax
+.done:
+    lock inc dword [r_completed]
+    ; a main thread waiting for room wakes when half the ring is free
+    cmp     byte [main_sleeping], 0
+    je      .loop
+    mov     eax, [r_submitted]
+    sub     eax, [r_completed]
+    cmp     eax, FRAME_RING / 2
+    ja      .loop
+    xor     eax, eax
+    xchg    [main_sleeping], al
+    test    al, al
+    jz      .loop
+    lock inc dword [main_seq]
+    lea     rdi, [main_seq]
+    call    futex_wake
+    jmp     .loop
+
+section .rodata
+env_threads:    db "TTFX_ASM_THREADS", 0
+
+section .text
+
 section .tstate
-alignb 8
+; Both threads read this block, which is fixed once render_init is done;
+; it has its lines to itself, so neither thread's writes elsewhere evict it.
+alignb 64
 grid_width:     resq 1
 grid_height:    resq 1
 grid_cells:     resq 1
-slot_grid:      resq 1
-handle_grid:    resq 1
-visible_list:   resq 1
-ch_cnext:       resq 1
-ch_cprev:       resq 1
-cell_rec:       resq 1
-visible_pos:    resq 1
-visible_count:  resd 1
-grid_valid:     resb 1
-all_dirty:      resb 1
-alignb 8
 co_rbase:       resq 1
 co_rspan:       resq 1
 co_cbase:       resq 1
 co_cspan:       resq 1
 co_cell0:       resq 1
+handle_grid:    resq 1
+rs_link:        resq 1
+owner_grid:     resq 1
+rs_cell:        resq 1
+rs_handle:      resq 1
+cell_rec:       resq 1
+pending_cells:  resq 1
 out_base:       resq 1
 row_store:      resq 1
 row_stride:     resq 1
@@ -1128,9 +1456,31 @@ row_offs:       resq 1
 offs_stride:    resq 1
 row_sel:        resq 1
 row_iov:        resq 1
-frame_len:      resq 1
 frame_iov:      resq 1
 dirty_cells:    resq 1
 dirty_bits:     resq 1
 full_blocks:    resq 1
 row_blocks:     resq 1
+render_tid:     resq 1
+pipe_running:   resb 1                  ; frames go to the render thread
+; what each thread writes as it goes, each on lines of its own
+alignb 64
+log_ptr:        resq 1                  ; the main side's end of the open log
+render_quit:    resb 1
+alignb 64
+frame_len:      resq 1                  ; the renderer's
+render_err:     resq 1                  ; the renderer's first failed write
+pending_count:  resd 1
+all_dirty:      resb 1
+alignb 64
+r_submitted:    resd 1                  ; frames handed over (main)
+alignb 64
+r_completed:    resd 1                  ; frames done (renderer)
+alignb 64
+render_seq:     resd 1                  ; the renderer's futex word
+render_sleeping: resb 1
+alignb 64
+main_seq:       resd 1                  ; the main thread's futex word
+main_sleeping:  resb 1
+alignb 64
+ring:           resb FRAME_RING * FS_SIZE

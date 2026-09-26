@@ -124,7 +124,20 @@ engine_fail:
     mov     [rax + RQ_ERROR_LEN], rsi
     mov     qword [rax + RQ_ERROR_KIND], ERR_MESSAGE
     mov     rsp, [fail_rsp]
+    ; the frames already handed to the render thread come first; if one of
+    ; them failed to write, the run ended there, before this error
+    call    pipeline_finish
+    test    rax, rax
+    jnz     .write_failed
     mov     eax, OUT_ERROR
+    jmp     ..@run_return
+.write_failed:
+    mov     ecx, [r_submitted]          ; the main thread's open ring entry
+    and     ecx, FRAME_RING - 1
+    shl     ecx, FS_SHIFT
+    lea     rdx, [ring]
+    mov     r13, [rdx + rcx + FS_PREFIX]
+    call    teardown_failed
     jmp     ..@run_return
 
 ; fail_with_number(rdi=message, edx=length, rsi=number): FAIL with the
@@ -281,13 +294,15 @@ next_frame:
     ret
 
 ; run_effect -> rax = outcome. Prep the canvas, stream frames, always
-; restore the cursor. r12 = pending-bytes cursor, r13 = pending base.
+; restore the cursor. r12 = pending-bytes cursor, r13 = pending base (the
+; open ring entry's prefix buffer; the first is at out_base).
 run_effect:
     push    rbx
     push    r12
     push    r13
     push    r14
     push    r15
+    call    pipeline_start
     mov     r13, [out_base]
     mov     r12, r13
     mov     r15d, OUT_COMPLETE
@@ -328,25 +343,21 @@ run_effect:
     jz      .teardown
     mov     r14, r12                    ; where this frame's prefix starts
     call    out_move_to_top
-    call    render_frame
     call    check_stop
     jnz     .discard
-    ; pending bytes (prep, cursor move) and the frame's rows in one writev
-    mov     rdi, [frame_iov]
-    mov     [rdi], r13
-    mov     rax, r12
-    sub     rax, r13
-    mov     [rdi + 8], rax
-    mov     esi, [grid_height]
-    inc     esi
-    call    writev_all
-    mov     r12, r13
+    ; pending bytes (prep, cursor move) and the frame's rows in one writev,
+    ; here or on the render thread
+    call    frame_submit
     test    rax, rax
     jnz     .write_failed
     jmp     .frame
 .discard:
     mov     r12, r14
 .teardown:
+    ; every frame handed over is out before the teardown bytes
+    call    pipeline_finish
+    test    rax, rax
+    jnz     .write_failed
     cmp     r15d, OUT_RESIZED
     je      .resized
     call    restore_cursor
@@ -378,25 +389,15 @@ run_effect:
     jnz     .write_failed_late
     jmp     .finish
 .write_failed:
-    ; a failed frame still gets its teardown attempt, as run_effect does
     mov     rbx, rax
-    mov     r12, r13
-    call    restore_cursor
-    call    flush_output
+    call    pipeline_finish
     mov     rax, rbx
-.write_failed_late:
-    ; the terminal went away (EIO, EPIPE): a quiet end, not an error
-    cmp     byte [cfg_tty_output], 0
-    je      .io_error
-    cmp     rax, -EIO
-    je      .closed
-    cmp     rax, -EPIPE
-    je      .closed
-.io_error:
+    call    teardown_failed
     mov     r15, rax
     jmp     .finish
-.closed:
-    mov     r15d, OUT_OUTPUT_CLOSED
+.write_failed_late:
+    call    write_outcome
+    mov     r15, rax
 .finish:
     mov     rax, r15
     pop     r15
@@ -404,6 +405,104 @@ run_effect:
     pop     r13
     pop     r12
     pop     rbx
+    ret
+
+; teardown_failed(rax=-errno of a failed frame) -> rax = outcome. A failed
+; frame still gets its teardown attempt, as run_effect does. r13 = pending
+; base; the pending bytes are dropped. Clobbers C but rbp, r13-r15.
+teardown_failed:
+    push    rbx
+    mov     rbx, rax
+    mov     r12, r13
+    call    restore_cursor
+    call    flush_output
+    mov     rax, rbx
+    pop     rbx
+; write_outcome(rax=-errno) -> rax = outcome: the terminal going away (EIO,
+; EPIPE) is a quiet end, not an error.
+write_outcome:
+    cmp     byte [cfg_tty_output], 0
+    je      .io_error
+    cmp     rax, -EIO
+    je      .closed
+    cmp     rax, -EPIPE
+    jne     .io_error
+.closed:
+    mov     eax, OUT_OUTPUT_CLOSED
+.io_error:
+    ret
+
+; frame_submit -> rax = 0, or -errno of a failed write (on the render thread
+; possibly an earlier frame's). The frame is complete: its change log ends at
+; log_ptr, its pending bytes are r13..r12. It is rendered and written here,
+; or handed to the render thread, and r12/r13 move to the next ring entry,
+; waiting for it to be free. Clobbers C but rbx, rbp, r14, r15.
+frame_submit:
+    mov     eax, [r_submitted]
+    and     eax, FRAME_RING - 1
+    shl     eax, FS_SHIFT
+    lea     rdi, [ring]
+    add     rdi, rax
+    mov     rax, [log_ptr]
+    mov     [rdi + FS_LOG_END], rax
+    mov     rax, r12
+    sub     rax, r13
+    mov     [rdi + FS_PREFIX_LEN], rax
+    cmp     byte [pipe_running], 0
+    jne     .hand_over
+    ; single-threaded: entry 0, over and over
+    push    rdi
+    call    render_emit
+    pop     rdi
+    mov     rcx, [rdi + FS_LOG]
+    mov     [log_ptr], rcx
+    mov     r12, r13
+    ret
+.hand_over:
+    lock inc dword [r_submitted]
+    ; a sleeping renderer wakes once a few frames wait
+    cmp     byte [render_sleeping], 0
+    je      .room
+    mov     eax, [r_submitted]
+    sub     eax, [r_completed]
+    cmp     eax, FRAME_RING_WAKE
+    jb      .room
+    xor     eax, eax
+    xchg    [render_sleeping], al
+    test    al, al
+    jz      .room
+    lock inc dword [render_seq]
+    lea     rdi, [render_seq]
+    call    futex_wake
+.room:
+    ; the next entry is free once fewer than FRAME_RING frames are in flight
+    mov     eax, [r_submitted]
+    sub     eax, [r_completed]
+    cmp     eax, FRAME_RING
+    jb      .free
+    mov     esi, [main_seq]
+    mov     al, 1
+    xchg    [main_sleeping], al
+    mov     eax, [r_submitted]
+    sub     eax, [r_completed]
+    cmp     eax, FRAME_RING
+    jb      .awake
+    lea     rdi, [main_seq]
+    call    futex_wait
+.awake:
+    mov     byte [main_sleeping], 0
+    jmp     .room
+.free:
+    mov     eax, [r_submitted]
+    and     eax, FRAME_RING - 1
+    shl     eax, FS_SHIFT
+    lea     rdi, [ring]
+    add     rdi, rax
+    mov     rax, [rdi + FS_LOG]
+    mov     [log_ptr], rax
+    mov     r13, [rdi + FS_PREFIX]
+    mov     r12, r13
+    mov     rax, [render_err]
     ret
 
 ; check_stop -> ZF clear (and r15 = outcome) when the run must stop.
@@ -457,6 +556,7 @@ dump_effect:
     call    next_frame
     test    eax, eax
     jz      .done
+    call    render_catch_up
     call    render_frame
     ; "<len>\n" header, the rows, then the frame's trailing newline
     mov     rdi, r13

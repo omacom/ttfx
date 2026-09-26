@@ -87,6 +87,8 @@ global %1
 %define SYS_getpid          39
 %define SYS_kill            62
 %define SYS_clock_gettime   228
+%define SYS_futex           202
+%define SYS_sched_getaffinity 204
 %define SYS_exit_group      231
 %define SYS_openat          257
 
@@ -103,11 +105,19 @@ global %1
 %define TIOCGWINSZ          0x5413
 
 %define SIGINT              2
+%define SIGILL              4
+%define SIGTRAP             5
+%define SIGBUS              7
+%define SIGFPE              8
+%define SIGSEGV             11
 %define SIGPIPE             13
 %define SIGTERM             15
 %define SA_RESTART          0x10000000
 %define SA_RESTORER         0x04000000
 %define SIG_DFL             0
+%define SIG_SETMASK         2
+%define FUTEX_WAIT_PRIVATE  128
+%define FUTEX_WAKE_PRIVATE  129
 
 %define EINTR               4
 %define EIO                 5
@@ -119,6 +129,7 @@ global %1
 
 %define NONE_I64            0x8000000000000001  ; "absent" for i64 values
 %define MADV_DONTNEED       4
+%define MADV_NOHUGEPAGE     15
 %define SYS_munmap          11
 %define SYS_madvise         28
 %define CLOCK_REALTIME      0
@@ -357,9 +368,6 @@ global %1
 %1_len equ $ - %1
 %endmacro
 
-; set_handle(edi=slot, eax=handle): the character's current visual changes;
-; its cell shows the new visual at once if it owns that cell.
-; Clobbers rcx, rdx.
 ; MARK_CANDIDATE: slot edi may have stopped being active; the next prune
 ; re-checks it. Clobbers rax, rcx, rdx.
 %macro MARK_CANDIDATE 0
@@ -371,26 +379,42 @@ global %1
     bts     qword [rax + rcx * 8], rdx
 %endmacro
 
-; SET_HANDLE: slot edi's current visual becomes handle eax. When the
-; character owns its grid cell, the cell shows the new visual at once and,
-; if that changed anything, its row is marked for re-emission.
-; Clobbers rcx, rdx.
+; The render grid is kept by the renderer (render.asm), which may run on a
+; thread of its own. Everything else changes it only through the frame's
+; change log: 8-byte records (slot | LOG_*, value), replayed in order before
+; the frame is formatted. ch_cell is the cell the log last put a character
+; in (NONE when hidden or outside the window); only characters with a cell
+; log visual and layer changes, and one entering a cell logs both first.
+%define LOG_HANDLE          0x00000000  ; value = visual handle
+%define LOG_LAYER           0x40000000  ; value = layer
+%define LOG_MOVE            0x80000000  ; value = cell, or NONE
+%define LOG_SLOT_MASK       0x3fffffff
+
+; The frame ring (render.asm): FRAME_RING entries of FS_SIZE bytes, each a
+; frame's change log and its pending (prefix) bytes.
+%define FRAME_RING          32
+%define FRAME_RING_WAKE     4           ; frames that wake a sleeping renderer
+%define LOG_SHIFT           30          ; log bytes per entry, log2
+%define FS_LOG              0
+%define FS_LOG_END          8
+%define FS_PREFIX           16
+%define FS_PREFIX_LEN       24
+%define FS_SIZE             64          ; a line each
+%define FS_SHIFT            6
+
+; SET_HANDLE: slot edi's current visual becomes handle eax. A character with
+; a render cell logs the change. Clobbers rcx.
 %macro SET_HANDLE 0
     mov     rcx, [ch_handle]
     mov     [rcx + rdi * 4], eax
     mov     rcx, [ch_cell]
-    mov     ecx, [rcx + rdi * 4]
-    cmp     ecx, NONE
+    cmp     dword [rcx + rdi * 4], NONE
     je      %%done
-    mov     rdx, [slot_grid]
-    cmp     [rdx + rcx * 4], edi
-    jne     %%done
-    mov     rdx, [handle_grid]
-    cmp     [rdx + rcx * 4], eax
-    je      %%done
-    mov     [rdx + rcx * 4], eax
-    mov     rdx, [dirty_cells]
-    mov     byte [rdx + rcx], 1
+    mov     rcx, [log_ptr]
+    mov     [rcx], edi
+    mov     [rcx + 4], eax
+    add     rcx, 8
+    mov     [log_ptr], rcx
 %%done:
 %endmacro
 
