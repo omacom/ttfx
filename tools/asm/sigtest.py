@@ -54,6 +54,10 @@ for sig in (signal.SIGINT, signal.SIGTERM):
     r = run("0", args, send=sig, after=0.05)
     for d in DELAYS:
         o, s = run("force", args, send=sig, after=d)
+        if o == full and s == st:
+            # the run finished before the signal arrived: nothing to compare
+            print("skip", sig.name, d, f"finished all {total} frames before the signal")
+            continue
         b = o[:-len(tail)]
         ok = o.endswith(tail) and s == r[1] and full.startswith(b)
         ok = ok and (len(b) == len(body) or body[len(b):].startswith(MOVE))
