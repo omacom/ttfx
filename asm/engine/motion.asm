@@ -1606,6 +1606,14 @@ motion_move:
     vblendvpd ymm7, ymm10, ymm12, ymm13
 %endmacro
 
+; MV_LINE4: ymm7 = start, ymm9 = end on one axis, ymm2 = t, ymm3 = 1 - t
+; -> ymm7 = start.interpolate(end, t). Clobbers ymm10-11.
+%macro MV_LINE4 0
+    vmulpd  ymm10, ymm7, ymm3
+    vmulpd  ymm11, ymm9, ymm2
+    vaddpd  ymm7, ymm10, ymm11
+%endmacro
+
 ; path_view(edi=slot, eax=its active path) -> rdx = the path's
 ; current_step, max_steps, total_distance and last_distance_reached at
 ; their PA_* offsets, for the synced scene step: the record, or while the
@@ -1881,18 +1889,29 @@ motion_batch:
     vpmovqd ymm12, zmm4
     vcvtdq2pd zmm11, ymm11              ; start column
     vcvtdq2pd zmm12, ymm12              ; start row
-    vmovdqu64 zmm4, [rbx + rsi * 8 + MVO_C]
-    vpmovqd ymm13, zmm4
-    vpsrlq  zmm4, zmm4, 32
-    vpmovqd ymm14, zmm4
-    vcvtdq2pd zmm13, ymm13              ; control column
-    vcvtdq2pd zmm14, ymm14              ; control row
     vmovdqu64 zmm4, [rbx + rsi * 8 + MVO_E]
     vpmovqd ymm15, zmm4
     vpsrlq  zmm4, zmm4, 32
     vpmovqd ymm16, zmm4
     vcvtdq2pd zmm15, ymm15              ; end column
     vcvtdq2pd zmm16, ymm16              ; end row
+    kortestb k6, k6
+    jnz     .curves
+    ; lines only: start.interpolate(end, t)
+    vmulpd  zmm17, zmm11, zmm10
+    vmulpd  zmm4, zmm15, zmm9
+    vaddpd  zmm17, zmm17, zmm4
+    vmulpd  zmm18, zmm12, zmm10
+    vmulpd  zmm4, zmm16, zmm9
+    vaddpd  zmm18, zmm18, zmm4
+    jmp     .placed
+.curves:
+    vmovdqu64 zmm4, [rbx + rsi * 8 + MVO_C]
+    vpmovqd ymm13, zmm4
+    vpsrlq  zmm4, zmm4, 32
+    vpmovqd ymm14, zmm4
+    vcvtdq2pd zmm13, ymm13              ; control column
+    vcvtdq2pd zmm14, ymm14              ; control row
     ; a = start.interpolate(control, t), the line itself (control = end)
     vmulpd  zmm17, zmm11, zmm10
     vmulpd  zmm4, zmm13, zmm9
@@ -1913,6 +1932,7 @@ motion_batch:
     vmulpd  zmm12, zmm18, zmm10
     vmulpd  zmm4, zmm14, zmm9
     vaddpd  zmm18{k6}, zmm12, zmm4
+.placed:
     vcvtpd2dq ymm17, zmm17
     vcvtpd2dq ymm18, zmm18
     ; a lane outside i32 (cvtpd2dq's 0x80000000) takes motion_move
@@ -1925,6 +1945,11 @@ motion_batch:
     vpcmpeqd k4, ymm18, [r10 + rsi * 4]
     kandb   k3, k3, k4
     kandnb  k3, k3, k1
+    ; what coordinate_changed reads for the movers, ahead of their ticks
+    mov     rax, [ch_flags]
+    prefetcht0 [rax + rsi * 2]
+    mov     rax, [ch_cell]
+    prefetcht0 [rax + rsi * 4]
     vpmovzxdq zmm17, ymm17
     vpmovzxdq zmm18, ymm18
     vpsllq  zmm18, zmm18, 32
@@ -1962,6 +1987,22 @@ motion_batch:
     kmovb   eax, k5
     shl     rax, cl
     or      [rsp + 64], rax
+    ; the scene records the ticks will read: a name's scenes are handed
+    ; out in chunks, so the group's usually follow the first one's
+    kandnb  k6, k4, k1
+    kandnb  k6, k7, k6
+    kmovb   eax, k6
+    tzcnt   eax, eax
+    jc      .scenes_fetched
+    add     eax, esi
+    mov     eax, [r11 + rax * 4]
+    shl     rax, SCENE_SHIFT
+    add     rax, [scenes]
+    prefetcht0 [rax]
+    prefetcht0 [rax + 64]
+    prefetcht0 [rax + 128]
+    prefetcht0 [rax + 192]
+.scenes_fetched:
     cmp     byte [mv_synced], 0
     je      .group_next
     vmovdqu32 ymm4, [rdx + rsi * 4 + MVO_SYNC]
@@ -2091,8 +2132,24 @@ motion_batch:
     vpand   ymm12, ymm10, ymm11
     vpcmpeqq ymm13, ymm12, ymm11        ; MVF_CURVE
     vpermd  ymm4, ymm14, [rbx + rsi * 8 + MVO_S]
-    vpermd  ymm5, ymm14, [rbx + rsi * 8 + MVO_C]
     vpermd  ymm6, ymm14, [rbx + rsi * 8 + MVO_E]
+    vmovmskpd eax, ymm13
+    test    eax, eax
+    jnz     .curves
+    ; lines only: start.interpolate(end, t)
+    vcvtdq2pd ymm7, xmm4
+    vcvtdq2pd ymm9, xmm6
+    MV_LINE4
+    vcvtpd2dq xmm1, ymm7                ; columns
+    vextracti128 xmm4, ymm4, 1
+    vextracti128 xmm6, ymm6, 1
+    vcvtdq2pd ymm7, xmm4
+    vcvtdq2pd ymm9, xmm6
+    MV_LINE4
+    vcvtpd2dq xmm7, ymm7                ; rows
+    jmp     .placed
+.curves:
+    vpermd  ymm5, ymm14, [rbx + rsi * 8 + MVO_C]
     vcvtdq2pd ymm7, xmm4
     vcvtdq2pd ymm8, xmm5
     vcvtdq2pd ymm9, xmm6
@@ -2106,6 +2163,7 @@ motion_batch:
     vcvtdq2pd ymm9, xmm6
     MV_AXIS4
     vcvtpd2dq xmm7, ymm7                ; rows
+.placed:
     ; a lane outside i32 (cvtpd2dq's 0x80000000) takes motion_move
     vpbroadcastd xmm8, [mv_tag_bit]
     vpcmpeqd xmm9, xmm1, xmm8
@@ -2114,6 +2172,10 @@ motion_batch:
     vpmovsxdq ymm9, xmm9
     vpandn  ymm0, ymm9, ymm0
     ; moved: the coordinate differs from the character's
+    mov     rax, [ch_flags]
+    prefetcht0 [rax + rsi * 2]
+    mov     rax, [ch_cell]
+    prefetcht0 [rax + rsi * 4]
     vpcmpeqd xmm9, xmm1, [r9 + rsi * 4]
     vpcmpeqd xmm10, xmm7, [r10 + rsi * 4]
     vpand   xmm9, xmm9, xmm10
