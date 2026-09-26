@@ -48,9 +48,10 @@ open(sys.argv[1], 'w').write('\n'.join(lines))
 PY
 # ANSI input: 16/256/truecolor SGR, bold/reset, cursor motion, OSC titles
 # and the supported private modes
-printf '\e[31mred\e[0m plain \e[1;92mbright\e[39m bold\e[0m\n\e[38;5;208morange\e[48;5;17m on navy\e[0m\n\e[38;2;10;200;30mtrue\e[48;2;90;0;90mcolor\e[m\e]0;title\a end\n\e[?25l\e[2Cshift\e[1Dx\e[?25h\e[?7l tail\e[?7h\n\e[44m   \e[0m spaces\n' > "$WORK/ansi"
+printf '\e[31mred\e[0m plain \e[1;92mbright\e[39m bold\e[0m\n\e[38;5;208morange\e[48;5;17m on navy\e[0m\n\e[38;2;10;200;30mtrue\e[48;2;90;0;90mcolor\e[m end\n\e[?25l\e[2Cshift\e[1Dx\e[?25h\e[?7l tail\e[?7h\n\e[44m   \e[0m spaces\n' > "$WORK/ansi"
 printf 'plain \e[7mreverse?\e[0m\n' > "$WORK/ansi-odd"
 printf 'bad \e[5n sequence\n' > "$WORK/ansi-bad"
+printf 'title \e]0;title\a here\n' > "$WORK/ansi-osc"
 
 # A full disk leaves generated inputs empty, and then both engines fail the
 # same way and every case "passes". Refuse to run on broken inputs.
@@ -73,12 +74,18 @@ fi
 
 pass=0
 fail=0
+must_succeed=0
 global=()
 check() {
     local name="$1"; shift
     local input="$1"; shift
     TTFX_ASM=0 "$BIN" "${global[@]}" "$@" < "$input" > "$WORK/r.out" 2> "$WORK/r.err"; local rs=$?
     TTFX_ASM=force "$BIN" "${global[@]}" "$@" < "$input" > "$WORK/a.out" 2> "$WORK/a.err"; local as=$?
+    if [ "$must_succeed" = 1 ] && [ $rs -ne 0 ]; then
+        fail=$((fail + 1))
+        echo "FAIL $name: the Rust engine exited $rs, so this case tests nothing: $(head -c 200 "$WORK/r.err")"
+        return
+    fi
     if [ $rs -eq $as ] && cmp -s "$WORK/r.out" "$WORK/a.out" && cmp -s "$WORK/r.err" "$WORK/a.err"; then
         pass=$((pass + 1))
     else
@@ -134,6 +141,7 @@ check no-eol "$WORK/basic" --seed 11 --frame-rate 0 --no-eol --no-restore-cursor
 check reuse "$WORK/basic" --seed 12 --frame-rate 0 --reuse-canvas "$EFFECT"
 check max-frames "$WORK/basic" --seed 13 --parity-dump --max-frames 5 "$EFFECT"
 check virtual-clock "$WORK/basic" --seed 14 --frame-rate 0 --virtual-clock "$EFFECT"
+must_succeed=1
 for seed in 1 2 3; do
     for handling in ignore always dynamic; do
         check "ansi/$handling" "$WORK/ansi" --seed "$seed" --frame-rate 0 --existing-color-handling "$handling" "$EFFECT"
@@ -142,6 +150,8 @@ for seed in 1 2 3; do
     check "ansi/dynamic/xterm" "$WORK/ansi" --seed "$seed" --frame-rate 0 --xterm-colors --existing-color-handling dynamic "$EFFECT"
     check "ansi/dynamic/no-color" "$WORK/ansi" --seed "$seed" --frame-rate 0 --no-color --existing-color-handling always "$EFFECT"
 done
+must_succeed=0
+check ansi-osc "$WORK/ansi-osc" --seed 15 --frame-rate 0 "$EFFECT"
 check ansi-odd "$WORK/ansi-odd" --seed 15 --frame-rate 0 --existing-color-handling always "$EFFECT"
 check ansi-bad "$WORK/ansi-bad" --seed 15 --frame-rate 0 "$EFFECT"
 COLUMNS=40 LINES=30 check wrap "$WORK/big" --seed 16 --frame-rate 0 --wrap-text "$EFFECT"

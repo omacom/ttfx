@@ -28,6 +28,11 @@
 %define SCF_SHAPE           (SCF_SHAPE_SAME | SCF_SHAPE_TAG)
 %define EASED_MEMO_LIMIT    (1 << 16)
 
+; a synced scene's last shown frame: its position + 1 (0 = none) and
+; visual, in the plain-stepping fields synced scenes never use
+%define SC_SYNC_POS         SC_TICKS
+%define SC_SYNC_HANDLE      SC_HEAD_DURATION
+
 ; shared frame lists (see scene_share)
 %define SCF_SHARED          (1 << 16)   ; looked up since the last append
 %define SHARE_MAX_FRAMES    64
@@ -50,6 +55,11 @@ scenes_init:
     mov     [frame_region_end], rax
     lea     rax, [shapes]
     mov     [shape_last], rax
+    ; vhstape finds a character's scenes at fixed distances from its first
+    ; (they are created back to back), so it keeps one run of indices
+    mov     rax, [request]
+    cmp     qword [rax + RQ_EFFECT], EFFECT_VHSTAPE
+    sete    byte [scene_unbanked]
     ret
 
 ; scene_ptr(esi=scene) -> r8 = record. Clobbers nothing else.
@@ -121,10 +131,8 @@ scene_new:
     jne     .reuse
 .fresh:
     ; a new record, appended to the character's map
-    mov     r15d, [scene_count]
-    cmp     r15d, SCENE_LIMIT
-    jae     .full
-    inc     dword [scene_count]
+    call    scene_alloc
+    mov     r15d, eax
     SCENE_PTR r8, r15
     mov     dword [r8 + SC_NEXT], NONE
     mov     rax, [ch_scenes]
@@ -191,6 +199,48 @@ scene_new:
     pop     r13
     pop     r12
     pop     rbx
+    ret
+
+; scene_alloc(r12d=name) -> eax = a fresh scene index. Effects give every
+; character the same scenes (by name), and the characters tick in slot
+; order with, most of the time, the same scene active. So each name draws
+; its indices from its own chunks of SCENE_CHUNK consecutive records: the
+; active scenes of neighboring characters then share cache lines, instead
+; of one line per character holding its active record next to an idle one.
+; Names are spread over SCENE_BANKS cursors (a collision just shares a
+; chunk). Clobbers rax, rcx, rdx.
+%define SCENE_CHUNK         64
+%define SCENE_BANKS         64          ; 8-byte cursors: next index, chunk end
+scene_alloc:
+    cmp     byte [scene_unbanked], 0
+    jne     .next
+    imul    eax, r12d, 0x9E3779B1
+    shr     eax, 32 - 6                 ; log2(SCENE_BANKS)
+    lea     rdx, [scene_banks]
+    lea     rdx, [rdx + rax * 8]
+    mov     eax, [rdx]
+    cmp     eax, [rdx + 4]
+    jae     .chunk
+    lea     ecx, [rax + 1]
+    mov     [rdx], ecx
+    ret
+.chunk:
+    mov     eax, [scene_count]          ; records handed out in chunks
+    lea     ecx, [rax + SCENE_CHUNK]
+    cmp     ecx, SCENE_LIMIT
+    ja      .full
+    mov     [scene_count], ecx
+    mov     [rdx + 4], ecx
+    lea     ecx, [rax + 1]
+    mov     [rdx], ecx
+    ret
+.next:
+    ; one run of indices in creation order
+    mov     eax, [scene_count]
+    cmp     eax, SCENE_LIMIT
+    jae     .full
+    lea     ecx, [rax + 1]
+    mov     [scene_count], ecx
     ret
 .full:
     lea     rdi, [msg_scenes_full]
@@ -272,53 +322,112 @@ scene_add_frame_visual:
 ; in place while its frames end the region - the usual case, since effects
 ; build one scene at a time - and otherwise first moves them to the end. So a
 ; character's scenes lie in creation order, which is roughly tick order.
+; Preserves rax, rdx, r8; clobbers rcx, rsi, rdi, r9.
 scene_append_frame:
-    push    rbx
-    mov     ebx, eax
+    mov     ecx, [r8 + SC_COUNT]
+    mov     rdi, [r8 + SC_FRAMES]
+    lea     rdi, [rdi + rcx * FRAME_SIZE]   ; where the next frame goes
+    cmp     rdi, [frame_region_end]
+    jne     .relocate
+.append:
+    mov     r9d, edx
+    shl     r9, 32
+    mov     esi, eax
+    or      r9, rsi
+    mov     [rdi], r9                   ; FR_HANDLE, FR_DURATION
+    add     rdi, FRAME_SIZE
+    mov     [frame_region_end], rdi
+    add     [r8 + SC_EASE_TOTAL], edx
+    lea     esi, [rcx + 1]
+    mov     [r8 + SC_COUNT], esi
+    and     dword [r8 + SC_FLAGS], ~(SCF_SHAPE | SCF_SHARED)
+    cmp     ecx, [r8 + SC_HEAD]
+    jne     .done
+    mov     [r8 + SC_HEAD_HANDLE], eax
+    mov     [r8 + SC_HEAD_DURATION], edx
+    mov     dword [r8 + SC_TICKS], 0    ; (so no synced frame is cached)
+.done:
+    ret
+.relocate:
+    ; move this scene's frames to the end of the region
+    mov     rsi, [r8 + SC_FRAMES]
+    mov     rdi, [frame_region_end]
+    mov     [r8 + SC_FRAMES], rdi
+    shl     ecx, FRAME_SHIFT
+    rep     movsb
+    mov     ecx, [r8 + SC_COUNT]
+    jmp     .append
+
+; scene_append_frames(edi=scene, rsi=frames, rdx=count): append a list of
+; frames (FRAME_SIZE records, e.g. another scene's SC_FRAMES) in one go -
+; scene_add_frame_visual for each, without re-checking durations or
+; rebuilding visuals for preexisting colors (callers copy frames made for
+; an equivalent scene). Clobbers rax, rcx, rdx, rsi, rdi, r8-r11.
+scene_append_frames:
+    test    rdx, rdx
+    jz      .none
+    SCENE_PTR r8, rdi
+    mov     r9, rsi                     ; source
+    mov     r10, rdx                    ; count
     mov     ecx, [r8 + SC_COUNT]
     mov     rdi, rcx
     shl     rdi, FRAME_SHIFT
-    add     rdi, [r8 + SC_FRAMES]       ; where the next frame goes
+    add     rdi, [r8 + SC_FRAMES]
     cmp     rdi, [frame_region_end]
     je      .append
     ; relocate this scene's frames to the end of the region
     mov     rsi, [r8 + SC_FRAMES]
     mov     rdi, [frame_region_end]
     mov     [r8 + SC_FRAMES], rdi
-    push    rcx
     shl     ecx, FRAME_SHIFT
     rep     movsb
-    pop     rcx
 .append:
-    mov     rax, [r8 + SC_FRAMES]
-    mov     rdi, rcx
-    shl     rdi, FRAME_SHIFT
-    add     rdi, rax
-    lea     rax, [rdi + FRAME_SIZE]
-    mov     [frame_region_end], rax
-    mov     [rdi + FR_HANDLE], ebx
-    mov     [rdi + FR_DURATION], edx
-    mov     esi, [r8 + SC_EASE_TOTAL]
-    add     esi, edx
-    mov     [r8 + SC_EASE_TOTAL], esi
-    inc     dword [r8 + SC_COUNT]
-    and     dword [r8 + SC_FLAGS], ~(SCF_SHAPE | SCF_SHARED)
+    ; rdi = where the first new frame goes; copy and sum the durations
+    mov     ecx, [r8 + SC_COUNT]
     cmp     ecx, [r8 + SC_HEAD]
-    jne     .done
-    mov     [r8 + SC_HEAD_HANDLE], ebx
-    mov     [r8 + SC_HEAD_DURATION], edx
-.done:
-    pop     rbx
+    jne     .copy
+    mov     eax, [r9 + FR_HANDLE]       ; the new head
+    mov     [r8 + SC_HEAD_HANDLE], eax
+    mov     eax, [r9 + FR_DURATION]
+    mov     [r8 + SC_HEAD_DURATION], eax
+    mov     dword [r8 + SC_TICKS], 0
+.copy:
+    add     ecx, r10d
+    mov     [r8 + SC_COUNT], ecx
+    xor     r11d, r11d                  ; the durations' sum
+    xor     ecx, ecx
+.frame:
+    mov     rax, [r9 + rcx * FRAME_SIZE]
+    mov     [rdi + rcx * FRAME_SIZE], rax
+    shr     rax, 32
+    add     r11d, eax
+    inc     rcx
+    cmp     rcx, r10
+    jb      .frame
+    lea     rdi, [rdi + rcx * FRAME_SIZE]
+    mov     [frame_region_end], rdi
+    add     [r8 + SC_EASE_TOTAL], r11d
+    and     dword [r8 + SC_FLAGS], ~(SCF_SHAPE | SCF_SHARED)
+.none:
     ret
 
 ; scene_load_head(r8=scene record): refresh the head cache after the head
-; moved. Clobbers rax, rcx.
+; moved, and prefetch the frame after it. Frames retire long after they
+; were written, and between two retirements of one scene every other
+; character's are walked, so the next frame is out of cache by then; one
+; retirement ahead is soon enough and late enough to stay cached.
+; Clobbers rax, rcx.
 scene_load_head:
     mov     ecx, [r8 + SC_HEAD]
     cmp     ecx, [r8 + SC_COUNT]
     jae     .done
+    lea     eax, [rcx + 1]
     shl     rcx, FRAME_SHIFT
     add     rcx, [r8 + SC_FRAMES]
+    cmp     eax, [r8 + SC_COUNT]
+    jae     .last
+    prefetcht0 [rcx + FRAME_SIZE]
+.last:
     mov     eax, [rcx + FR_HANDLE]
     mov     [r8 + SC_HEAD_HANDLE], eax
     mov     eax, [rcx + FR_DURATION]
@@ -1009,9 +1118,22 @@ step_synced_scene:
     test    rax, rax
     cmovs   rax, rcx
     add     eax, [r8 + SC_HEAD]
+    ; the frame shown last time is cached (SC_SYNC_POS/SC_SYNC_HANDLE): a
+    ; character usually takes several steps per frame, and the frame lists
+    ; are out of cache by the next tick. A position's frame never changes
+    ; (lists are only appended to, and shared lists are equal).
+    lea     ecx, [eax + 1]
+    cmp     ecx, [r8 + SC_SYNC_POS]
+    jne     .load
+    mov     eax, [r8 + SC_SYNC_HANDLE]
+    jmp     .loaded
+.load:
+    mov     [r8 + SC_SYNC_POS], ecx
     shl     rax, FRAME_SHIFT
     add     rax, [r8 + SC_FRAMES]
     mov     eax, [rax + FR_HANDLE]
+    mov     [r8 + SC_SYNC_HANDLE], eax
+.loaded:
     mov     rcx, [ch_handle]
     cmp     [rcx + rdi * 4], eax
     je      .same
@@ -1099,7 +1221,7 @@ shape_find:
 
 ; shape_check(r8=scene record, r9=its shape): compare the scene's frames
 ; with the shape's reference frames, recording the tag and the verdict in
-; SC_FLAGS. Clobbers rax, rcx, rdx.
+; SC_FLAGS. Clobbers rax, rcx, rdx (and zmm16, k1 at TIER 4).
 shape_check:
     push    rsi
     push    rdi
@@ -1112,6 +1234,23 @@ shape_check:
     jne     .store
     mov     rsi, [r8 + SC_FRAMES]
     mov     rdi, [r9 + SH_REF]
+%if TIER >= 4
+    ; eight frames a compare (in zmm16, which legacy SSE code never uses)
+.compare8:
+    cmp     ecx, 8
+    jb      .compare_tail
+    vmovdqu64 zmm16, [rsi]
+    vpcmpq  k1, zmm16, [rdi], 4         ; not equal
+    kortestb k1, k1
+    jnz     .store
+    add     rsi, 8 * FRAME_SIZE
+    add     rdi, 8 * FRAME_SIZE
+    sub     ecx, 8
+    jmp     .compare8
+.compare_tail:
+    test    ecx, ecx
+    jz      .same
+%endif
 .compare:
     mov     rax, [rsi]
     cmp     rax, [rdi]
@@ -1120,6 +1259,7 @@ shape_check:
     add     rdi, FRAME_SIZE
     dec     ecx
     jnz     .compare
+.same:
     or      edx, SCF_SHAPE_SAME
 .store:
     mov     [r8 + SC_FLAGS], edx
@@ -1301,6 +1441,60 @@ step_eased_scene:
     add     [r8 + SC_EASE_STEP], esi
     ret
 
+; ------------------------------------------------------------ visual memo
+
+; visual_memo(rdi=fg, rsi=bg, rdx=packed symbol, ecx=ATTR_* bits) -> eax:
+; visual_make behind a small direct-mapped cache of recent visuals.
+; visual_make's pool lookup compares the header stored with the visual,
+; a cache miss in a pool of thousands; appearances mostly repeat a few
+; recent visuals, which this finds in one line. (Scene frames repeat less
+; closely: there it measured neutral, so they call visual_make.) Handles never
+; change within a run, so a cached one stays right. Same clobbers as
+; visual_make (rax, rcx, rdx, rsi, rdi, r8-r11 and more when it formats).
+%define VMEMO_BITS  8
+visual_memo:
+    mov     rax, rdi
+    mov     r8, 0x9E3779B97F4A7C15
+    imul    rax, r8
+    xor     rax, rdx
+    mov     r9, rsi
+    rol     r9, 17
+    xor     rax, r9
+    xor     rax, rcx
+    imul    rax, r8
+    shr     rax, 64 - VMEMO_BITS
+    shl     eax, 5
+    lea     r8, [vmemo]
+    add     r8, rax                     ; the entry: symbol, fg, bg, handle | attrs << 32
+    cmp     [r8], rdx
+    jne     .miss
+    cmp     [r8 + 8], rdi
+    jne     .miss
+    cmp     [r8 + 16], rsi
+    jne     .miss
+    cmp     [r8 + 28], ecx
+    jne     .miss
+    mov     eax, [r8 + 24]
+    ret
+.miss:
+    push    r8
+    push    rdx
+    push    rdi
+    push    rsi
+    push    rcx
+    call    visual_make
+    pop     rcx
+    pop     rsi
+    pop     rdi
+    pop     rdx
+    pop     r8
+    mov     [r8], rdx
+    mov     [r8 + 8], rdi
+    mov     [r8 + 16], rsi
+    mov     [r8 + 24], eax
+    mov     [r8 + 28], ecx
+    ret
+
 ; ------------------------------------------------------------ appearance
 
 ; set_appearance(edi=slot, rsi=packed symbol or 0 for the input symbol,
@@ -1335,7 +1529,7 @@ set_appearance:
     mov     rdx, rsi
     mov     rsi, rcx
     mov     ecx, r9d
-    call    visual_make
+    call    visual_memo
     mov     edi, ebx
     SET_HANDLE
     pop     rbx
@@ -1365,7 +1559,10 @@ scenes:         resq 1
 scene_pre:      resq 1
 frame_region:   resq 1
 frame_region_end: resq 1
-scene_count:    resd 1
+scene_count:    resd 1              ; records handed out (in chunks)
+alignb 8
+scene_banks:    resq SCENE_BANKS    ; scene_alloc's cursors
+scene_unbanked: resb 1              ; indices in creation order (vhstape)
 alignb 8
 shape_last:     resq 1              ; the last shape found (initially shapes)
 shape_count:    resd 1
@@ -1376,3 +1573,4 @@ alignb 8
 share_table:    resq 1
 alignb 64
 shapes:         resb SHAPE_LIMIT << SHAPE_SHIFT
+vmemo:          resb 32 << VMEMO_BITS   ; visual_memo's cache
