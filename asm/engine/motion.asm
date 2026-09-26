@@ -43,7 +43,7 @@
 ; The mirrors are blocks of 8 slots, each field 8 entries in a row, so a
 ; group's fields are one run of memory. [MV_P8(slot) + slot * 8 + MVO_x]
 ; addresses an 8-byte field, [MV_P4(slot) + slot * 4 + MVO_x] a 4-byte one.
-%define MV_BLOCK    704
+%define MV_BLOCK    768
 %define MVO_TAG     0                   ; u32 path ^ MV_TAG_BIT, 0 = none
 %define MVO_ETAB    32                  ; u32 PA_ETAB, 0 = linear
 %define MVO_STEP    64                  ; f64 current_step (the path's, while mirrored)
@@ -56,6 +56,8 @@
 %define MVO_C       512                 ; u64 control (the end for a line)
 %define MVO_E       576                 ; u64 segment end
 %define MVO_LAST    640                 ; f64 last_distance_reached (the path's)
+%define MVO_SYNC    704                 ; u32 the synced scene's key (0 = none)
+%define MVO_SIDX    736                 ; u32 its frame index, or MV_NO_INDEX
 %define MV_SIZE     (MV_LIMIT / 8 * MV_BLOCK)
 
 ; MV_P8 dest64, slot64 / MV_P4: the block's base for 8- or 4-byte fields.
@@ -72,6 +74,7 @@
     add     %1, [mv_base]
 %endmacro
 %define MV_TAG_BIT  0x80000000
+%define MV_NO_INDEX 0x80000000          ; MVO_SIDX unknown (cvtpd2dq's out of range)
 %define MVF_CURVE   1                   ; one control point
 %define MVF_OVER    2                   ; past the end: the for-else
 %define MVF_FIRST   4                   ; no lower bound (lo = -inf)
@@ -1577,6 +1580,15 @@ motion_move:
 ; code, no FMA, and cvtpd2dq's half-to-even rounding; a lane outside i32
 ; goes to motion_move.
 ;
+; Idle ticks. A mirrored step that neither moves the character nor ends
+; the path changes nothing observable, and neither does step_animation for
+; a character without a scene, with no frames remaining, or with a synced
+; scene (not looping) whose frame index is known and shows the visual the
+; character has; motion_batch returns those ticks in mb_idle_bits and
+; update skips them. The index is known because the vector pass works it
+; out with each step it takes (MVO_SIDX), for the scene key the slot last
+; showed a synced frame with (MVO_SYNC, see path_sync_index).
+;
 ; A step depends only on the character's own path, so the results hold
 ; until something outside the ticking character's own tick runs: an effect
 ; callback, or an action on another character. run_action bumps
@@ -1598,6 +1610,14 @@ motion_move:
     vmulpd  ymm11, ymm11, ymm2
     vaddpd  ymm12, ymm12, ymm11         ; a.interpolate(b, t)
     vblendvpd ymm7, ymm10, ymm12, ymm13
+%endmacro
+
+; MV_LINE4: ymm7 = start, ymm9 = end on one axis, ymm2 = t, ymm3 = 1 - t
+; -> ymm7 = start.interpolate(end, t). Clobbers ymm10-11.
+%macro MV_LINE4 0
+    vmulpd  ymm10, ymm7, ymm3
+    vmulpd  ymm11, ymm9, ymm2
+    vaddpd  ymm7, ymm10, ymm11
 %endmacro
 
 ; path_view(edi=slot, eax=its active path) -> rdx = the path's
@@ -1637,6 +1657,41 @@ path_view:
     ret
 
 %if TIER >= 3
+
+; path_sync_index(edi=slot, eax=its active path, ecx=key) -> eax = the
+; synced scene's frame index (0..=final_frame_index), or MV_NO_INDEX. The
+; key is final_frame_index + 1, with bit 31 for SCF_SYNC_STEP. While the
+; slot's mirror stands, motion_batch's vector pass works out
+; step_synced_scene's index for each step it takes, for the key the slot
+; last asked with (MVO_SYNC); any other write of the mirror's step or last
+; distance makes it unknown. A new key is recorded for the next steps.
+; Preserves everything else.
+path_sync_index:
+    cmp     edi, MV_LIMIT
+    jae     .none
+    push    rdx
+    push    rsi
+    MV_P4   rdx, rdi
+    mov     esi, [rdx + rdi * 4 + MVO_TAG]
+    xor     esi, MV_TAG_BIT
+    cmp     esi, eax
+    jne     .unmirrored
+    cmp     [rdx + rdi * 4 + MVO_SYNC], ecx
+    jne     .rekey
+    mov     eax, [rdx + rdi * 4 + MVO_SIDX]
+    pop     rsi
+    pop     rdx
+    ret
+.rekey:
+    mov     [rdx + rdi * 4 + MVO_SYNC], ecx
+    mov     byte [mv_synced], 1
+    mov     dword [rdx + rdi * 4 + MVO_SIDX], MV_NO_INDEX
+.unmirrored:
+    pop     rsi
+    pop     rdx
+.none:
+    mov     eax, MV_NO_INDEX
+    ret
 
 ; mv_sync(eax=slot): write the slot's mirrored step and last distance back
 ; to its path record. Preserves everything but rax.
@@ -1713,6 +1768,8 @@ motion_void:
     movsd   [rsi + rdx * 8 + MVO_STEP], xmm0
     movsd   xmm0, [r8 + MB_OLDLAST + rcx * 8]
     movsd   [rsi + rdx * 8 + MVO_LAST], xmm0
+    MV_P4   rsi, rdx
+    mov     dword [rsi + rdx * 4 + MVO_SIDX], MV_NO_INDEX
     test    rax, rax
     jnz     .undo
 .clear:
@@ -1726,7 +1783,8 @@ motion_void:
 
 ; motion_batch(rdi=snapshot word, esi=its first slot) -> rax = the bits
 ; whose motion_move is taken care of: motion_apply when their bit is in
-; mb_act_bits, nothing otherwise. Clobbers C.
+; mb_act_bits, nothing otherwise; the bits in mb_idle_bits need no tick at
+; all. Clobbers C.
 motion_batch:
     push    rbx
     push    rbp
@@ -1734,10 +1792,12 @@ motion_batch:
     push    r13
     push    r14
     push    r15
-    sub     rsp, 56
+    sub     rsp, 72
     ; [rsp] resolved steps (motion_apply writes them), [rsp + 8] tails,
     ; [rsp + 16] the prefix-search flag, [rsp + 24] moves, [rsp + 32]
-    ; mirrored steps, [rsp + 40] ready bits while assembling
+    ; mirrored steps, [rsp + 40] ready bits while assembling, [rsp + 48]
+    ; idle ticks, [rsp + 56] quiet steps of characters with a scene,
+    ; [rsp + 64] bare moves
     mov     r12, rdi                    ; candidates
     mov     r13d, esi                   ; first slot
     xor     r14d, r14d                  ; ready bits
@@ -1747,6 +1807,9 @@ motion_batch:
     mov     [rsp + 8], rax
     mov     [rsp + 24], rax
     mov     [rsp + 32], rax
+    mov     [rsp + 48], rax
+    mov     [rsp + 56], rax
+    mov     [rsp + 64], rax
     mov     [mb_first], r13d
     mov     rbp, [ch_path]
     mov     rbx, [mv_base]
@@ -1764,6 +1827,8 @@ motion_batch:
     vpbroadcastq zmm24, [mv_flag_curve]
     vpbroadcastq zmm25, [mv_flag_over]
     vpbroadcastq zmm26, [mv_flag_first]
+    vpternlogd ymm23, ymm23, ymm23, 0xff    ; NONE
+    mov     r11, [ch_scene]
     xor     ecx, ecx                    ; the group's first bit
 .group:
     mov     rax, r12
@@ -1830,18 +1895,29 @@ motion_batch:
     vpmovqd ymm12, zmm4
     vcvtdq2pd zmm11, ymm11              ; start column
     vcvtdq2pd zmm12, ymm12              ; start row
-    vmovdqu64 zmm4, [rbx + rsi * 8 + MVO_C]
-    vpmovqd ymm13, zmm4
-    vpsrlq  zmm4, zmm4, 32
-    vpmovqd ymm14, zmm4
-    vcvtdq2pd zmm13, ymm13              ; control column
-    vcvtdq2pd zmm14, ymm14              ; control row
     vmovdqu64 zmm4, [rbx + rsi * 8 + MVO_E]
     vpmovqd ymm15, zmm4
     vpsrlq  zmm4, zmm4, 32
     vpmovqd ymm16, zmm4
     vcvtdq2pd zmm15, ymm15              ; end column
     vcvtdq2pd zmm16, ymm16              ; end row
+    kortestb k6, k6
+    jnz     .curves
+    ; lines only: start.interpolate(end, t)
+    vmulpd  zmm17, zmm11, zmm10
+    vmulpd  zmm4, zmm15, zmm9
+    vaddpd  zmm17, zmm17, zmm4
+    vmulpd  zmm18, zmm12, zmm10
+    vmulpd  zmm4, zmm16, zmm9
+    vaddpd  zmm18, zmm18, zmm4
+    jmp     .placed
+.curves:
+    vmovdqu64 zmm4, [rbx + rsi * 8 + MVO_C]
+    vpmovqd ymm13, zmm4
+    vpsrlq  zmm4, zmm4, 32
+    vpmovqd ymm14, zmm4
+    vcvtdq2pd zmm13, ymm13              ; control column
+    vcvtdq2pd zmm14, ymm14              ; control row
     ; a = start.interpolate(control, t), the line itself (control = end)
     vmulpd  zmm17, zmm11, zmm10
     vmulpd  zmm4, zmm13, zmm9
@@ -1862,6 +1938,7 @@ motion_batch:
     vmulpd  zmm12, zmm18, zmm10
     vmulpd  zmm4, zmm14, zmm9
     vaddpd  zmm18{k6}, zmm12, zmm4
+.placed:
     vcvtpd2dq ymm17, zmm17
     vcvtpd2dq ymm18, zmm18
     ; a lane outside i32 (cvtpd2dq's 0x80000000) takes motion_move
@@ -1874,6 +1951,11 @@ motion_batch:
     vpcmpeqd k4, ymm18, [r10 + rsi * 4]
     kandb   k3, k3, k4
     kandnb  k3, k3, k1
+    ; what coordinate_changed reads for the movers, ahead of their ticks
+    mov     rax, [ch_flags]
+    prefetcht0 [rax + rsi * 2]
+    mov     rax, [ch_cell]
+    prefetcht0 [rax + rsi * 4]
     vpmovzxdq zmm17, ymm17
     vpmovzxdq zmm18, ymm18
     vpsllq  zmm18, zmm18, 32
@@ -1895,6 +1977,72 @@ motion_batch:
     kmovb   eax, k7
     shl     rax, cl
     or      [rsp + 8], rax
+    ; no scene to step: a step that does not end the path is idle, or
+    ; a bare move when it moves
+    vpcmpeqd k4{k1}, ymm23, [r11 + rsi * 4]
+    kandnb  k4, k7, k4
+    kandb   k5, k4, k3
+    kandnb  k2, k3, k4
+    ; quiet: a step that neither moves nor ends
+    korb    k3, k3, k7
+    kandnb  k3, k3, k1
+    kandnb  k3, k4, k3                  ; with a scene
+    kmovb   eax, k2
+    shl     rax, cl
+    or      [rsp + 48], rax
+    kmovb   eax, k5
+    shl     rax, cl
+    or      [rsp + 64], rax
+    ; the scene records the ticks will read: a name's scenes are handed
+    ; out in chunks, so the group's usually follow the first one's
+    kandnb  k6, k4, k1
+    kandnb  k6, k7, k6
+    kmovb   eax, k6
+    tzcnt   eax, eax
+    jc      .scenes_fetched
+    add     eax, esi
+    mov     eax, [r11 + rax * 4]
+    shl     rax, SCENE_SHIFT
+    add     rax, [scenes]
+    prefetcht0 [rax]
+    prefetcht0 [rax + 64]
+    prefetcht0 [rax + 128]
+    prefetcht0 [rax + 192]
+.scenes_fetched:
+    cmp     byte [mv_synced], 0
+    je      .group_next
+    vmovdqu32 ymm4, [rdx + rsi * 4 + MVO_SYNC]
+    vptestmd k3{k3}, ymm4, ymm4         ; a synced scene stepped before
+    kmovb   eax, k3
+    shl     rax, cl
+    or      [rsp + 56], rax
+    ; the synced scenes' frame indices (MVO_SIDX) for the new steps
+    vptestmd k2{k1}, ymm4, ymm4
+    kortestb k2, k2
+    jz      .group_next
+    vmaxpd  zmm5, zmm1, zmm20           ; max(current_step, 1)
+    vmaxpd  zmm6, zmm2, zmm20           ; max(max_steps, 1)
+    vdivpd  zmm5, zmm5, zmm6
+    vmovupd zmm6, [rbx + rsi * 8 + MVO_TOTAL]
+    vmaxpd  zmm7, zmm6, zmm20           ; total = max(total_distance, 1)
+    vsubpd  zmm6, zmm6, zmm3
+    vmaxpd  zmm6, zmm6, zmm20           ; remaining
+    vsubpd  zmm6, zmm7, zmm6
+    vmaxpd  zmm6, zmm6, zmm20           ; reached
+    vdivpd  zmm6, zmm6, zmm7
+    vpmovd2m k3, ymm4                   ; SCF_SYNC_STEP
+    vmovapd zmm6{k3}, zmm5
+    vpandd  ymm5, ymm4, [mv_key_final]{1to8}
+    vpternlogd ymm7, ymm7, ymm7, 0xff
+    vpaddd  ymm5, ymm5, ymm7            ; final_frame_index
+    vcvtdq2pd zmm7, ymm5
+    vmulpd  zmm6, zmm7, zmm6
+    vcvtpd2dq ymm6, zmm6                ; round, half to even
+    vpcmpeqd k4, ymm6, ymm22            ; outside i32: unknown
+    vpminsd ymm6, ymm6, ymm5
+    vpmaxsd ymm6, ymm6, ymm21
+    vmovdqa32 ymm6{k4}, ymm22
+    vmovdqu32 [rdx + rsi * 4 + MVO_SIDX]{k1}, ymm6
 .group_next:
     add     ecx, 8
     cmp     ecx, 64
@@ -1990,8 +2138,24 @@ motion_batch:
     vpand   ymm12, ymm10, ymm11
     vpcmpeqq ymm13, ymm12, ymm11        ; MVF_CURVE
     vpermd  ymm4, ymm14, [rbx + rsi * 8 + MVO_S]
-    vpermd  ymm5, ymm14, [rbx + rsi * 8 + MVO_C]
     vpermd  ymm6, ymm14, [rbx + rsi * 8 + MVO_E]
+    vmovmskpd eax, ymm13
+    test    eax, eax
+    jnz     .curves
+    ; lines only: start.interpolate(end, t)
+    vcvtdq2pd ymm7, xmm4
+    vcvtdq2pd ymm9, xmm6
+    MV_LINE4
+    vcvtpd2dq xmm1, ymm7                ; columns
+    vextracti128 xmm4, ymm4, 1
+    vextracti128 xmm6, ymm6, 1
+    vcvtdq2pd ymm7, xmm4
+    vcvtdq2pd ymm9, xmm6
+    MV_LINE4
+    vcvtpd2dq xmm7, ymm7                ; rows
+    jmp     .placed
+.curves:
+    vpermd  ymm5, ymm14, [rbx + rsi * 8 + MVO_C]
     vcvtdq2pd ymm7, xmm4
     vcvtdq2pd ymm8, xmm5
     vcvtdq2pd ymm9, xmm6
@@ -2005,6 +2169,7 @@ motion_batch:
     vcvtdq2pd ymm9, xmm6
     MV_AXIS4
     vcvtpd2dq xmm7, ymm7                ; rows
+.placed:
     ; a lane outside i32 (cvtpd2dq's 0x80000000) takes motion_move
     vpbroadcastd xmm8, [mv_tag_bit]
     vpcmpeqd xmm9, xmm1, xmm8
@@ -2013,6 +2178,10 @@ motion_batch:
     vpmovsxdq ymm9, xmm9
     vpandn  ymm0, ymm9, ymm0
     ; moved: the coordinate differs from the character's
+    mov     rax, [ch_flags]
+    prefetcht0 [rax + rsi * 2]
+    mov     rax, [ch_cell]
+    prefetcht0 [rax + rsi * 4]
     vpcmpeqd xmm9, xmm1, [r9 + rsi * 4]
     vpcmpeqd xmm10, xmm7, [r10 + rsi * 4]
     vpand   xmm9, xmm9, xmm10
@@ -2038,12 +2207,132 @@ motion_batch:
     or      [rsp + 24], rax
     shl     r11, cl
     or      [rsp + 8], r11
+    ; quiet: a step that neither moves nor ends; idle with no scene to
+    ; step, a bare move when it moves
+    mov     rax, [ch_scene]
+    vmovdqu xmm1, [rax + rsi * 4]
+    vpcmpeqd xmm2, xmm2, xmm2           ; NONE
+    vpcmpeqd xmm1, xmm1, xmm2
+    vpmovsxdq ymm1, xmm1
+    vpand   ymm2, ymm1, ymm9
+    vpand   ymm2, ymm2, ymm0
+    vmovmskpd eax, ymm2
+    shl     rax, cl
+    andn    rax, r11, rax
+    or      [rsp + 64], rax
+    vpandn  ymm2, ymm9, ymm0            ; quiet, but for the tails
+    vpand   ymm1, ymm1, ymm2
+    vmovmskpd eax, ymm1
+    shl     rax, cl
+    andn    rax, r11, rax
+    or      [rsp + 48], rax
+    cmp     byte [mv_synced], 0
+    je      .group_next
+    vmovdqu xmm4, [rdx + rsi * 4 + MVO_SYNC]
+    vpxor   xmm5, xmm5, xmm5
+    vpcmpeqd xmm5, xmm4, xmm5
+    vpmovsxdq ymm5, xmm5                ; no key
+    vpandn  ymm2, ymm5, ymm2            ; a synced scene stepped before
+    vmovmskpd eax, ymm2
+    shl     rax, cl
+    andn    rax, r11, rax
+    mov     r11, [rsp + 48]
+    andn    rax, r11, rax
+    or      [rsp + 56], rax
+    ; the synced scenes' frame indices (MVO_SIDX) for the new steps
+    vpandn  ymm5, ymm5, ymm0            ; the steps' lanes with a key
+    vmovmskpd eax, ymm5
+    test    eax, eax
+    jz      .group_next
+    vmovupd ymm1, [rdi + MB_STEPF + rcx * 8]
+    vmaxpd  ymm1, ymm1, ymm15           ; max(current_step, 1)
+    vmovupd ymm2, [rbx + rsi * 8 + MVO_MAX]
+    vmaxpd  ymm2, ymm2, ymm15           ; max(max_steps, 1)
+    vdivpd  ymm1, ymm1, ymm2
+    vmovupd ymm2, [rbx + rsi * 8 + MVO_TOTAL]
+    vmaxpd  ymm3, ymm2, ymm15           ; total = max(total_distance, 1)
+    vsubpd  ymm2, ymm2, [rdi + MB_LAST + rcx * 8]
+    vmaxpd  ymm2, ymm2, ymm15           ; remaining
+    vsubpd  ymm2, ymm3, ymm2
+    vmaxpd  ymm2, ymm2, ymm15           ; reached
+    vdivpd  ymm2, ymm2, ymm3
+    vpmovsxdq ymm3, xmm4                ; SCF_SYNC_STEP in the sign
+    vblendvpd ymm2, ymm2, ymm1, ymm3
+    vpbroadcastd xmm6, [mv_key_final]
+    vpand   xmm6, xmm4, xmm6
+    vpcmpeqd xmm7, xmm7, xmm7
+    vpaddd  xmm6, xmm6, xmm7            ; final_frame_index
+    vcvtdq2pd ymm7, xmm6
+    vmulpd  ymm2, ymm7, ymm2
+    vcvtpd2dq xmm2, ymm2                ; round, half to even
+    vpbroadcastd xmm8, [mv_tag_bit]
+    vpcmpeqd xmm9, xmm2, xmm8           ; outside i32: unknown
+    vpminsd xmm2, xmm2, xmm6
+    vpxor   xmm7, xmm7, xmm7
+    vpmaxsd xmm2, xmm2, xmm7            ; 0 for those
+    vpand   xmm9, xmm9, xmm8
+    vpor    xmm2, xmm2, xmm9
+    vpermd  ymm9, ymm14, ymm0           ; the lane masks as dwords
+    vpmaskmovd [rdx + rsi * 4 + MVO_SIDX], xmm9, xmm2
 .group_next:
     add     ecx, 4
     cmp     ecx, 64
     jb      .group
     vzeroupper
 %endif
+    ; ---- the quiet steps of characters with a scene: idle when their
+    ; step_animation does nothing (step_animation_awake): no frames
+    ; remaining, or a synced scene, not looping, whose frame index is
+    ; known and shows the visual the character has
+    mov     rsi, [rsp + 56]
+    test    rsi, rsi
+    jz      .idle_done
+    mov     r8, [ch_scene]
+    mov     r9, [scenes]
+    mov     r10, [ch_handle]
+.idle_next:
+    tzcnt   rcx, rsi
+    blsr    rsi, rsi
+    lea     edx, [r13 + rcx]
+    mov     eax, [r8 + rdx * 4]
+    shl     rax, SCENE_SHIFT
+    add     rax, r9
+    mov     ebx, [rax + SC_COUNT]
+    sub     ebx, [rax + SC_HEAD]
+    jbe     .idle
+    mov     r11d, [rax + SC_FLAGS]
+    test    r11d, SCF_LOOPING
+    jnz     .idle_unsynced
+    test    r11d, SCF_SYNC
+    jz      .idle_unsynced
+    and     r11d, SCF_SYNC_STEP
+    neg     r11d
+    and     r11d, 0x80000000
+    or      ebx, r11d                   ; the key (path_sync_index)
+    MV_P4   r11, rdx
+    cmp     [r11 + rdx * 4 + MVO_SYNC], ebx
+    jne     .idle_cont
+    mov     ebx, [r11 + rdx * 4 + MVO_SIDX]
+    cmp     ebx, MV_NO_INDEX
+    je      .idle_cont
+    add     ebx, [rax + SC_HEAD]
+    inc     ebx
+    cmp     ebx, [rax + SC_SYNC_POS]
+    jne     .idle_cont
+    mov     ebx, [rax + SC_SYNC_HANDLE]
+    cmp     ebx, [r10 + rdx * 4]
+    jne     .idle_cont
+.idle:
+    bts     [rsp + 48], rcx
+    jmp     .idle_cont
+.idle_unsynced:
+    ; not a synced scene now: stop looking (MVO_SYNC only filters)
+    MV_P4   r11, rdx
+    mov     dword [r11 + rdx * 4 + MVO_SYNC], 0
+.idle_cont:
+    test    rsi, rsi
+    jnz     .idle_next
+.idle_done:
     ; ---- the rest, one at a time, their path records fetched together
     andn    r12, r14, r12
     mov     rsi, r12
@@ -2317,6 +2606,7 @@ motion_batch:
     mov     eax, [rbp + rdx * 4]
     xor     eax, MV_TAG_BIT
     mov     [rbx + rdx * 4 + MVO_TAG], eax
+    mov     dword [rbx + rdx * 4 + MVO_SIDX], MV_NO_INDEX
 .lane_done:
     inc     r15d
     jmp     .resolve
@@ -2502,8 +2792,12 @@ motion_batch:
     mov     [mb_act_bits], rax
     mov     rax, [rsp + 32]
     mov     [mb_mirror_bits], rax
+    mov     rax, [rsp + 48]
+    mov     [mb_idle_bits], rax
+    mov     rax, [rsp + 64]
+    mov     [mb_bare_bits], rax
     mov     rax, r14
-    add     rsp, 56
+    add     rsp, 72
     pop     r15
     pop     r14
     pop     r13
@@ -2568,6 +2862,8 @@ motion_apply:
     MV_P8   rax, rbx
     movsd   [rax + rbx * 8 + MVO_STEP], xmm0
     mov     [rax + rbx * 8 + MVO_LAST], rcx
+    MV_P4   rax, rbx
+    mov     dword [rax + rbx * 4 + MVO_SIDX], MV_NO_INDEX
 .coord:
     mov     rax, [mb_moved_bits]
     bt      rax, r12
@@ -2644,6 +2940,7 @@ mv_nan:         dq 0x7ff8000000000000
 mv_two_p51:     dq 0x4320000000000000   ; 2^51
 mv_flag_first:  dq MVF_FIRST
 mv_tag_bit:     dd MV_TAG_BIT           ; also cvtpd2dq's out-of-range value
+mv_key_final:   dd 0x7fffffff           ; MVO_SYNC's final_frame_index + 1
 STR msg_path_speed, "ttfx: asm engine: path speed must be greater than 0", 10
 STR msg_duplicate_path, "ttfx: asm engine: duplicate path id", 10
 STR msg_duplicate_waypoint, "ttfx: asm engine: duplicate waypoint id", 10
@@ -2674,7 +2971,10 @@ mb_tail_bits:   resq 1              ; steps that run motion_move's tail
 mb_moved_bits:  resq 1              ; steps that move the character
 mb_act_bits:    resq 1              ; any of those
 mb_mirror_bits: resq 1              ; mirrored steps (motion_void)
+mb_idle_bits:   resq 1              ; ticks with nothing to do (update skips them)
+mb_bare_bits:   resq 1              ; ticks that only move (set_coordinate)
 mb_first:       resd 1              ; the word's first slot
+mv_synced:      resb 1              ; a mirror has an MVO_SYNC key
 alignb 8
 mv_view:        resb PATH_SIZE      ; path_view's copy of a mirrored path's fields
 alignb 64

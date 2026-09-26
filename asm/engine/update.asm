@@ -36,9 +36,12 @@
 ; motion_batch (motion.asm), which works out the pure path steps of the
 ; word's movers ahead of time; their motion_move becomes motion_apply, or
 ; nothing when the step neither moves the character nor ends the path.
+; Ticks that do nothing at all (mb_idle_bits) are left out of the word,
+; and those that only move a character without a scene (mb_bare_bits) are
+; a set_coordinate.
 ; A callback or an action on another character bumps motion_epoch (and
 ; motion_void takes the word's unticked steps back), and the rest of the
-; word ticks through motion_move.
+; word ticks through motion_move, the idle ticks not reached yet included.
 
 %define UPD_STAGGER     640         ; bytes between the bitmaps' page offsets
 
@@ -403,7 +406,7 @@ update:
     push    r13
     push    r14
     push    r15
-    sub     rsp, 24                     ; prune slot, batch bits, batch epoch
+    sub     rsp, 40                     ; prune slot, batch bits, batch epoch, idle bits
     mov     r12, [active_bits]
     mov     r13, [snapshot_bits]
     ; only the window of words that can hold active characters
@@ -461,6 +464,7 @@ update:
     shl     rbp, 6
     ; the word's pure path steps, worked out ahead (motion_batch)
     mov     qword [rsp + 8], 0
+    mov     qword [rsp + 24], 0
 %if TIER >= 3
     cmp     dword [path_count], 0
     je      .tick_bit
@@ -470,10 +474,23 @@ update:
     mov     [rsp + 8], rax
     mov     eax, [motion_epoch]
     mov     [rsp + 16], eax
+    ; idle ticks do nothing: skip them (they come back if the epoch moves)
+    mov     rax, [mb_idle_bits]
+    mov     [rsp + 24], rax
+    andn    r15, rax, r15
+    jnz     .tick_bit
+    mov     [r13 + rbx * 8], r15
+    inc     rbx
+    jmp     .tick_word
 %endif
 .tick_bit:
     BIT_POP rdi, r15
     mov     [r13 + rbx * 8], r15
+%if TIER >= 3
+    mov     rdx, [rsp + 8]
+    bt      rdx, rdi
+    jc      .batched
+%endif
     add     rdi, rbp
     mov     [upd_cursor], edi
     mov     rdx, [doze_bits]
@@ -491,19 +508,6 @@ update:
     jmp     .ticked
 .moving:
     ; tick_awake, inline
-%if TIER >= 3
-    mov     eax, edi
-    and     eax, 63
-    mov     rdx, [rsp + 8]
-    bt      rdx, rax
-    jnc     .unbatched
-    mov     rdx, [mb_act_bits]
-    bt      rdx, rax
-    jnc     .moved                      ; worked out, and nothing to do
-    call    motion_apply
-    jmp     .moved
-.unbatched:
-%endif
     call    motion_move
 .moved:
     mov     edi, [upd_cursor]
@@ -515,6 +519,16 @@ update:
     cmp     eax, [rsp + 16]
     je      .epoch_same
     mov     qword [rsp + 8], 0
+%if TIER >= 3
+    ; the idle ticks not reached yet tick after all
+    mov     ecx, [upd_cursor]
+    sub     ecx, ebp
+    mov     rax, -2
+    shl     rax, cl
+    and     rax, [rsp + 24]
+    or      [r13 + rbx * 8], rax
+    mov     qword [rsp + 24], 0
+%endif
 .epoch_same:
     ; re-read: a character woken during the pass may have joined this word
     mov     r15, [r13 + rbx * 8]
@@ -534,6 +548,27 @@ update:
 .tick_next:
     inc     rbx
     jmp     .tick_word
+%if TIER >= 3
+.batched:
+    ; a path step motion_batch worked out (so a path, and no doze)
+    mov     eax, edi
+    add     rdi, rbp
+    mov     [upd_cursor], edi
+    mov     rdx, [mb_act_bits]
+    bt      rdx, rax
+    jnc     .moved                      ; worked out, and nothing to do
+    mov     rdx, [mb_bare_bits]
+    bt      rdx, rax
+    jc      .bare
+    call    motion_apply
+    jmp     .moved
+.bare:
+    ; a move and nothing else: no path event, no scene
+    lea     rdx, [mb]
+    mov     rsi, [rdx + MB_COORD + rax * 8]
+    call    set_coordinate
+    jmp     .ticked
+%endif
 .prune:
     mov     dword [upd_cursor], -1
 %if TIER >= 3
@@ -593,7 +628,7 @@ update:
     mov     [active_lo], eax
     mov     [active_hi], r14d
 .done:
-    add     rsp, 24
+    add     rsp, 40
     pop     r15
     pop     r14
     pop     r13

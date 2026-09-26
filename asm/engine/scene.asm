@@ -1079,6 +1079,21 @@ step_synced_scene:
     mov     [r8 + SC_HEAD], ecx
     ret
 .path:
+%if TIER >= 3
+    ; motion_batch usually worked the index out with the step
+    mov     ecx, [r8 + SC_COUNT]
+    sub     ecx, [r8 + SC_HEAD]
+    mov     edx, [r8 + SC_FLAGS]
+    and     edx, SCF_SYNC_STEP
+    neg     edx
+    and     edx, 0x80000000
+    or      ecx, edx                    ; the key: final_frame_index + 1
+    mov     esi, eax
+    call    path_sync_index             ; motion.asm
+    cmp     eax, 0x80000000             ; MV_NO_INDEX
+    jne     .indexed
+    mov     eax, esi
+%endif
     call    path_view                   ; motion.asm: rdx = the path's step fields
     mov     ecx, [r8 + SC_COUNT]
     sub     ecx, [r8 + SC_HEAD]
@@ -1122,6 +1137,7 @@ step_synced_scene:
     xor     ecx, ecx
     test    rax, rax
     cmovs   rax, rcx
+.indexed:
     add     eax, [r8 + SC_HEAD]
     ; the frame shown last time is cached (SC_SYNC_POS/SC_SYNC_HANDLE): a
     ; character usually takes several steps per frame, and the frame lists

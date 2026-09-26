@@ -68,10 +68,30 @@ entry_matches:
     ret
 
 ; event_find(edi=slot, esi=event, edx=caller kind, rcx=caller) -> eax =
-; entry index or NONE. Clobbers r8-r11.
+; entry index or NONE, and r8 = its record. Clobbers r8-r11.
 event_find:
     mov     rax, [ch_events]
     mov     eax, [rax + rdi * 4]
+    cmp     edx, CALLER_WAYPOINT
+    je      .next
+    ; a name: the (event, kind) pair as one word, then the name
+    mov     r9d, edx
+    shl     r9d, 8
+    or      r9d, esi
+    mov     r10, [event_entries]
+.named:
+    cmp     eax, NONE
+    je      .done
+    mov     r8, rax
+    shl     r8, 6                       ; ENTRY_SIZE
+    add     r8, r10
+    cmp     [r8 + EN_EVENT], r9w
+    jne     .named_next
+    cmp     [r8 + EN_WAYPOINT + WP_NAME], ecx
+    je      .done
+.named_next:
+    mov     eax, [r8 + EN_NEXT]
+    jmp     .named
 .next:
     cmp     eax, NONE
     je      .done
