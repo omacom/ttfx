@@ -38,6 +38,10 @@ decrypt_build:
     push    r14
     push    r15
     call    make_encrypted_symbols
+    xor     eax, eax
+    cmp     qword [cfg_existing_colors], 1
+    sete    al
+    mov     [decrypt_dynamic], al
     ; memo of (cipher color, symbol) -> handle: colors x (523 + 4 blocks)
     mov     rax, [effect_config]
     mov     rdi, [rax + DECRYPT.cipher_count]
@@ -188,6 +192,8 @@ make_decrypting_scenes:
     mov     ecx, NONE
     call    scene_new
     mov     ebp, eax                    ; discovered scene
+    cmp     byte [decrypt_dynamic], 0
+    jne     .dynamic
     mov     rax, [ch_row]
     movsxd  rax, dword [rax + r12 * 4]
     sub     rax, [text_bottom]
@@ -222,6 +228,72 @@ make_decrypting_scenes:
     call    scene_add_frame
     inc     r14d
     jmp     .gradient
+.dynamic:
+    ; dynamic: white -> the input fg and/or bg in 10 steps, or one plain frame
+    ; when the character has no input colors
+    xor     ebx, ebx                    ; fg spectrum length (0 = none)
+    xor     r14d, r14d                  ; bg spectrum length
+    mov     rax, [ch_fg]
+    mov     rax, [rax + r12 * 8]
+    cmp     rax, NONE
+    je      .dynamic_bg
+    mov     qword [pair_stops], 0xffffff
+    mov     [pair_stops + 8], rax
+    lea     rdi, [pair_stops]
+    mov     esi, 2
+    lea     rdx, [ten_steps]
+    mov     ecx, 1
+    lea     r8, [pair_spectrum]
+    call    gradient_new
+    mov     ebx, eax
+.dynamic_bg:
+    mov     rax, [ch_bg]
+    mov     rax, [rax + r12 * 8]
+    cmp     rax, NONE
+    je      .dynamic_frames
+    mov     qword [pair_stops], 0xffffff
+    mov     [pair_stops + 8], rax
+    lea     rdi, [pair_stops]
+    mov     esi, 2
+    lea     rdx, [ten_steps]
+    mov     ecx, 1
+    lea     r8, [bg_spectrum]
+    call    gradient_new
+    mov     r14d, eax
+.dynamic_frames:
+    mov     eax, ebx
+    or      eax, r14d
+    jz      .dynamic_plain
+    xor     r8d, r8d
+    test    ebx, ebx
+    jz      .dynamic_no_fg
+    lea     r8, [pair_spectrum]
+.dynamic_no_fg:
+    xor     eax, eax
+    test    r14d, r14d
+    jz      .dynamic_no_bg
+    lea     rax, [bg_spectrum]
+.dynamic_no_bg:
+    push    r14
+    push    rax
+    mov     edi, ebp
+    mov     rsi, [ch_sym]
+    lea     rsi, [rsi + r12 * 8]
+    mov     edx, 1
+    mov     ecx, 5
+    mov     r9d, ebx
+    call    scene_apply_gradient
+    add     rsp, 16
+    jmp     .events
+.dynamic_plain:
+    mov     rsi, [ch_sym]
+    mov     rsi, [rsi + r12 * 8]
+    mov     edi, ebp
+    mov     edx, 5
+    mov     rcx, NONE
+    mov     r8, NONE
+    xor     r9d, r9d
+    call    scene_add_frame
 .events:
     ; fast complete -> slow; slow complete -> discovered; start on fast
     push    0
@@ -459,4 +531,6 @@ final_map_width:    resq 1
 typing_pos:         resq 1
 pair_stops:         resq 2
 pair_spectrum:      resq 16
+bg_spectrum:        resq 16
 decrypt_phase:      resb 1
+decrypt_dynamic:    resb 1
