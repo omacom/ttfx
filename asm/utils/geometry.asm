@@ -582,8 +582,32 @@ extrapolate_along_ray:
 
 ; find_coord_on_line(rdi=start, rsi=end, xmm0=t) -> rax = coord:
 ; (1 - t) * start + t * end per axis, rounded half-even.
+; Both axes at once: the same multiplies and adds per lane, and cvtpd2dq
+; rounds half to even like cvtsd2si. A lane outside i32 (cvtpd2dq's
+; 0x80000000) takes the scalar path, which wraps like the i64 cast does.
 ; Clobbers rcx, rdx, xmm0-xmm4.
 find_coord_on_line:
+    movq    xmm3, rdi
+    cvtdq2pd xmm3, xmm3                 ; start column, row
+    movq    xmm4, rsi
+    cvtdq2pd xmm4, xmm4                 ; end column, row
+    movsd   xmm1, [geo_one]
+    subsd   xmm1, xmm0                  ; 1 - t
+    unpcklpd xmm1, xmm1
+    mulpd   xmm3, xmm1
+    movapd  xmm2, xmm0
+    unpcklpd xmm2, xmm2
+    mulpd   xmm4, xmm2
+    addpd   xmm3, xmm4
+    cvtpd2dq xmm4, xmm3
+    movq    rax, xmm4
+    movdqa  xmm2, xmm4
+    pcmpeqd xmm2, [geo_int_min]
+    pmovmskb ecx, xmm2
+    test    ecx, 0xff
+    jnz     .scalar
+    ret
+.scalar:
     movsd   xmm1, [geo_one]
     subsd   xmm1, xmm0                  ; 1 - t
     movsxd  rax, edi
@@ -621,63 +645,51 @@ find_coord_on_bezier_curve:
     mov     rsi, rcx
     jmp     find_coord_on_line
 .curve:
+    cmp     rdx, 1
+    jne     .many
+    ; one control point: both axes at once, as in find_coord_on_line
+    movq    xmm1, rdi
+    cvtdq2pd xmm1, xmm1                 ; start
+    cvtdq2pd xmm2, [rsi]                ; control
+    movq    xmm3, rcx
+    cvtdq2pd xmm3, xmm3                 ; end
+    movsd   xmm5, [geo_one]
+    subsd   xmm5, xmm0
+    unpcklpd xmm5, xmm5                 ; 1 - t
+    movapd  xmm4, xmm0
+    unpcklpd xmm4, xmm4                 ; t
+    mulpd   xmm1, xmm5
+    movapd  xmm6, xmm2
+    mulpd   xmm6, xmm4
+    addpd   xmm1, xmm6                  ; start.interpolate(control, t)
+    mulpd   xmm2, xmm5
+    mulpd   xmm3, xmm4
+    addpd   xmm2, xmm3                  ; control.interpolate(end, t)
+    mulpd   xmm1, xmm5
+    mulpd   xmm2, xmm4
+    addpd   xmm1, xmm2                  ; the point between them
+    cvtpd2dq xmm0, xmm1
+    movq    rax, xmm0
+    pcmpeqd xmm0, [geo_int_min]
+    pmovmskb ecx, xmm0
+    test    ecx, 0xff
+    jnz     .wide
+    ret
+.wide:
+    ; a lane outside i32: round each like the i64 cast
+    push    rbx
+    push    rbp
+    push    r12
+    movapd  xmm0, xmm1
+    unpckhpd xmm1, xmm1
+    jmp     .round
+.many:
     push    rbx
     push    rbp
     push    r12
     movapd  xmm4, xmm0                  ; t
     movsd   xmm5, [geo_one]
     subsd   xmm5, xmm0                  ; 1 - t
-    cmp     rdx, 1
-    jne     .general
-    movsxd  rax, edi
-    cvtsi2sd xmm6, rax                  ; start column
-    mov     rax, rdi
-    sar     rax, 32
-    cvtsi2sd xmm7, rax                  ; start row
-    mov     rax, [rsi]
-    movsxd  rdx, eax
-    cvtsi2sd xmm8, rdx                  ; control column
-    sar     rax, 32
-    cvtsi2sd xmm9, rax                  ; control row
-    movsxd  rax, ecx
-    cvtsi2sd xmm10, rax                 ; end column
-    mov     rax, rcx
-    sar     rax, 32
-    cvtsi2sd xmm11, rax                 ; end row
-    ; start.interpolate(control, t)
-    movapd  xmm12, xmm5
-    mulsd   xmm12, xmm6
-    movapd  xmm0, xmm4
-    mulsd   xmm0, xmm8
-    addsd   xmm12, xmm0
-    movapd  xmm13, xmm5
-    mulsd   xmm13, xmm7
-    movapd  xmm0, xmm4
-    mulsd   xmm0, xmm9
-    addsd   xmm13, xmm0
-    ; control.interpolate(end, t)
-    movapd  xmm14, xmm5
-    mulsd   xmm14, xmm8
-    movapd  xmm0, xmm4
-    mulsd   xmm0, xmm10
-    addsd   xmm14, xmm0
-    movapd  xmm15, xmm5
-    mulsd   xmm15, xmm9
-    movapd  xmm0, xmm4
-    mulsd   xmm0, xmm11
-    addsd   xmm15, xmm0
-    ; the point between them
-    movapd  xmm0, xmm5
-    mulsd   xmm0, xmm12
-    movapd  xmm1, xmm4
-    mulsd   xmm1, xmm14
-    addsd   xmm0, xmm1
-    movapd  xmm1, xmm5
-    mulsd   xmm1, xmm13
-    movapd  xmm2, xmm4
-    mulsd   xmm2, xmm15
-    addsd   xmm1, xmm2
-    jmp     .round
 .general:
     ; points[0..n+2] as (column, row) f64 pairs on the stack
     mov     rbp, rsp
@@ -951,6 +963,7 @@ utf8_pack:
 section .rodata
 align 16
 geo_abs_mask:   dq 0x7fffffffffffffff, 0x7fffffffffffffff
+geo_int_min:    dd 0x80000000, 0x80000000, 0, 0
 geo_two_pi:     dq 0x401921fb54442d18   ; 2.0 * PI, as the oracle folded it
 geo_one:        dq 1.0
 geo_half:       dq 0.5

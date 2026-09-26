@@ -14,6 +14,7 @@
 %define PA_INT_COUNT        120         ; u16 leading segments of whole-number distance
 %define PA_DONE             122         ; u16 leading segments with both events fired
 %define PA_CURSOR           124         ; u16 the segment the last step landed in
+%define PA_REACH            126         ; u16 min(PA_INT_COUNT, PA_DONE + 1)
 %define SG_PREFIX           76          ; u32 distance sum of segments 0..=i (the run above)
 ; Eased factor tables (path_ease_table), in PA_OWNER's slot (never read).
 %define PA_ETAB             PA_OWNER    ; u32 table offset / 8; 0 = not looked up
@@ -22,7 +23,12 @@
 %define ETAB_REGION         (1 << 28)
 %define ETAB_MAP_BITS       12
 %define ETAB_MAP_SIZE       (1 << ETAB_MAP_BITS)
-%if PA_WP_CAP + 4 > PA_INT_COUNT || PA_CURSOR + 2 > PATH_SIZE
+; Shared segment lists (see path_seg_share).
+%define PAF_SHARED          8           ; PA_SEGS is a shared list
+%define SEGSHARE_BITS       14
+%define SEGSHARE_SIZE       (1 << SEGSHARE_BITS)    ; 16-byte entries: list, count, tag
+%define SEGSHARE_PROBATION  256
+%if PA_WP_CAP + 4 > PA_INT_COUNT || PA_REACH + 2 > PATH_SIZE
 %error "path record layout overlaps the walk index"
 %endif
 %if SEGMENT_SIZE % 16 || WAYPOINT_SIZE != 32
@@ -193,6 +199,7 @@ path_new_waypoint:
     mov     r14d, ecx
     mov     r15d, r8d
     PATH_PTR rbp, rbx
+    call    path_unshare
     cmp     r15d, AUTO
     jne     .named
     mov     r15d, [rbp + PA_WP_COUNT]
@@ -370,6 +377,17 @@ grow_array:
     pop     rbx
     ret
 
+; PATH_REACH record: store PA_REACH after PA_INT_COUNT or PA_DONE changed.
+; Clobbers rax, rcx.
+%macro PATH_REACH 1
+    movzx   eax, word [%1 + PA_DONE]
+    inc     eax
+    movzx   ecx, word [%1 + PA_INT_COUNT]
+    cmp     ecx, eax
+    cmova   ecx, eax
+    mov     [%1 + PA_REACH], cx
+%endmacro
+
 ; path_extend_index(rbp=path record): extend the run of whole-number
 ; segment distances (PA_INT_COUNT) and its prefix sums (SG_PREFIX) over the
 ; segments after it. Distances are at most 2^20 and sums below 2^30, so
@@ -404,6 +422,219 @@ path_extend_index:
     mov     [rbp + PA_INT_COUNT], cx
     jmp     .next
 .done:
+    PATH_REACH rbp
+    ret
+
+; ------------------------------------------------------------ shared segments
+;
+; Effects sometimes give several characters the same path (binarypath's
+; eight bits per input character), and each walks its own copy of the
+; segments. When a path is activated and its owner has no segment events,
+; its segments are looked up by content (everything but the event flags)
+; in segshare_table, and the path then walks the table's copy, which is
+; never written: its flags read as fired. Without events nothing can reset
+; the path mid-walk, so the path's own flags follow from its record: the
+; segments before PA_DONE fired, and segment PA_DONE entered once any step
+; was taken (every walk that moves PA_DONE ends in the new PA_DONE, and the
+; first one enters where it ends). Anything that would write the segments
+; or could observe the flags first gives the path a private copy with the
+; flags spelled out (path_unshare): new waypoints, activation, path_reset
+; and a segment event registered for the owner (event_register).
+
+; path_unshare(rbp=path record): give a shared path its own segments.
+; Clobbers rax, rcx, rdx, rsi, rdi.
+path_unshare:
+    test    dword [rbp + PA_FLAGS], PAF_SHARED
+    jnz     .copy
+    ret
+.copy:
+    mov     ecx, [rbp + PA_SEG_COUNT]
+    mov     eax, 4
+    cmp     ecx, eax
+    cmovb   ecx, eax
+    mov     [rbp + PA_SEG_CAP], ecx
+    imul    edi, ecx, SEGMENT_SIZE
+    call    alloc
+    mov     rsi, [rbp + PA_SEGS]
+    mov     [rbp + PA_SEGS], rax
+    mov     rdi, rax
+    imul    ecx, [rbp + PA_SEG_COUNT], SEGMENT_SIZE
+    rep     movsb
+    ; the flags: fired before PA_DONE, entered at PA_DONE after a step
+    mov     rdi, [rbp + PA_SEGS]
+    movzx   edx, word [rbp + PA_DONE]
+    xor     ecx, ecx
+.flag:
+    cmp     ecx, [rbp + PA_SEG_COUNT]
+    jae     .flagged
+    mov     eax, 0x0101
+    cmp     ecx, edx
+    jb      .store
+    mov     eax, 0
+    jne     .store
+    cmp     qword [rbp + PA_STEP], 0
+    je      .store
+    mov     eax, 1
+.store:
+    mov     [rdi + SG_ENTERED], ax
+    add     rdi, SEGMENT_SIZE
+    inc     ecx
+    jmp     .flag
+.flagged:
+    and     dword [rbp + PA_FLAGS], ~PAF_SHARED
+    ret
+
+; path_unshare_all(edi=slot): path_unshare for every path of the character
+; (it is about to observe segment events). Preserves rdi, rsi; clobbers
+; rax, rcx, rdx.
+path_unshare_all:
+    push    rbp
+    push    rdi
+    push    rsi
+    push    rbx
+    sub     rsp, 8
+    mov     rax, [ch_paths]
+    mov     ebx, [rax + rdi * 4]
+.next:
+    cmp     ebx, NONE
+    je      .done
+    PATH_PTR rbp, rbx
+    call    path_unshare
+    mov     ebx, [rbp + PA_NEXT]
+    jmp     .next
+.done:
+    add     rsp, 8
+    pop     rbx
+    pop     rsi
+    pop     rdi
+    pop     rbp
+    ret
+
+; SEG_HASH_STEP acc, segment register, offset: fold one qword.
+%macro SEG_HASH_STEP 3
+    add     %1, [%2 + %3]
+    xor     rdx, %1
+    rol     rdx, 7
+%endmacro
+
+; path_seg_share(rbp=path record, ebx=owner slot): after activation, walk
+; the shared copy of the segments when there is one (or make one).
+; Clobbers rax, rcx, rdx, rsi, rdi, r8-r11.
+path_seg_share:
+    cmp     byte [segshare_off], 0
+    jne     .done
+    mov     rax, [ch_subs]
+    test    byte [rax + rbx], (1 << EV_SEGMENT_ENTERED) | (1 << EV_SEGMENT_EXITED)
+    jnz     .done
+    mov     ecx, [rbp + PA_SEG_COUNT]
+    test    ecx, ecx
+    jz      .done
+    cmp     ecx, 0xfff0
+    jae     .done
+    mov     r9, [segshare_table]
+    test    r9, r9
+    jnz     .hash
+    mov     rdi, SEGSHARE_SIZE * 16
+    call    reserve
+    mov     [segshare_table], rax
+    mov     r9, rax
+    mov     ecx, [rbp + PA_SEG_COUNT]
+.hash:
+    ; a running sum of each segment's end and distance and the xor of its
+    ; rotated prefixes (the compare checks the rest)
+    mov     r10, [rbp + PA_SEGS]
+    mov     rax, rcx                    ; seeded with the count
+    xor     edx, edx
+.fold:
+    SEG_HASH_STEP rax, r10, SG_END + WP_COORD
+    SEG_HASH_STEP rax, r10, SG_DISTANCE
+    add     r10, SEGMENT_SIZE
+    dec     ecx
+    jnz     .fold
+    mov     r11, 0x9E3779B97F4A7C15
+    imul    rax, r11
+    xor     rax, rdx
+    imul    rax, r11
+    mov     r10, rax                    ; the hash
+    shr     rax, 64 - SEGSHARE_BITS
+.probe:
+    mov     rdx, rax
+    shl     rdx, 4
+    add     rdx, r9                     ; the entry
+    mov     rsi, [rdx]
+    test    rsi, rsi
+    jz      .insert
+    cmp     [rdx + 12], r10d
+    jne     .next
+    mov     ecx, [rbp + PA_SEG_COUNT]
+    cmp     [rdx + 8], ecx
+    jne     .next
+    ; compare everything but the flags
+    mov     rdi, [rbp + PA_SEGS]
+.compare:
+%assign so 0
+%rep 9
+    mov     r11, [rdi + so]
+    cmp     r11, [rsi + so]
+    jne     .next
+%assign so so + 8
+%endrep
+    mov     r11d, [rdi + SG_PREFIX]
+    cmp     r11d, [rsi + SG_PREFIX]
+    jne     .next
+    add     rdi, SEGMENT_SIZE
+    add     rsi, SEGMENT_SIZE
+    dec     ecx
+    jnz     .compare
+    inc     dword [segshare_hits]
+    mov     rsi, [rdx]
+    jmp     .use
+.next:
+    inc     eax
+    and     eax, SEGSHARE_SIZE - 1
+    jmp     .probe
+.insert:
+    ; a new list: the table keeps its own copy, with every flag fired
+    mov     ecx, [segshare_count]
+    cmp     ecx, SEGSHARE_SIZE * 3 / 4
+    jae     .off
+    cmp     ecx, SEGSHARE_PROBATION
+    jb      .keep
+    mov     r11d, [segshare_hits]
+    shl     r11d, 2
+    cmp     r11d, ecx
+    jb      .off                        ; under one hit in four new lists
+.keep:
+    inc     dword [segshare_count]
+    mov     r8, rdx
+    imul    edi, [rbp + PA_SEG_COUNT], SEGMENT_SIZE
+    call    alloc
+    mov     [r8], rax
+    mov     ecx, [rbp + PA_SEG_COUNT]
+    mov     [r8 + 8], ecx
+    mov     [r8 + 12], r10d
+    mov     rdi, rax
+    mov     rsi, [rbp + PA_SEGS]
+    imul    ecx, ecx, SEGMENT_SIZE
+    rep     movsb
+    mov     rsi, [r8]
+    mov     rdi, rsi
+    mov     ecx, [rbp + PA_SEG_COUNT]
+.fire:
+    mov     word [rdi + SG_ENTERED], 0x0101
+    add     rdi, SEGMENT_SIZE
+    dec     ecx
+    jnz     .fire
+.use:
+    ; the path walks the shared list; activation left every flag clear
+    mov     [rbp + PA_SEGS], rsi
+    mov     ecx, [rbp + PA_SEG_COUNT]
+    mov     [rbp + PA_SEG_CAP], ecx
+    or      dword [rbp + PA_FLAGS], PAF_SHARED
+.done:
+    ret
+.off:
+    mov     byte [segshare_off], 1
     ret
 
 ; ------------------------------------------------------------ activation
@@ -424,7 +655,9 @@ path_activate:
     PATH_PTR rbp, r12
     cmp     dword [rbp + PA_WP_COUNT], 0
     je      .empty
-    call    char_coord                  ; rdi still the slot
+    call    path_unshare
+    mov     edi, ebx
+    call    char_coord
     mov     r13, rax                    ; current coordinate
     ; distance to the first waypoint
     mov     rax, [rbp + PA_WPS]
@@ -517,6 +750,7 @@ path_activate:
     mov     dword [rbp + PA_INT_COUNT], 0   ; and PA_DONE
     mov     word [rbp + PA_CURSOR], 0
     call    path_extend_index
+    call    path_seg_share
 .layer:
     test    dword [rbp + PA_FLAGS], PAF_LAYER
     jz      .event
@@ -695,40 +929,35 @@ path_ease_table:
 ; is the distance minus a prefix sum, bit for bit, and each `d <= distance`
 ; test is `d <= prefix sum`. Over the leading run of such segments whose
 ; events have all fired (PA_DONE), the walk is a cursor search over the
-; prefix sums (SG_PREFIX), which steps along with the character.
+; prefix sums (SG_PREFIX), which steps along with the character. The search
+; also covers the segment just after that run (PA_REACH): it may hold the
+; destination too.
+;
+; When the segment the walk would test next holds the destination and was
+; entered already - nearly every step - no event can fire, and the step
+; finishes without saving any register; only the rest of the walk (.slow)
+; keeps its state in callee-saved ones.
 path_step:
-    push    rbx
-    push    rbp
-    push    r12
-    push    r13
-    push    r14
-    push    r15
-    sub     rsp, 56
-    mov     ebx, edi
-    mov     r12d, esi
-    PATH_PTR rbp, r12                   ; records never move
-    mov     rax, [rbp + PA_MAX]
+    PATH_PTR r8, rsi                    ; records never move
+    mov     rax, [r8 + PA_MAX]
     test    rax, rax
     jz      .at_end
-    cmp     [rbp + PA_STEP], rax
+    cmp     [r8 + PA_STEP], rax
     jge     .at_end
     xorpd   xmm1, xmm1
-    ucomisd xmm1, [rbp + PA_TOTAL]
+    ucomisd xmm1, [r8 + PA_TOTAL]
     jne     .step
     jnp     .at_end
 .step:
-    mov     rax, [rbp + PA_STEP]
+    mov     rax, [r8 + PA_STEP]
     inc     rax
-    mov     [rbp + PA_STEP], rax
-    cmp     dword [rbp + PA_EASE], NONE
+    mov     [r8 + PA_STEP], rax
+    cmp     dword [r8 + PA_EASE], NONE
     je      .ratio_only
     ; eased: the factor for (easing, max_steps, step) from its table
-    mov     ecx, [rbp + PA_ETAB]
+    mov     ecx, [r8 + PA_ETAB]
     test    ecx, ecx
-    jnz     .have_table
-    call    path_ease_table             ; rbp = the path
-    mov     ecx, eax
-    mov     rax, [rbp + PA_STEP]
+    jz      .find_table
 .have_table:
     cmp     ecx, ETAB_NONE
     je      .ratio_only
@@ -739,77 +968,195 @@ path_step:
     test    rcx, rcx
     jnz     .factor                     ; 0 = not filled (or +0.0: recomputed)
     cvtsi2sd xmm0, rax
-    cvtsi2sd xmm1, qword [rbp + PA_MAX]
+    cvtsi2sd xmm1, qword [r8 + PA_MAX]
     divsd   xmm0, xmm1                  ; ratio
-    mov     edi, [rbp + PA_EASE]
+    push    rdi
+    push    r8
+    sub     rsp, 8
+    mov     edi, [r8 + PA_EASE]
     call    ease
-    mov     ecx, [rbp + PA_ETAB]
-    mov     rax, [rbp + PA_STEP]
+    add     rsp, 8
+    pop     r8
+    pop     rdi
+    mov     ecx, [r8 + PA_ETAB]
+    mov     rax, [r8 + PA_STEP]
     mov     rdx, [etab_base]
     lea     rdx, [rdx + rcx * 8]
     movsd   [rdx + rax * 8], xmm0
     jmp     .factor
+.find_table:
+    push    rbp
+    push    rdi
+    push    r8
+    mov     rbp, r8
+    call    path_ease_table
+    pop     r8
+    pop     rdi
+    pop     rbp
+    mov     ecx, eax
+    mov     rax, [r8 + PA_STEP]
+    jmp     .have_table
 .ratio_only:
     cvtsi2sd xmm0, rax
-    cvtsi2sd xmm1, qword [rbp + PA_MAX]
+    cvtsi2sd xmm1, qword [r8 + PA_MAX]
     divsd   xmm0, xmm1                  ; ratio
-    mov     edi, [rbp + PA_EASE]
-    cmp     edi, NONE
+    mov     eax, [r8 + PA_EASE]
+    cmp     eax, NONE
     je      .factor
+    push    rdi
+    push    r8
+    sub     rsp, 8
+    mov     edi, eax
     call    ease
+    add     rsp, 8
+    pop     r8
+    pop     rdi
 .factor:
-    mulsd   xmm0, [rbp + PA_TOTAL]
-    movsd   [rbp + PA_LAST], xmm0       ; distance_to_travel
-    mov     r13d, NONE                  ; active segment
-    xor     r14d, r14d                  ; i
-    ; the exact prefix: L = min(PA_INT_COUNT, PA_DONE) segments
-    movzx   edx, word [rbp + PA_INT_COUNT]
-    movzx   eax, word [rbp + PA_DONE]
-    cmp     edx, eax
-    cmova   edx, eax
+    mulsd   xmm0, [r8 + PA_TOTAL]
+    movsd   [r8 + PA_LAST], xmm0        ; distance_to_travel
+    ; the exact prefix: the walk skips the first L = min(PA_INT_COUNT,
+    ; PA_DONE) segments, and the one after them may hold the destination
+    ; too (L2 = min(PA_INT_COUNT, PA_DONE + 1))
+    xor     ecx, ecx
+    movzx   edx, word [r8 + PA_REACH]   ; L2
     test    edx, edx
-    jz      .slow
+    jz      .try
     movsd   xmm1, [path_two_p52]
     ucomisd xmm1, xmm0
-    jbe     .slow                       ; too large, or NaN
-    mov     r15, [rbp + PA_SEGS]
-    movzx   ecx, word [rbp + PA_CURSOR]
+    jbe     .try                        ; too large, or NaN
+    mov     r9, [r8 + PA_SEGS]
+    movzx   ecx, word [r8 + PA_CURSOR]
     cmp     ecx, edx
     cmova   ecx, edx
 .back:
-    ; the first segment c with prefix(c + 1) >= d, else L
+    ; the first segment c with prefix(c + 1) >= d, else L2
     test    ecx, ecx
     jz      .forward
     imul    eax, ecx, SEGMENT_SIZE
-    cvtsi2sd xmm1, dword [r15 + rax - SEGMENT_SIZE + SG_PREFIX]
+    cvtsi2sd xmm1, dword [r9 + rax - SEGMENT_SIZE + SG_PREFIX]
     ucomisd xmm1, xmm0
     jb      .forward
     dec     ecx
     jmp     .back
 .forward:
     cmp     ecx, edx
-    jae     .found
+    jae     .past
     imul    eax, ecx, SEGMENT_SIZE
-    cvtsi2sd xmm1, dword [r15 + rax + SG_PREFIX]
+    cvtsi2sd xmm1, dword [r9 + rax + SG_PREFIX]
     ucomisd xmm1, xmm0
     jae     .found
     inc     ecx
     jmp     .forward
 .found:
-    mov     [rbp + PA_CURSOR], cx
-    mov     r14d, ecx
+    ; segments[c] holds the destination
+    mov     [r8 + PA_CURSOR], cx
     imul    eax, ecx, SEGMENT_SIZE
     test    ecx, ecx
-    jz      .skipped
-    cvtsi2sd xmm1, dword [r15 + rax - SEGMENT_SIZE + SG_PREFIX]
+    jz      .entered
+    cvtsi2sd xmm1, dword [r9 + rax - SEGMENT_SIZE + SG_PREFIX]
     subsd   xmm0, xmm1
-.skipped:
-    movsd   [rsp], xmm0
+    jmp     .entered
+.past:
+    ; the walk goes on from segment L
+    movzx   ecx, word [r8 + PA_DONE]
     cmp     ecx, edx
-    jae     .walk
-    add     r15, rax                    ; segments[c] holds the destination
-    jmp     .holds
+    cmova   ecx, edx
+    mov     [r8 + PA_CURSOR], cx
+    test    ecx, ecx
+    jz      .try
+    imul    eax, ecx, SEGMENT_SIZE
+    cvtsi2sd xmm1, dword [r9 + rax - SEGMENT_SIZE + SG_PREFIX]
+    subsd   xmm0, xmm1
+.try:
+    ; the walk's test of segment c with xmm0 left to travel: when it holds
+    ; the destination and was entered already, no event fires, and no
+    ; callee-saved register is needed
+    cmp     ecx, [r8 + PA_SEG_COUNT]
+    jae     .slow
+    imul    eax, ecx, SEGMENT_SIZE
+    mov     r9, [r8 + PA_SEGS]
+    ucomisd xmm0, [r9 + rax + SG_DISTANCE]
+    ja      .slow
+.entered:
+    cmp     byte [r9 + rax + SG_ENTERED], 0
+    je      .slow                       ; its enter event is due
+.finish:
+    ; no event, so no callee-saved register is needed
+    add     r9, rax
+    movsd   xmm1, [r9 + SG_DISTANCE]
+    xorpd   xmm2, xmm2
+    ucomisd xmm1, xmm2
+    jne     .fast_ratio
+    jp      .fast_ratio
+    xorpd   xmm0, xmm0                  ; zero-length segment: t = 0
+    jmp     .fast_position
+.fast_ratio:
+    divsd   xmm0, xmm1
+    cmp     dword [r8 + PA_EASE], NONE
+    jne     .fast_position              ; eased: unclamped, overshoot allowed
+    minsd   xmm0, [path_one]            ; f64::min(x, 1.0)
+.fast_position:
+    mov     rdi, [r9 + SG_START + WP_COORD]
+    mov     rsi, [r9 + SG_END + WP_COORD]
+    mov     edx, [r9 + SG_END + WP_BEZ_COUNT]
+    test    edx, edx
+    jz      find_coord_on_line
+    mov     rcx, rsi
+    mov     rsi, [r9 + SG_END + WP_BEZ]
+    jmp     find_coord_on_bezier_curve
+.at_end:
+    mov     eax, [r8 + PA_SEG_COUNT]
+    dec     eax
+    imul    rax, rax, SEGMENT_SIZE
+    add     rax, [r8 + PA_SEGS]
+    mov     rax, [rax + SG_END + WP_COORD]
+    ret
+.shared_walk:
+    ; the walk over a shared list: its owner has no segment events, so a
+    ; passed segment only extends PA_DONE (see path_unshare)
+    cmp     ecx, [r8 + PA_SEG_COUNT]
+    jae     .shared_over
+    imul    eax, ecx, SEGMENT_SIZE
+    mov     r9, [r8 + PA_SEGS]
+    ucomisd xmm0, [r9 + rax + SG_DISTANCE]
+    jna     .finish
+    subsd   xmm0, [r9 + rax + SG_DISTANCE]
+    movzx   edx, word [r8 + PA_DONE]
+    cmp     ecx, edx
+    jne     .shared_next
+    inc     edx
+    mov     [r8 + PA_DONE], dx
+    inc     edx
+    movzx   r10d, word [r8 + PA_INT_COUNT]
+    cmp     r10d, edx
+    cmova   r10d, edx
+    mov     [r8 + PA_REACH], r10w
+.shared_next:
+    inc     ecx
+    jmp     .shared_walk
+.shared_over:
+    ; for-else: overshoot past the last waypoint re-adds its distance
+    lea     eax, [ecx - 1]
+    imul    eax, eax, SEGMENT_SIZE
+    mov     r9, [r8 + PA_SEGS]
+    addsd   xmm0, [r9 + rax + SG_DISTANCE]
+    jmp     .finish
 .slow:
+    ; the walk from segment ecx with xmm0 still to travel, which may fire
+    ; segment events
+    test    dword [r8 + PA_FLAGS], PAF_SHARED
+    jnz     .shared_walk
+    push    rbx
+    push    rbp
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    sub     rsp, 56
+    mov     ebx, edi
+    mov     rbp, r8
+    mov     r13d, NONE                  ; active segment
+    mov     r14d, ecx                   ; i
     movsd   [rsp], xmm0
 .walk:
     cmp     r14d, [rbp + PA_SEG_COUNT]
@@ -891,6 +1238,7 @@ path_step:
     ja      .next_segment
     inc     eax
     mov     [rbp + PA_DONE], ax
+    PATH_REACH rbp
 .next_segment:
     inc     r14d
     jmp     .walk
@@ -944,20 +1292,6 @@ path_step:
     pop     rbp
     pop     rbx
     jmp     find_coord_on_bezier_curve
-.at_end:
-    mov     eax, [rbp + PA_SEG_COUNT]
-    dec     eax
-    imul    rax, rax, SEGMENT_SIZE
-    add     rax, [rbp + PA_SEGS]
-    mov     rax, [rax + SG_END + WP_COORD]
-    add     rsp, 56
-    pop     r15
-    pop     r14
-    pop     r13
-    pop     r12
-    pop     rbp
-    pop     rbx
-    ret
 
 ; motion_move(edi=slot): Motion.move - step the active path, then holds,
 ; loops, completion and their events.
@@ -1072,7 +1406,12 @@ paths_clear:
 ; capacity is reused. Clobbers rax.
 path_reset:
     PATH_PTR rax, rdi
-    and     dword [rax + PA_FLAGS], ~PAF_ORIGIN
+    test    dword [rax + PA_FLAGS], PAF_SHARED
+    jz      .own
+    mov     qword [rax + PA_SEGS], 0    ; the next segment starts a list
+    mov     dword [rax + PA_SEG_CAP], 0
+.own:
+    and     dword [rax + PA_FLAGS], ~(PAF_ORIGIN | PAF_SHARED)
     mov     dword [rax + PA_WP_COUNT], 0
     mov     dword [rax + PA_SEG_COUNT], 0
     mov     qword [rax + PA_TOTAL], 0
@@ -1107,3 +1446,8 @@ etab_base:      resq 1
 etab_map:       resq 1
 etab_used:      resq 1              ; in f64 entries
 path_count:     resd 1
+segshare_count: resd 1              ; lists in segshare_table
+segshare_hits:  resd 1              ; lookups that found one
+alignb 8
+segshare_table: resq 1
+segshare_off:   resb 1              ; lookups stopped

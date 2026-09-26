@@ -72,7 +72,8 @@
 
 section .text
 
-; chars_init: reserve every field array.
+; chars_init: reserve every field array. (Staggering them within a page
+; against 4K aliasing measured neutral overall and cost matrix 10%.)
 chars_init:
 %macro RESERVE_FIELD 3
     mov     rdi, CHAR_LIMIT * %2

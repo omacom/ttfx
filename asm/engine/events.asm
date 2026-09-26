@@ -188,6 +188,15 @@ event_register:
 .first:
     mov     [r8 + EN_FIRST], eax
 .subscribed:
+    ; a character that observes segments walks its own segment lists
+    cmp     ebp, EV_SEGMENT_ENTERED
+    je      .own_segments
+    cmp     ebp, EV_SEGMENT_EXITED
+    jne     .mark
+.own_segments:
+    mov     edi, ebx
+    call    path_unshare_all            ; motion.asm
+.mark:
     mov     rax, [ch_subs]
     bts     dword [rax + rbx], ebp
     add     rsp, 8
