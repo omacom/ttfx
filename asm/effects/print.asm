@@ -184,11 +184,49 @@ pr_make_row:
     mov     [pr_symbols + 32], rax
     cmp     byte [pr_dynamic], 0
     jne     .dynamic
-    ; white -> the final color in 5 steps over the five symbols
+    ; white -> the final color in 5 steps over the five symbols; the frames
+    ; depend on the input symbol and final color only, so later characters
+    ; with the same pair copy the first one's scene (when neither scene
+    ; applies preexisting colors)
     mov     edi, r14d
     call    pr_final_color
+    mov     rbp, rax
+    mov     ecx, r15d
+    shl     rcx, SCENE_SHIFT
+    add     rcx, [scenes]
+    test    dword [rcx + SC_FLAGS], SCF_PREEXISTING | SCF_PRE_BOLD
+    jnz     .head_gradient
+    mov     rdi, [pr_symbols + 32]
+    mov     rsi, rbp
+    mov     rdx, NONE
+    call    visual_run_find
+    test    rax, rax
+    jz      .head_template
+    mov     eax, [rax]                  ; the template scene
+    shl     rax, SCENE_SHIFT
+    add     rax, [scenes]
+    mov     edi, r15d
+    mov     rsi, [rax + SC_FRAMES]
+    mov     edx, [rax + SC_COUNT]
+    call    scene_append_frames
+    jmp     .activate
+.head_template:
+    push    rcx                         ; the empty memo entry
+    push    rcx
+    mov     edi, 8
+    call    alloc
+    mov     dword [rax], 1
+    mov     [rax + 4], r15d
+    lea     r8, [rax + 4]
+    pop     rcx
+    pop     rcx
+    mov     rdi, [pr_symbols + 32]
+    mov     rsi, rbp
+    mov     rdx, NONE
+    call    visual_run_keep
+.head_gradient:
     lea     rdi, [pr_fg_spectrum]
-    mov     rsi, rax
+    mov     rsi, rbp
     call    pr_head_gradient
     mov     r9d, eax
     lea     r8, [pr_fg_spectrum]

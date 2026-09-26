@@ -334,16 +334,18 @@ sld_scene:
     call    gradient_new
     mov     [sld_pair_len], rax
 .gradient:
-    push    0
-    push    0
+    ; apply_gradient_to_symbols([symbol], final frames, pair spectrum): a
+    ; frame per color, the visuals shared by symbol and mapped color
+    mov     rdi, [sld_symbol]
+    mov     rsi, [sld_pair_spectrum]
+    mov     rdx, [sld_pair_len]
+    mov     rcx, NONE
+    mov     r8, [sld_last_fg]
+    call    visual_run
     mov     edi, r13d
-    lea     rsi, [sld_symbol]
-    mov     edx, 1
+    mov     rsi, rax
     mov     ecx, [rbx + SLIDE.final_frames]
-    mov     r8, [sld_pair_spectrum]
-    mov     r9d, [sld_pair_len]
-    call    scene_apply_gradient
-    add     rsp, 16
+    call    visual_frames
     jmp     .activate
 .dynamic:
     mov     rax, [ch_fg]

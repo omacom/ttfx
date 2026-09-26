@@ -125,17 +125,19 @@ expand_build:
     call    ex_pair_gradient
     mov     [ex_fg_len], eax
 .apply:
+    ; apply_gradient_to_symbols([symbol], 5, fg spectrum): a frame per
+    ; color, the visuals shared by symbol and final color
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + r12 * 8]
+    lea     rsi, [ex_fg_spectrum]
+    mov     edx, [ex_fg_len]
+    mov     rcx, NONE
+    mov     r8, [ex_last_color]
+    call    visual_run
     mov     edi, ebp
-    mov     rsi, [ch_sym]
-    lea     rsi, [rsi + r12 * 8]
-    mov     edx, 1
+    mov     rsi, rax
     mov     ecx, 5
-    lea     r8, [ex_fg_spectrum]
-    mov     r9d, [ex_fg_len]
-    push    0
-    push    0
-    call    scene_apply_gradient
-    add     rsp, 16
+    call    visual_frames
 .activate:
     mov     edi, r12d
     mov     esi, ebp

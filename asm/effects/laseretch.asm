@@ -492,22 +492,19 @@ le_init_spark:
     mov     ecx, NONE
     call    scene_new
     mov     r12d, eax
-    xor     r13d, r13d
-.frame:
-    cmp     r13, [le_spark_len]
-    jae     .done
+    ; the cooling gradient over the symbol: three symbols, one spectrum
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbx * 8]
+    mov     rsi, [le_spark]
+    mov     rdx, [le_spark_len]
+    mov     rcx, NONE
+    xor     r8d, r8d
+    call    visual_run
     mov     edi, r12d
-    mov     rsi, [ch_sym]
-    mov     rsi, [rsi + rbx * 8]
-    mov     rdx, [effect_config]
-    mov     rdx, [rdx + LASERETCH.spark_cooling]
-    mov     rcx, [le_spark]
-    mov     rcx, [rcx + r13 * 8]
-    mov     r8, NONE
-    xor     r9d, r9d
-    call    scene_add_frame
-    inc     r13
-    jmp     .frame
+    mov     rsi, rax
+    mov     rcx, [effect_config]
+    mov     rcx, [rcx + LASERETCH.spark_cooling]
+    call    visual_frames
 .done:
     pop     r13
     pop     r12

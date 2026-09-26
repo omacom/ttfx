@@ -142,19 +142,19 @@ middleout_build:
     call    gradient_new
     mov     [mo_fg_len], rax
 .apply:
-    mov     rax, [ch_sym]
-    mov     rax, [rax + r12 * 8]
-    mov     [rsp + 16], rax
-    push    0
-    push    0
-    mov     edi, [rsp + 16 + 8]
-    lea     rsi, [rsp + 16 + 16]        ; [input symbol]
-    mov     edx, 1
+    ; apply_gradient_to_symbols([input symbol], 6, fg spectrum): a frame per
+    ; color, the visuals shared by symbol and final color
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + r12 * 8]
+    lea     rsi, [mo_fg_spectrum]
+    mov     rdx, [mo_fg_len]
+    mov     rcx, NONE
+    mov     r8, [mo_last_final]
+    call    visual_run
+    mov     edi, [rsp + 8]
+    mov     rsi, rax
     mov     ecx, 6
-    lea     r8, [mo_fg_spectrum]
-    mov     r9d, [mo_fg_len]
-    call    scene_apply_gradient
-    add     rsp, 16
+    call    visual_frames
 .appearance:
     mov     edi, r12d
     mov     esi, ebp

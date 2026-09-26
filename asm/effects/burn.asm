@@ -371,21 +371,18 @@ brn_init_smoke:
     mov     ecx, NONE
     call    scene_new
     mov     r12d, eax
-    xor     r13d, r13d
-.frame:
-    cmp     r13d, BRN_SMOKE_LEN
-    jae     .layer
+    ; the smoke gradient over the symbol: six symbols, one spectrum
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbx * 8]
+    lea     rsi, [brn_smoke_spectrum]
+    mov     edx, BRN_SMOKE_LEN
+    mov     rcx, NONE
+    xor     r8d, r8d
+    call    visual_run
     mov     edi, r12d
-    mov     rsi, [ch_sym]
-    mov     rsi, [rsi + rbx * 8]
-    mov     edx, 10
-    lea     rcx, [brn_smoke_spectrum]
-    mov     rcx, [rcx + r13 * 8]
-    mov     r8, NONE
-    xor     r9d, r9d
-    call    scene_add_frame
-    inc     r13d
-    jmp     .frame
+    mov     rsi, rax
+    mov     ecx, 10
+    call    visual_frames
 .layer:
     mov     edi, ebx
     mov     esi, 2

@@ -431,7 +431,7 @@ overflow_next_frame:
     dec     qword [rsp]
     mov     rax, [of_next]
     cmp     rax, [of_row_count]
-    jae     .push
+    jae     .delay                      ; out of rows: the rest do nothing
     ; move every active row up, recoloring the overflow rows by height
     xor     r12d, r12d
 .active_row:

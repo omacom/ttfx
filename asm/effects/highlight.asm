@@ -134,25 +134,19 @@ highlight_build:
     call    scene_add_frame
     jmp     .visible
 .frames:
-    xor     eax, eax
-.frame:
-    cmp     rax, [hl_spectrum_len]
-    jae     .visible
-    push    rax
-    push    rax
-    mov     rcx, [hl_spectrum]
-    mov     rcx, [rcx + rax * 8]
-    mov     edi, [rsp + 16]
-    mov     rsi, [ch_sym]
-    mov     rsi, [rsi + rbp * 8]
-    mov     edx, 2
-    mov     r8, r15
-    xor     r9d, r9d
-    call    scene_add_frame
-    pop     rax
-    pop     rax
-    inc     rax
-    jmp     .frame
+    ; one frame per spectrum color, the visuals shared by symbol, base
+    ; color (the spectrum's) and bg
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbp * 8]
+    mov     rsi, [hl_spectrum]
+    mov     rdx, [hl_spectrum_len]
+    mov     rcx, r15
+    mov     r8, r14
+    call    visual_run
+    mov     edi, [rsp]
+    mov     rsi, rax
+    mov     ecx, 2
+    call    visual_frames
 .visible:
     mov     edi, ebp
     mov     esi, 1

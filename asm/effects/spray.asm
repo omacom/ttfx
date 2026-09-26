@@ -117,6 +117,7 @@ spray_build:
     ; with_steps([choice(final spectrum), final color], 7), 20 frames each
     mov     rdi, [spray_spectrum_len]
     call    rng_below
+    mov     rbp, rax                    ; the start color's index
     mov     rcx, [spray_spectrum]
     mov     rax, [rcx + rax * 8]
     mov     [spray_pair], rax
@@ -131,23 +132,36 @@ spray_build:
     mov     rcx, [spray_map]
     mov     rax, [rcx + rax * 8]
     mov     [spray_pair + 8], rax
+    ; apply_gradient_to_symbols([input symbol], 20, the pair's spectrum):
+    ; a frame per color, the visuals shared by symbol and pair (colors fit
+    ; in 41 bits, so the index above them keys the pair exactly)
+    shl     rbp, 48
+    or      rbp, rax
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + r12 * 8]
+    mov     rsi, rbp
+    mov     rdx, NONE
+    call    visual_run_find
+    test    rax, rax
+    jnz     .frames
     lea     rdi, [spray_pair]
     mov     esi, 2
     lea     rdx, [spray_seven]
     mov     ecx, 1
     lea     r8, [spray_pair_spectrum]
     call    gradient_new
-    push    0
-    push    0
-    mov     edi, [rsp + 16]
-    mov     rsi, [ch_sym]
-    lea     rsi, [rsi + r12 * 8]
-    mov     edx, 1
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + r12 * 8]
+    lea     rsi, [spray_pair_spectrum]
+    mov     edx, eax
+    mov     rcx, NONE
+    mov     r8, rbp
+    call    visual_run
+.frames:
+    mov     edi, [rsp]
+    mov     rsi, rax
     mov     ecx, 20
-    lea     r8, [spray_pair_spectrum]
-    mov     r9d, eax
-    call    scene_apply_gradient
-    add     rsp, 16
+    call    visual_frames
     jmp     .activate
 .dynamic:
     ; the input colors on the input symbol, 7 frames of 20

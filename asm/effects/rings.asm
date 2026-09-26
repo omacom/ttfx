@@ -605,10 +605,11 @@ ring_activate:
     mov     r13, rsi
     shl     r13, 4
     add     r13, [r12 + RINGCH.dist]    ; (total, origin distance) of path k
-    mov     rax, [r12 + RINGCH.start]
-    add     rax, rsi
-    xor     edx, edx
-    div     qword [r12 + RINGCH.n]
+    mov     rdx, [r12 + RINGCH.start]
+    add     rdx, rsi                    ; start, k < n: (start + k) % n
+    mov     rax, rdx
+    sub     rax, [r12 + RINGCH.n]
+    cmovae  rdx, rax
     mov     rax, [r12 + RINGCH.coords]
     mov     rcx, [rax + rdx * 8]
     mov     esi, [r12 + RINGCH.rpath]
@@ -819,10 +820,11 @@ rings_spin:
     mov     r15, [rbp + RINGCH.last]
     test    r15, r15
     js      .engine_path
-    mov     rax, [rbp + RINGCH.start]
-    add     rax, r15
-    xor     edx, edx
-    div     qword [rbp + RINGCH.n]
+    mov     rdx, [rbp + RINGCH.start]
+    add     rdx, r15                    ; start, last < n: (start + last) % n
+    mov     rax, rdx
+    sub     rax, [rbp + RINGCH.n]
+    cmovae  rdx, rax
     mov     rax, [rbp + RINGCH.coords]
     mov     r13, [rax + rdx * 8]
     jmp     .condense

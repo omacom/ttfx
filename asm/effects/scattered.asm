@@ -162,19 +162,19 @@ scattered_build:
     call    gradient_new
     mov     [scat_char_len], rax
 .apply:
-    mov     rax, [ch_sym]
-    mov     rax, [rax + r12 * 8]
-    mov     [scat_symbol], rax
+    ; apply_gradient_to_symbols([symbol], final frames, the spectrum): a
+    ; frame per color, the visuals shared by symbol and final color
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + r12 * 8]
+    lea     rsi, [scat_char_spectrum]
+    mov     rdx, [scat_char_len]
+    mov     rcx, NONE
+    mov     r8, [scat_last_fg]
+    call    visual_run
     mov     edi, ebp
-    lea     rsi, [scat_symbol]
-    mov     edx, 1
+    mov     rsi, rax
     mov     rcx, [r15 + SCATTERED.final_frames]
-    lea     r8, [scat_char_spectrum]
-    mov     r9, [scat_char_len]
-    push    0
-    push    0
-    call    scene_apply_gradient
-    add     rsp, 16
+    call    visual_frames
 .activate:
     mov     edi, r12d
     mov     esi, ebp

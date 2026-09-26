@@ -9,15 +9,18 @@
 ; spotlight's ellipse show their bright colors, dimmed towards the beam's
 ; edge; characters that left every beam fall back to their dark colors.
 ;
-; The illuminated set is a list plus a per-character frame stamp. Order does
-; not matter: a frame draws nothing from the RNG and only sets appearances.
+; The illuminated set is a list plus a per-character frame stamp (spl_marks).
+; Order does not matter: a frame draws nothing from the RNG and only sets
+; appearances.
 ;
 ; Speed: each character keeps its bright and dark visual handles; a
 ; character well inside the beam's edge by exact integer distance skips the
 ; hypot fold; beam distances come from a memo of hypot over (|dx|, |dy|);
 ; dimmed visuals are memoized per character (its last factor) and by
 ; (bright handle, brightness factor bits), which determines the symbol and
-; both adjusted colors.
+; both adjusted colors. That memo holds ~190K entries over a run (probes
+; average 1.15 slots), so its lookups are cache misses; a frame's lit
+; characters go through it in batches whose slots are prefetched first.
 
 struc SPOTLIGHTS
     .beam_width_ratio:  resq 1          ; f64
@@ -39,11 +42,18 @@ struc SPL_REC
     .bg:        resq 1
     .bright:    resd 1                  ; visual handles
     .dark:      resd 1
-    .mark:      resd 1                  ; frame stamp: in range this frame
+    .mark:      resd 1                  ; (unused: spl_marks)
     .flags:     resd 1                  ; SPLF_*
     .factor:    resq 1                  ; the last brightness factor's bits
     .dimmed:    resd 1                  ; and its visual (0: none yet)
     .pad:       resd 1
+endstruc
+
+; a memo batch entry (spl_batch)
+struc SPL_BE
+    .visual:    resd 1                  ; 0 until known
+    .slot:      resd 1                  ; memo slot to probe from, then the empty one
+    .factor:    resq 1                  ; brightness factor bits
 endstruc
 
 %define SPLF_LIT            1           ; _is_spotlightable
@@ -57,6 +67,7 @@ endstruc
 
 %define SPL_MEMO_BITS       19
 %define SPL_MEMO_SIZE       (1 << SPL_MEMO_BITS)
+%define SPL_BATCH           16          ; characters per memo batch
 
 section .text
 
@@ -87,6 +98,15 @@ spotlights_build:
     lea     rdi, [rbx * 4 + 64]
     call    alloc
     mov     [spl_next], rax
+    ; per character: the frame stamp it was lit in, or all ones when it
+    ; cannot be lit (so "stamp >= this frame's" skips both)
+    lea     rdi, [rbx * 4 + 64]
+    call    alloc
+    mov     [spl_marks], rax
+    mov     rdi, rax
+    mov     ecx, ebx
+    mov     eax, -1
+    rep     stosd
     ; memo tables
     mov     rdi, SPL_MEMO_SIZE * 16
     call    reserve
@@ -146,6 +166,11 @@ spotlights_build:
     or      edx, SPLF_OVERRIDE          ; (None, bg) or no input colors
 .flags:
     mov     [r14 + SPL_REC.flags], edx
+    test    edx, SPLF_LIT
+    jz      .unmarked
+    mov     rax, [spl_marks]
+    mov     dword [rax + rbp * 4], 0
+.unmarked:
     cmp     byte [spl_dynamic], 0
     je      .gradient
     ; dynamic: the input colors, gray standing in for a missing fg
@@ -428,10 +453,10 @@ spl_visual:
     mov     ecx, r9d
     jmp     visual_make
 
-; spl_adjusted(ebp=slot, r14=record, xmm0=brightness) -> eax = the visual
-; of _adjust_color_pair_brightness(bright pair, brightness).
+; spl_adjust_pair(r14=record, xmm0=brightness) -> rax = fg, rdx = bg:
+; _adjust_color_pair_brightness(bright pair, brightness).
 ; Clobbers C except rbx, rbp, r12-r15.
-spl_adjusted:
+spl_adjust_pair:
     push    rbx
     sub     rsp, 16
     movsd   [rsp], xmm0
@@ -442,20 +467,30 @@ spl_adjusted:
     call    adjust_color_brightness
     mov     rbx, rax
 .bg:
-    mov     rcx, NONE
+    mov     rdx, NONE
     mov     rdi, [r14 + SPL_REC.bg]
     cmp     rdi, NONE
-    je      .make
+    je      .done
     movsd   xmm0, [rsp]
     call    adjust_color_brightness
-    mov     rcx, rax
-.make:
-    mov     edi, ebp
-    mov     rdx, rbx
-    call    spl_visual
+    mov     rdx, rax
+.done:
+    mov     rax, rbx
     add     rsp, 16
     pop     rbx
     ret
+
+; spl_adjusted(ebp=slot, r14=record, xmm0=brightness) -> eax = the visual
+; of _adjust_color_pair_brightness(bright pair, brightness).
+; Clobbers C except rbx, rbp, r12-r15.
+spl_adjusted:
+    sub     rsp, 8
+    call    spl_adjust_pair
+    mov     rcx, rdx
+    mov     rdx, rax
+    mov     edi, ebp
+    add     rsp, 8
+    jmp     spl_visual
 
 ; spl_override(ebp=slot) -> eax = the visual of the expand override
 ; (None, input bg): (None, bg) for a bg-only character, (None, None) for one
@@ -468,10 +503,11 @@ spl_override:
     jmp     spl_visual
 
 ; spl_dimmed(ebp=slot, r14=record, xmm0=brightness factor) -> eax: the
-; memoized spl_adjusted: the character's last factor and visual first, then
-; a memo keyed by (bright handle, factor bits), emptied when half full.
-; Characters showing their input colors (always) are not memoized.
-; Clobbers C except rbx, rbp, r12-r15.
+; memoized spl_adjusted, or 0 with edx = the factor's memo slot (prefetched)
+; and r8 = the factor bits, for spl_memo_probe. The character's last factor
+; and visual come first; then a memo keyed by (bright handle, factor bits),
+; emptied when half full. Characters showing their input colors (always)
+; are not memoized. Clobbers C except rbx, rbp, r12-r15.
 spl_dimmed:
     test    dword [r14 + SPL_REC.flags], SPLF_UNCACHED
     jnz     spl_adjusted
@@ -485,10 +521,7 @@ spl_dimmed:
     ret
 .memo:
     mov     [r14 + SPL_REC.factor], rax
-    call    .lookup
-    mov     [r14 + SPL_REC.dimmed], eax
-    ret
-.lookup:
+    mov     r8, rax
     mov     edx, [r14 + SPL_REC.bright]
     mov     rcx, 0x9e3779b97f4a7c15
     imul    rcx, rdx
@@ -496,6 +529,19 @@ spl_dimmed:
     mov     rsi, 0xff51afd7ed558ccd
     imul    rcx, rsi
     shr     rcx, 64 - SPL_MEMO_BITS
+    mov     edx, ecx
+    shl     rcx, 4
+    add     rcx, [spl_memo]
+    prefetcht0 [rcx]
+    xor     eax, eax
+    ret
+
+; spl_memo_probe(r14=record, edx=memo slot, rax=factor bits) -> eax: spl_dimmed's
+; memo lookup from its slot: the visual, or 0 and ecx = the empty entry's
+; slot where spl_memo_store keeps it. Clobbers rcx, rdx, rsi, rdi, r8.
+spl_memo_probe:
+    mov     ecx, edx
+    mov     edx, [r14 + SPL_REC.bright]
     mov     rsi, [spl_memo]
 .probe:
     mov     rdi, rcx
@@ -515,30 +561,32 @@ spl_dimmed:
     and     ecx, SPL_MEMO_SIZE - 1
     jmp     .probe
 .miss:
-    push    rdi
-    push    rax
-    call    spl_adjusted
-    pop     rcx                         ; factor bits
-    pop     rdi                         ; the empty entry
+    xor     eax, eax
+    ret
+
+; spl_memo_store(r14=record, edx=empty slot, rcx=factor bits, eax=visual):
+; keep (bright, factor) -> visual; when the memo is half full, empty it
+; instead (the entry is not kept either). Preserves rax. Clobbers rcx, rdx,
+; rdi.
+spl_memo_store:
     cmp     qword [spl_memo_count], SPL_MEMO_SIZE / 2
     jb      .store
-    ; half full: start over (the entry found is not kept either)
     push    rax
-    push    rcx
     mov     rdi, [spl_memo]
     mov     ecx, SPL_MEMO_SIZE * 2
     xor     eax, eax
     rep     stosq
     mov     qword [spl_memo_count], 0
-    pop     rcx
     pop     rax
     ret
 .store:
     inc     qword [spl_memo_count]
-    mov     [rdi], rcx
-    mov     edx, [r14 + SPL_REC.bright]
-    mov     [rdi + 8], edx
-    mov     [rdi + 12], eax
+    shl     rdx, 4
+    add     rdx, [spl_memo]
+    mov     [rdx], rcx
+    mov     ecx, [r14 + SPL_REC.bright]
+    mov     [rdx + 8], ecx
+    mov     [rdx + 12], eax
     ret
 
 ; spl_distance(ebp=slot) -> xmm0 = the smallest find_length_of_line(
@@ -615,9 +663,9 @@ spl_distance:
 
 ; spl_illuminate: SpotlightsIterator.illuminate_chars(illuminate_range).
 ; Each spotlightable character met in an ellipse for the first time this
-; frame is stamped, listed and given its colors at once (a frame's colors
-; don't depend on visiting order); then the previously illuminated
-; characters without this frame's stamp go dark. The ellipse is
+; frame is stamped and listed, then the listed ones get their colors (a
+; frame's colors don't depend on visiting order); then the previously
+; illuminated characters without this frame's stamp go dark. The ellipse is
 ; coords_in_circle's, walked column by column over the canvas cells only
 ; (the input-coordinate map holds nothing outside them).
 spl_illuminate:
@@ -629,13 +677,28 @@ spl_illuminate:
     push    r15
     sub     rsp, CIRCLE_ITER_size + 16
     ; [rsp] the ellipse's a^2/b^2 (CIRCLE_ITER), [rsp + 72] last column
-    inc     dword [spl_stamp]
-    mov     qword [spl_next_count], 0
-    ; the live spotlights' coordinates
+    ; the live spotlights' coordinates; the frame repeats the last one
+    ; exactly when they, the range and the expand phase are unchanged
+    ; (spotlights move under a cell a frame), and then nothing is redone
+    xor     r12d, r12d                  ; nonzero once something changed
+    mov     rax, [spl_range]
+    cmp     rax, [spl_prev_range]
+    setne   r12b
+    mov     [spl_prev_range], rax
+    mov     rax, [spl_live]
+    cmp     rax, [spl_prev_live]
+    setne   cl
+    or      r12b, cl
+    mov     [spl_prev_live], rax
+    movzx   eax, byte [spl_expanding]
+    cmp     al, [spl_prev_expanding]
+    setne   cl
+    or      r12b, cl
+    mov     [spl_prev_expanding], al
     xor     ebx, ebx
 .coords:
     cmp     rbx, [spl_live]
-    jae     .gather
+    jae     .changed
     mov     rax, [spl_slots]
     mov     ecx, [rax + rbx * 4]
     mov     rdx, rbx
@@ -643,17 +706,32 @@ spl_illuminate:
     add     rdx, [spl_coords]
     mov     rax, [ch_col]
     movsxd  rax, dword [rax + rcx * 4]
+    cmp     [rdx], rax
+    setne   sil
+    or      r12b, sil
     mov     [rdx], rax
     mov     rax, [ch_row]
     movsxd  rax, dword [rax + rcx * 4]
+    cmp     [rdx + 8], rax
+    setne   sil
+    or      r12b, sil
     mov     [rdx + 8], rax
     inc     rbx
     jmp     .coords
+.changed:
+    cmp     byte [spl_lit_once], 0
+    je      .fresh
+    test    r12b, r12b
+    jz      .same
+.fresh:
+    mov     byte [spl_lit_once], 1
+    inc     dword [spl_stamp]
+    mov     qword [spl_next_count], 0
 .gather:
     xor     r15d, r15d                  ; spotlight index
 .ellipse:
     cmp     r15, [spl_live]
-    jae     .dark
+    jae     .shine
     mov     rsi, r15
     shl     rsi, 4
     add     rsi, [spl_coords]
@@ -701,23 +779,15 @@ spl_illuminate:
     add     rbx, [canvas_right]
     cmp     ebp, NONE
     je      .cell
-    lea     r14, [rbp + rbp * 2]
-    shl     r14, 4
-    add     r14, [spl_recs]
-    test    dword [r14 + SPL_REC.flags], SPLF_LIT
-    jz      .cell
+    mov     rcx, [spl_marks]
     mov     eax, [spl_stamp]
-    cmp     [r14 + SPL_REC.mark], eax
-    je      .cell
-    mov     [r14 + SPL_REC.mark], eax
+    cmp     [rcx + rbp * 4], eax
+    jae     .cell                       ; lit already, or never
+    mov     [rcx + rbp * 4], eax
     mov     rax, [spl_next]
     mov     rcx, [spl_next_count]
     mov     [rax + rcx * 4], ebp
     inc     qword [spl_next_count]
-    call    spl_shine
-    call    spl_expand_override
-    mov     edi, ebp
-    SET_HANDLE
     jmp     .cell
 .next_column:
     inc     r13
@@ -725,6 +795,77 @@ spl_illuminate:
 .next_ellipse:
     inc     r15
     jmp     .ellipse
+.shine:
+    ; the newly lit characters' colors, SPL_BATCH at a time: first each
+    ; one's visual or, when it needs the memo, its memo slot (prefetched)
+    xor     r15d, r15d                  ; batch start
+.batch:
+    mov     r12, [spl_next_count]
+    sub     r12, r15
+    jle     .dark
+    cmp     r12, SPL_BATCH
+    jbe     .prepare
+    mov     r12d, SPL_BATCH
+.prepare:
+    xor     ebx, ebx
+.prepare_char:
+    lea     rax, [r15 + rbx]
+    mov     rcx, [spl_next]
+    mov     ebp, [rcx + rax * 4]
+    lea     r14, [rbp + rbp * 2]
+    shl     r14, 4
+    add     r14, [spl_recs]
+    call    spl_shine
+    mov     rcx, rbx
+    shl     rcx, 4
+    lea     rsi, [spl_batch]
+    add     rsi, rcx
+    mov     [rsi + SPL_BE.visual], eax  ; the visual, or 0: look it up
+    mov     [rsi + SPL_BE.slot], edx    ; its memo slot
+    mov     [rsi + SPL_BE.factor], r8   ; and factor bits
+    inc     ebx
+    cmp     rbx, r12
+    jb      .prepare_char
+    ; the memo lookups, whose cache misses now overlap; then each
+    ; character shows its visual, in order
+    xor     ebx, ebx
+.resolve_char:
+    lea     rax, [r15 + rbx]
+    mov     rcx, [spl_next]
+    mov     ebp, [rcx + rax * 4]
+    lea     r14, [rbp + rbp * 2]
+    shl     r14, 4
+    add     r14, [spl_recs]
+    mov     r13, rbx
+    shl     r13, 4
+    lea     rax, [spl_batch]
+    add     r13, rax                    ; the batch entry
+    mov     eax, [r13 + SPL_BE.visual]
+    test    eax, eax
+    jnz     .show
+    mov     edx, [r13 + SPL_BE.slot]
+    mov     rax, [r13 + SPL_BE.factor]
+    call    spl_memo_probe
+    test    eax, eax
+    jnz     .found
+    ; a miss: make the visual and keep it
+    mov     [r13 + SPL_BE.slot], ecx
+    movq    xmm0, [r13 + SPL_BE.factor]
+    call    spl_adjusted
+    mov     edx, [r13 + SPL_BE.slot]
+    mov     rcx, [r13 + SPL_BE.factor]
+    call    spl_memo_store
+.found:
+    mov     [r14 + SPL_REC.dimmed], eax
+.show:
+    call    spl_expand_override
+    mov     edi, ebp
+    SET_HANDLE
+    inc     ebx
+    cmp     rbx, r12
+    jb      .resolve_char
+    add     r15, r12
+    jmp     .batch
 .dark:
     ; characters that left every beam go dark
     mov     r12, [spl_lit]
@@ -736,11 +877,12 @@ spl_illuminate:
     jae     .swap
     mov     ebp, [r12 + rbx * 4]
     inc     rbx
+    mov     rax, [spl_marks]
+    cmp     [rax + rbp * 4], r15d
+    je      .dark_char
     lea     r14, [rbp + rbp * 2]
     shl     r14, 4
     add     r14, [spl_recs]
-    cmp     [r14 + SPL_REC.mark], r15d
-    je      .dark_char
     mov     eax, [r14 + SPL_REC.dark]
     call    spl_expand_override
     mov     edi, ebp
@@ -753,6 +895,7 @@ spl_illuminate:
     mov     [spl_next], rax
     mov     rax, [spl_next_count]
     mov     [spl_lit_count], rax
+.same:
     add     rsp, CIRCLE_ITER_size + 16
     pop     r15
     pop     r14
@@ -763,7 +906,8 @@ spl_illuminate:
     ret
 
 ; spl_shine(ebp=slot, r14=record) -> eax = the visual of an illuminated
-; character: its bright pair, dimmed past the beam's edge by
+; character (or 0, edx and r8 as spl_dimmed's for spl_memo_probe): its
+; bright pair, dimmed past the beam's edge by
 ; max(1 - (distance - edge) / (range * falloff), 0.2). A character whose
 ; nearest spotlight is well inside the edge by exact integer distance
 ; (dx^2 + (2 dy)^2 against edge^2 less a margin far above hypot's error)
@@ -809,9 +953,7 @@ spl_shine:
     subsd   xmm1, xmm0
     maxsd   xmm1, [spl_dim]             ; NaN takes 0.2, as f64::max
     movapd  xmm0, xmm1
-    sub     rsp, 8
-    call    spl_dimmed
-    add     rsp, 8
+    jmp     spl_dimmed
 .done:
     ret
 
@@ -935,6 +1077,7 @@ spl_lit_count:      resq 1
 spl_next_count:     resq 1
 spl_next:           resq 1          ; illuminated_scratch
 spl_memo:           resq 1
+spl_marks:          resq 1          ; u32 per character (see the build)
 spl_memo_count:     resq 1
 spl_hyp:            resq 1
 spl_hyp_w:          resq 1
@@ -944,7 +1087,13 @@ spl_search_left:    resq 1
 spl_edge:           resq 1          ; f64
 spl_falloff_width:  resq 1          ; f64
 spl_core2:          resq 1          ; f64: squared distances below are lit
+spl_prev_range:     resq 1          ; the last illumination's inputs
+spl_prev_live:      resq 1
 spl_stamp:          resd 1
+spl_prev_expanding: resb 1
+spl_lit_once:       resb 1
+alignb 16
+spl_batch:          resb SPL_BATCH * 16 ; SPL_BE entries
 spl_searching:      resb 1
 spl_expanding:      resb 1
 spl_complete:       resb 1

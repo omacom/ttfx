@@ -75,13 +75,30 @@ randomsequence_build:
     add     rax, rcx
     sub     rax, [text_left]
     mov     rcx, [rs_final_map]
-    mov     rdi, [rcx + rax * 8]
+    mov     rbx, [rcx + rax * 8]
+    ; the fade's frames: visuals shared by symbol and final color
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbp * 8]
+    mov     rsi, rbx
+    mov     rdx, NONE
+    call    visual_run_find
+    test    rax, rax
+    jnz     .fade_frames
+    mov     rdi, rbx
     call    rs_fade
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbp * 8]
+    mov     rsi, rax
+    mov     edx, RS_FADE_LEN
+    mov     rcx, NONE
+    mov     r8, rbx
+    call    visual_run
+.fade_frames:
     mov     edi, r15d
-    mov     esi, ebp
-    mov     rdx, rax
-    xor     ecx, ecx
-    call    rs_add_fade
+    mov     rsi, rax
+    mov     rcx, [effect_config]
+    mov     ecx, [rcx + RANDOMSEQUENCE.final_frames]
+    call    visual_frames
 .activate:
     mov     edi, ebp
     mov     esi, r15d

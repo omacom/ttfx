@@ -33,6 +33,7 @@ struc BUB
     .lowest:    resq 1                  ; lowest_row
     .anchor:    resd 1
     .landed:    resd 1
+    .trig:      resq 1                  ; radius * (cos, sin) per point, or 0
 endstruc
 
 %define BUB_POP_ROW         0
@@ -588,48 +589,69 @@ bub_make:
     pop     rbx
     ret
 
-; bub_set_coords(rdi=bubble): Bubble.set_character_coordinates. The point
-; list is scratch: its arena bytes are zeroed and handed back, since this
-; runs every frame for every floating bubble.
+; bub_set_coords(rdi=bubble): Bubble.set_character_coordinates:
+; find_coords_on_circle(anchor, radius, n, false). Its trig does not depend
+; on the anchor, so radius * cos and radius * sin of each point's angle are
+; made once per bubble (the same sincos of the same angles) and each move
+; only adds the anchor and rounds, in Rust's order.
 bub_set_coords:
     push    rbx
     push    rbp
     push    r12
     push    r13
     push    r14
+    sub     rsp, 16                     ; [rsp] origin column, [rsp+8] row (f64)
     mov     rbx, rdi
-    mov     r14, [arena_ptr]
+    cmp     qword [rbx + BUB.radius], 0
+    je      .moved                      ; no points at all
+    mov     r12, [rbx + BUB.trig]
+    test    r12, r12
+    jnz     .placed
+    call    bub_trig
+    mov     r12, rax
+.placed:
     mov     edi, [rbx + BUB.anchor]
     call    char_coord
-    mov     rdi, rax
-    mov     rsi, [rbx + BUB.radius]
-    mov     rdx, [rbx + BUB.n]
-    xor     ecx, ecx
-    call    find_coords_on_circle
-    mov     r12, rax
+    movsxd  rcx, eax
+    cvtsi2sd xmm0, rcx
+    movsd   [rsp], xmm0
+    sar     rax, 32
+    cvtsi2sd xmm0, rax
+    movsd   [rsp + 8], xmm0
     xor     ebp, ebp
 .char:
     cmp     rbp, [rbx + BUB.n]
-    jae     .scratch
-    mov     r13, [r12 + rbp * 8]
+    jae     .moved
+    ; x = column + radius * cos; x += x - column; y = row + radius * sin
+    mov     rax, rbp
+    shl     rax, 4
+    movsd   xmm0, [r12 + rax]
+    addsd   xmm0, [rsp]
+    movapd  xmm1, xmm0
+    subsd   xmm1, [rsp]
+    addsd   xmm0, xmm1
+    ROUND_HALF_EVEN
+    mov     r13d, eax
+    mov     rax, rbp
+    shl     rax, 4
+    movsd   xmm0, [r12 + rax + 8]
+    addsd   xmm0, [rsp + 8]
+    ROUND_HALF_EVEN
+    mov     r14, rax
+    shl     rax, 32
+    or      r13, rax
     mov     rax, [rbx + BUB.chars]
     mov     edi, [rax + rbp * 4]
     mov     rsi, r13
     call    set_coordinate
-    sar     r13, 32
-    cmp     r13, [rbx + BUB.lowest]
+    movsxd  rax, r14d
+    cmp     rax, [rbx + BUB.lowest]
     jne     .next
     mov     dword [rbx + BUB.landed], 1
 .next:
     inc     rbp
     jmp     .char
-.scratch:
-    mov     rdi, r14
-    mov     rcx, [arena_ptr]
-    sub     rcx, r14
-    xor     eax, eax
-    rep     stosb
-    mov     [arena_ptr], r14
+.moved:
     mov     rax, [effect_config]
     cmp     qword [rax + BUBBLES.pop_condition], BUB_POP_ANYWHERE
     jne     .done
@@ -639,11 +661,61 @@ bub_set_coords:
     jbe     .done
     mov     dword [rbx + BUB.landed], 1
 .done:
+    add     rsp, 16
     pop     r14
     pop     r13
     pop     r12
     pop     rbp
     pop     rbx
+    ret
+
+; bub_trig(rbx=bubble) -> rax = n (radius * cos(a_i), radius * sin(a_i))
+; pairs, a_i = (2 pi / n) * i as find_coords_on_circle computes them; kept
+; in BUB.trig. Clobbers C except rbx, rbp, r12-r15.
+bub_trig:
+    push    r12
+    push    r13
+    push    r14
+    sub     rsp, 32
+    mov     rdi, [rbx + BUB.n]
+    shl     rdi, 4
+    add     rdi, 16
+    call    alloc
+    mov     r12, rax
+    mov     [rbx + BUB.trig], rax
+    mov     r13, [rbx + BUB.n]
+    test    r13, r13
+    jle     .done
+    cvtsi2sd xmm1, r13
+    movsd   xmm0, [bub_two_pi]
+    divsd   xmm0, xmm1
+    movsd   [rsp + 16], xmm0            ; angle_step
+    cvtsi2sd xmm0, qword [rbx + BUB.radius]
+    movsd   [rsp + 24], xmm0
+    xor     r14d, r14d
+.point:
+    cmp     r14, r13
+    jge     .done
+    cvtsi2sd xmm0, r14
+    mulsd   xmm0, [rsp + 16]            ; angle
+    lea     rdi, [rsp]
+    lea     rsi, [rsp + 8]
+    CCALL   sincos
+    movsd   xmm0, [rsp + 8]
+    mulsd   xmm0, [rsp + 24]            ; radius * cos
+    movsd   [r12], xmm0
+    movsd   xmm0, [rsp]
+    mulsd   xmm0, [rsp + 24]            ; radius * sin
+    movsd   [r12 + 8], xmm0
+    add     r12, 16
+    inc     r14
+    jmp     .point
+.done:
+    mov     rax, [rbx + BUB.trig]
+    add     rsp, 32
+    pop     r14
+    pop     r13
+    pop     r12
     ret
 
 ; bub_pop(rdi=bubble): Bubble.pop - each character (zipped with the unique
@@ -856,6 +928,8 @@ bubbles_next_frame:
     ret
 
 section .rodata
+align 8
+bub_two_pi:     dq 0x401921FB54442D18   ; 2 * pi
 align 8
 bub_rainbow_stops:  dq 0xe81416, 0xffa500, 0xfaeb36, 0x79c314, 0x487de7, 0x4b369d, 0x70369d
 bub_five_steps:     dq 5
