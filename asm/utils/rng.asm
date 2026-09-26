@@ -99,7 +99,7 @@ rng_store:
     ret
 
 ; rng_next -> rax: the next xoshiro256++ output.
-; Clobbers rcx, rdx, r8, r9, r10, r11.
+; Clobbers rcx only.
 rng_next:
     mov     rcx, [rng_pos]
     cmp     rcx, RNG_BATCH
@@ -111,6 +111,22 @@ rng_next:
     mov     [rng_pos], rcx
     ret
 .refill:
+    call    rng_refill
+    xor     ecx, ecx
+    jmp     .take
+
+; rng_refill: generate the next batch into rng_buf (rng_pos is left to the
+; caller, which starts the batch at 0). Preserves every register but the
+; flags, so the draw macros below can call it from anywhere.
+rng_refill:
+    push    rax
+    push    rcx
+    push    rdx
+    push    rbx
+    push    r8
+    push    r9
+    push    r10
+    push    r11
     mov     r8, [rng_state]
     mov     r9, [rng_state + 8]
     mov     r10, [rng_state + 16]
@@ -119,17 +135,17 @@ rng_next:
     mov     [rng_batch_start + 8], r9
     mov     [rng_batch_start + 16], r10
     mov     [rng_batch_start + 24], rdx
-    push    rbx
     lea     rbx, [rng_buf]
-    xor     ecx, ecx
+    lea     rcx, [rbx + RNG_BATCH * 8]
 .generate:
-    ; four draws per pass (RNG_BATCH is a multiple of 4)
+    ; four draws per pass (RNG_BATCH is a multiple of 4). The state
+    ; update is two xors deep a step, the output a side chain off it.
 %assign i 0
 %rep 4
     lea     rax, [r8 + rdx]
     rol     rax, 23
     add     rax, r8                     ; result
-    mov     [rbx + rcx * 8 + i * 8], rax
+    mov     [rbx + i * 8], rax
     mov     r11, r9
     shl     r11, 17                     ; t
     xor     r10, r8                     ; s2 ^= s0
@@ -140,19 +156,61 @@ rng_next:
     rol     rdx, 45                     ; s3 = rotl(s3, 45)
 %assign i i + 1
 %endrep
-    add     ecx, 4
-    cmp     ecx, RNG_BATCH
+    add     rbx, 32
+    cmp     rbx, rcx
     jb      .generate
-    pop     rbx
     mov     [rng_state], r8
     mov     [rng_state + 8], r9
     mov     [rng_state + 16], r10
     mov     [rng_state + 24], rdx
-    xor     ecx, ecx
-    jmp     .take
+    pop     r11
+    pop     r10
+    pop     r9
+    pop     r8
+    pop     rbx
+    pop     rdx
+    pop     rcx
+    pop     rax
+    ret
+
+; Draws with the position in a register, for hot loops. The sequence is
+; the same as the functions', one draw per RNG_TAKE:
+;   RNG_OPEN pos, base      pos = the batch position, base = rng_buf
+;   RNG_TAKE dest, pos, base  dest = the next raw output (refills in place,
+;                           preserving every other register)
+;   RNG_TAKE53 dest, pos, base  dest = the next output >> 11, the integer
+;                           behind rng_random (see RNG_BITS53)
+;   RNG_CLOSE pos           write the position back
+; Between RNG_OPEN and RNG_CLOSE no other RNG function may run: close
+; before calling one and open again after. All operands are 64-bit
+; registers; dest must differ from pos and base.
+%macro RNG_OPEN 2
+    mov     %1, [rng_pos]
+    lea     %2, [rng_buf]
+%endmacro
+
+%macro RNG_TAKE 3
+    cmp     %2, RNG_BATCH
+    jb      %%ready
+    call    rng_refill
+    xor     %2, %2
+%%ready:
+    mov     %1, [%3 + %2 * 8]
+    inc     %2
+%endmacro
+
+%macro RNG_TAKE53 3
+    RNG_TAKE %1, %2, %3
+    shr     %1, 11
+%endmacro
+
+%macro RNG_CLOSE 1
+    mov     [rng_pos], %1
+%endmacro
 
 ; rng_below(rdi=n > 0) -> rax in [0, n): bit-mask rejection sampling.
 ; n == 1 still draws (and may reject) exactly like Rust's randbelow.
+; Clobbers rcx, rdx, r8.
 rng_below:
     push    rbx
     push    r12
@@ -175,30 +233,33 @@ rng_below:
     mov     eax, 64
     sub     eax, ebx
     mov     ebx, eax                    ; shift = 64 - bits
+    ; the position stays in rdx through the rejection loop
+    lea     r8, [rng_buf]
+    mov     rdx, [rng_pos]
+%if TIER < 3
+    mov     ecx, ebx
+%endif
 .again:
-    ; rng_next, its batch read inlined
-    mov     rcx, [rng_pos]
-    cmp     rcx, RNG_BATCH
+    cmp     rdx, RNG_BATCH
     jae     .refill
-    lea     rax, [rng_buf]
-    mov     rax, [rax + rcx * 8]
-    inc     rcx
-    mov     [rng_pos], rcx
-.drawn:
+.take:
+    mov     rax, [r8 + rdx * 8]
+    inc     rdx
 %if TIER >= 3
     shrx    rax, rax, rbx
 %else
-    mov     ecx, ebx
     shr     rax, cl
 %endif
     cmp     rax, r12
     jae     .again
+    mov     [rng_pos], rdx
     pop     r12
     pop     rbx
     ret
 .refill:
-    call    rng_next
-    jmp     .drawn
+    call    rng_refill
+    xor     edx, edx
+    jmp     .take
 
 ; rng_randint(rdi=a, rsi=b) -> rax in [a, b].
 rng_randint:
