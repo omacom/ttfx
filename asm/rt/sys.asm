@@ -92,6 +92,67 @@ writev_all:
     pop     rbx
     ret
 
+; writev_keep(rdi=iovec array, esi=count, rdx=their total length, rcx=scratch
+; array of count entries) -> rax = 0, or -errno on failure. writev_all that
+; leaves the array as it is: when one writev does not do it all (a short
+; write, EINTR, more than IOV_MAX vectors), the rest goes on from a copy.
+writev_keep:
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    mov     rbx, rdi
+    mov     r12d, esi
+    mov     r13, rdx
+    mov     r14, rcx
+    xor     eax, eax
+    cmp     esi, 1024                   ; IOV_MAX
+    ja      .copy
+    mov     edi, 1
+    mov     rsi, rbx
+    mov     edx, r12d
+    SYSCALL SYS_writev
+    cmp     rax, r13
+    je      .done
+    test    rax, rax
+    jns     .copy
+    cmp     rax, -EINTR
+    jne     .out
+    xor     eax, eax
+.copy:
+    ; rax bytes are out; the copy is consumed past them
+    mov     rdi, r14
+    mov     rsi, rbx
+    mov     ecx, r12d
+    shl     ecx, 4
+    rep     movsb
+    mov     rdi, r14
+    mov     esi, r12d
+.consume:
+    test    rax, rax
+    jz      .rest
+    mov     rcx, [rdi + 8]
+    cmp     rax, rcx
+    jb      .partial
+    sub     rax, rcx
+    add     rdi, 16
+    dec     esi
+    jmp     .consume
+.partial:
+    add     [rdi], rax
+    sub     [rdi + 8], rax
+.rest:
+    call    writev_all
+    jmp     .out
+.done:
+    xor     eax, eax
+.out:
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
 ; exit(edi=code) - never returns.
 exit:
     SYSCALL SYS_exit_group

@@ -52,6 +52,8 @@
 ; a clean gap of fewer blocks than this between dirty runs is formatted
 ; along with them: a copy has a fixed cost of several blocks' formatting
 %define MIN_GAP         4
+; cells per dirty chunk (the coarse summary of dirty_cells)
+%define CHUNK_SHIFT     6
 %define OUTPUT_RESERVE  (1 << 36)
 ; POPCNT dst, scratch: dst = its own population count (SWAR below TIER 2).
 ; Clobbers scratch.
@@ -135,6 +137,17 @@
 %%outside:
     mov     eax, NONE
 %%done:
+%endmacro
+
+; MARK_DIRTY cell, scratch: the cell changed; so did its CHUNK-cell chunk,
+; which render_frame checks before it scans a row's cells. cell is a 64-bit
+; register; both are clobbered.
+%macro MARK_DIRTY 2
+    mov     %2, [dirty_cells]
+    mov     byte [%2 + %1], 1
+    shr     %1, CHUNK_SHIFT
+    add     %1, [dirty_chunks]
+    mov     byte [%1], 1
 %endmacro
 
 section .rodata
@@ -288,20 +301,29 @@ render_init:
     ; the rows' iovecs, top row first, and the frame's: one slot before
     ; the rows (prefix / header) and one after them (the dump's trailing
     ; newline)
-    mov     rdi, rbx
+    lea     rdi, [rbx + 2]
     shl     rdi, 4
-    add     rdi, 64
-    call    alloc
-    mov     [row_iov], rax
-    mov     rdi, rbx
-    shl     rdi, 4
-    add     rdi, 64
     call    alloc
     mov     [frame_iov], rax
+    add     rax, 16
+    mov     [row_iov], rax
+    lea     rdi, [rbx + 2]
+    shl     rdi, 4
+    call    alloc
+    mov     [iov_scratch], rax
     mov     rdi, [grid_cells]
     add     rdi, 128
     call    alloc
     mov     [dirty_cells], rax
+    mov     rdi, [grid_cells]
+    shr     rdi, CHUNK_SHIFT
+    add     rdi, 64
+    call    alloc
+    mov     [dirty_chunks], rax
+    mov     rdi, [grid_height]
+    add     rdi, 64
+    call    alloc
+    mov     [dirty_rows], rax
     mov     rdi, [grid_cells]
     lea     rdi, [rdi * 4 + 64]
     call    alloc
@@ -476,8 +498,7 @@ render_apply:
     cmp     [rdx + rcx * 4], eax
     je      .next
     mov     [rdx + rcx * 4], eax
-    mov     rdx, [dirty_cells]
-    mov     byte [rdx + rcx], 1
+    MARK_DIRTY rcx, rdx
     jmp     .next
 .layer:
     ; the cell picks its owner again
@@ -544,8 +565,8 @@ paint_rec:
     mov     ecx, [rcx + rdi * 4]
     mov     rdx, [handle_grid]
     mov     [rdx + rax * 4], ecx
-    mov     rdx, [dirty_cells]
-    mov     byte [rdx + rax], 1
+    mov     rcx, rax
+    MARK_DIRTY rcx, rdx
 .keep:
     ret
 .other:
@@ -647,8 +668,8 @@ cell_rewin:
     mov     ecx, [space_handle]
     mov     [rdx + rax * 4], ecx
 .dirty:
-    mov     rsi, [dirty_cells]
-    mov     byte [rsi + rax], 1
+    mov     rcx, rax
+    MARK_DIRTY rcx, rsi
     pop     r15
     ret
 
@@ -855,8 +876,9 @@ row_buffers:
     ret
 
 ; render_frame -> rax = frame length. The frame's rows are frame_iov[1] ..
-; frame_iov[grid_height], top row first; frame_iov[0] and the entry after the
-; rows are the caller's.
+; frame_iov[grid_height] (row_iov[0] ..), top row first; frame_iov[0] and the
+; entry after the rows are the caller's. The array is the rows' own record, so
+; it is written with writev_keep.
 render_frame:
     push    rbx
     push    rbp
@@ -870,15 +892,23 @@ render_frame:
     mov     rbx, [pool_base]
     test    rbp, rbp
     jz      .done
+    cmp     byte [all_dirty], 0
+    jne     .row
+    call    rows_marked
 .row:
     dec     rbp                         ; row index, counting down
     test    r14, r14
     jz      .scanned
     mov     rax, rbp
     imul    rax, r14
-    call    row_dirty
     cmp     byte [all_dirty], 0
-    jne     .full
+    jne     .whole
+    ; a row none of whose chunks changed is clean
+    mov     rcx, [dirty_rows]
+    cmp     byte [rcx + rbp], 0
+    je      .next
+    mov     byte [rcx + rbp], 0
+    call    row_dirty
     test    rax, rax
     jz      .next
     ; a mostly dirty row is cheaper to format whole
@@ -887,6 +917,9 @@ render_frame:
     jae     .full
     call    row_rebuild
     jmp     .next
+.whole:
+    call    row_dirty                   ; clears the row's marks
+    jmp     .full
 .scanned:
     cmp     byte [all_dirty], 0
     je      .next
@@ -895,18 +928,15 @@ render_frame:
 .next:
     test    rbp, rbp
     jnz     .row
-    ; the rows' iovecs (writev_all consumes its array, so it gets a copy)
-    mov     rsi, [row_iov]
-    mov     rdi, [frame_iov]
-    add     rdi, 16
-    mov     rcx, [grid_height]
-.iov:
-    LD32    0, 1, rsi
-    ST32    rdi, 0, 1
-    add     rsi, 32
-    add     rdi, 32
-    sub     rcx, 2
-    ja      .iov
+    cmp     byte [all_dirty], 0
+    je      .done
+    ; the chunk marks are spent
+    mov     rdi, [dirty_chunks]
+    mov     rcx, [grid_cells]
+    shr     rcx, CHUNK_SHIFT
+    inc     rcx
+    xor     eax, eax
+    rep     stosb
 .done:
     mov     byte [all_dirty], 0
     mov     rax, [frame_len]
@@ -919,6 +949,64 @@ render_frame:
     pop     r12
     pop     rbp
     pop     rbx
+    ret
+
+; rows_marked: flag in [dirty_rows] every row that a marked chunk touches,
+; and clear the chunk marks. One walk up the chunks and rows together.
+; r14 = width, nonzero. Clobbers rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11.
+rows_marked:
+    mov     rsi, [dirty_chunks]
+    mov     rdi, [dirty_rows]
+    mov     r10, [grid_cells]
+    add     r10, (1 << CHUNK_SHIFT) - 1
+    shr     r10, CHUNK_SHIFT            ; chunks
+    xor     ecx, ecx                    ; chunk
+    xor     r8d, r8d                    ; row
+    mov     r9, r14                     ; the row's end cell
+    mov     r11, [grid_height]
+.eight:
+    cmp     rcx, r10
+    jae     .done
+    cmp     qword [rsi + rcx], 0
+    jne     .bytes
+    add     rcx, 8
+    jmp     .eight
+.bytes:
+    lea     rdx, [rcx + 8]              ; the eight's end
+.byte:
+    cmp     byte [rsi + rcx], 0
+    je      .skip
+    mov     byte [rsi + rcx], 0
+    mov     rax, rcx
+    shl     rax, CHUNK_SHIFT            ; the chunk's first cell
+.find:
+    cmp     r9, rax
+    ja      .found
+    inc     r8
+    add     r9, r14
+    jmp     .find
+.found:
+    add     rax, (1 << CHUNK_SHIFT) - 1 ; its last
+    push    r8
+    push    r9
+.flag:
+    cmp     r8, r11
+    jae     .flagged
+    mov     byte [rdi + r8], 1
+    cmp     r9, rax
+    ja      .flagged
+    inc     r8
+    add     r9, r14
+    jmp     .flag
+.flagged:
+    pop     r9
+    pop     r8
+.skip:
+    inc     rcx
+    cmp     rcx, rdx
+    jb      .byte
+    jmp     .eight
+.done:
     ret
 
 ; row_end(rbp=row, rdi=end of the row's cells, rsi=block starts, r15 = the
@@ -1230,11 +1318,13 @@ render_emit:
     mov     rdi, [frame_iov]
     mov     rax, [rbx + FS_PREFIX]
     mov     [rdi], rax
-    mov     rax, [rbx + FS_PREFIX_LEN]
-    mov     [rdi + 8], rax
+    mov     rdx, [rbx + FS_PREFIX_LEN]
+    mov     [rdi + 8], rdx
+    add     rdx, [frame_len]
     mov     esi, [grid_height]
     inc     esi
-    call    writev_all
+    mov     rcx, [iov_scratch]
+    call    writev_keep
     pop     rbx
     ret
 
@@ -1440,6 +1530,9 @@ offs_stride:    resq 1
 row_sel:        resq 1
 row_iov:        resq 1
 frame_iov:      resq 1
+iov_scratch:    resq 1
+dirty_chunks:   resq 1
+dirty_rows:     resq 1
 dirty_cells:    resq 1
 dirty_bits:     resq 1
 full_blocks:    resq 1
