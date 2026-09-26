@@ -31,6 +31,14 @@
 ; change. doze_wake gives back the ticks not yet due, and a character woken
 ; during update ahead of the ticking slot rejoins this update's snapshot,
 ; so it ticks exactly where Rust ticks it.
+;
+; Batched motion (TIER 3+). Before ticking a word, update hands its bits to
+; motion_batch (motion.asm), which works out the pure path steps of the
+; word's movers ahead of time; their motion_move becomes motion_apply, or
+; nothing when the step neither moves the character nor ends the path.
+; A callback or an action on another character bumps motion_epoch (and
+; motion_void takes the word's unticked steps back), and the rest of the
+; word ticks through motion_move.
 
 %define UPD_STAGGER     640         ; bytes between the bitmaps' page offsets
 
@@ -395,7 +403,7 @@ update:
     push    r13
     push    r14
     push    r15
-    sub     rsp, 8
+    sub     rsp, 24                     ; prune slot, batch bits, batch epoch
     mov     r12, [active_bits]
     mov     r13, [snapshot_bits]
     ; only the window of words that can hold active characters
@@ -451,6 +459,18 @@ update:
     jz      .tick_next
     mov     rbp, rbx
     shl     rbp, 6
+    ; the word's pure path steps, worked out ahead (motion_batch)
+    mov     qword [rsp + 8], 0
+%if TIER >= 3
+    cmp     dword [path_count], 0
+    je      .tick_bit
+    mov     rdi, r15
+    mov     esi, ebp
+    call    motion_batch
+    mov     [rsp + 8], rax
+    mov     eax, [motion_epoch]
+    mov     [rsp + 16], eax
+%endif
 .tick_bit:
     BIT_POP rdi, r15
     mov     [r13 + rbx * 8], r15
@@ -471,10 +491,31 @@ update:
     jmp     .ticked
 .moving:
     ; tick_awake, inline
+%if TIER >= 3
+    mov     eax, edi
+    and     eax, 63
+    mov     rdx, [rsp + 8]
+    bt      rdx, rax
+    jnc     .unbatched
+    mov     rdx, [mb_act_bits]
+    bt      rdx, rax
+    jnc     .moved                      ; worked out, and nothing to do
+    call    motion_apply
+    jmp     .moved
+.unbatched:
+%endif
     call    motion_move
+.moved:
     mov     edi, [upd_cursor]
     call    step_animation_awake
 .ticked:
+    ; a callback or an action on another character may have changed any
+    ; path: the rest of the word steps without the precomputed results
+    mov     eax, [motion_epoch]
+    cmp     eax, [rsp + 16]
+    je      .epoch_same
+    mov     qword [rsp + 8], 0
+.epoch_same:
     ; re-read: a character woken during the pass may have joined this word
     mov     r15, [r13 + rbx * 8]
     test    r15, r15
@@ -495,6 +536,9 @@ update:
     jmp     .tick_word
 .prune:
     mov     dword [upd_cursor], -1
+%if TIER >= 3
+    mov     qword [mb_mirror_bits], 0   ; nothing left for motion_void
+%endif
     ; the set may have grown during the pass (new characters); candidates
     ; outside the window are not active
     mov     r14d, [active_hi]
@@ -549,7 +593,7 @@ update:
     mov     [active_lo], eax
     mov     [active_hi], r14d
 .done:
-    add     rsp, 8
+    add     rsp, 24
     pop     r15
     pop     r14
     pop     r13
@@ -569,4 +613,5 @@ active_lo:      resd 1              ; words [lo, hi) hold every active
 active_hi:      resd 1              ; character (empty when hi <= lo)
 upd_count:      resd 1              ; updates started
 upd_cursor:     resd 1              ; the slot ticking now, or -1
-doze_slot:      resd 1              ; the slot whose update tick is running, or -1
+doze_slot:      resd 1
+              ; the slot whose update tick is running, or -1

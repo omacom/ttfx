@@ -963,9 +963,7 @@ step_synced_scene:
     mov     [r8 + SC_HEAD], ecx
     ret
 .path:
-    mov     rdx, rax
-    shl     rdx, 7                      ; PATH_SIZE
-    add     rdx, [paths]
+    call    path_view                   ; motion.asm: rdx = the path's step fields
     mov     ecx, [r8 + SC_COUNT]
     sub     ecx, [r8 + SC_HEAD]
     dec     ecx

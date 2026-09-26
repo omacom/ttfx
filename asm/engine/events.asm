@@ -259,6 +259,18 @@ handle_event:
 
 ; run_action(edi=slot, ecx=ACT_* kind, rsi=arg0, rdx=arg1)
 run_action:
+    ; a callback, or an action on a character other than the one update is
+    ; ticking, may change any path: update's precomputed steps are void
+    cmp     ecx, ACT_CALLBACK
+    je      .epoch
+    cmp     edi, [upd_cursor]
+    je      .dispatch
+.epoch:
+    inc     dword [motion_epoch]
+%if TIER >= 3
+    call    motion_void
+%endif
+.dispatch:
     cmp     ecx, ACT_ACTIVATE_PATH
     je      path_activate_name
     cmp     ecx, ACT_ACTIVATE_SCENE
