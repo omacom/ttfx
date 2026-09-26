@@ -148,6 +148,11 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
             11
         }
         EffectCommand::Highlight(c) => {
+            // the highlight spectrum is width + 10 colors, sized with 32-bit
+            // lengths in the engine
+            if c.highlight_width > 1 << 24 {
+                return Err("--highlight-width above 2^24 is not supported");
+            }
             w.float(c.highlight_brightness)
                 .int(c.highlight_direction as i64)
                 .int(c.highlight_width)
@@ -208,6 +213,12 @@ pub fn marshal(effect: &EffectCommand) -> Result<(u64, Words), &'static str> {
             14
         }
         EffectCommand::Overflow(c) => {
+            // every cycle copies the input rows into new characters; keep the
+            // row arrays' sizes well inside 64-bit arithmetic and the
+            // engine's character limit
+            if c.overflow_cycles_range.1 > 1 << 20 {
+                return Err("--overflow-cycles-range above 2^20 is not supported");
+            }
             w.colors(&c.overflow_gradient_stops)
                 .int(c.overflow_cycles_range.0)
                 .int(c.overflow_cycles_range.1)

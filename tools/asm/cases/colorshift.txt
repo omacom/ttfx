@@ -16,6 +16,6 @@
 --cycles 1 --final-gradient-direction radial --gradient-steps 1
 --cycles 1 --final-gradient-direction diagonal --travel-direction radial
 --cycles 3 --gradient-steps 1 --gradient-frames 1 --no-travel
---gradient-frames 0
---cycles 0
---gradient-steps 0
+!--gradient-frames 0
+!--cycles 0
+!--gradient-steps 0

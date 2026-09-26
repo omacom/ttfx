@@ -23,6 +23,6 @@
 --grouping diagonal --final-gradient-stops ffffff --final-gradient-steps 4 --final-gradient-direction radial
 --grouping row --merge --final-gradient-stops ff00ff 00ffff 9 abcdef --final-gradient-steps 1 5 20 --final-gradient-frames 1
 --final-gradient-steps 1 --final-gradient-frames 3 --movement-easing in_expo
---final-gradient-frames 0
---final-gradient-frames=-3
+!--final-gradient-frames 0
+!--final-gradient-frames=-3
 --grouping diagonal --reverse-direction --movement-easing out_circ --final-gradient-frames 11 --gap 5
