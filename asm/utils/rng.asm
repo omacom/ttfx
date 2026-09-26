@@ -16,7 +16,7 @@
 
 %if TIER >= 4
 %define RNG_LANES   8
-%define RNG_LANE    256                 ; draws a lane (rng_jump.inc: 7 * 256 steps)
+%define RNG_LANE    512                 ; draws a lane (rng_jump.inc: 7 * 512 steps)
 %define RNG_BATCH   (RNG_LANES * RNG_LANE)
 %else
 %define RNG_LANES   1
