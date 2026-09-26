@@ -14,9 +14,11 @@ git log --oneline -10 | ttfx matrix
 ## Credit where it's due
 
 **This is a port of [TerminalTextEffects](https://github.com/ChrisBuilds/terminaltexteffects)
-(TTE) by [ChrisBuilds](https://github.com/ChrisBuilds).** Every effect, the animation engine,
-and the command-line interface are their design — this project translates that work to Rust
-and adds nothing of its own to the art. If you like what you see here, star the original.
+(TTE) by [ChrisBuilds](https://github.com/ChrisBuilds).** The animation engine, command-line
+interface, and 37 original effects are their design — this project translates that work to Rust.
+The additional `airstrike`, `automata`, `bubblepop`, `malfunction`, `reverselife`, `roses`,
+`sunshower`, and `voronoi` effects are native to ttfx. If you like what you see here, star the
+original.
 
 TTE is MIT licensed and so is this port; the original copyright is preserved in
 [LICENSE](LICENSE) and [NOTICE](NOTICE). Please file *effect* ideas upstream, where they belong.
@@ -51,8 +53,10 @@ command, best of five.
 
 ## The effects
 
-All 37, each animating the Omarchy logo. Every frame below came out of the Rust binary — and is
-byte-identical to what the Python original produces from the same input and seed.
+All 45, each animating the Omarchy logo. Every frame below came out of the Rust binary. The 37
+ported effects are byte-identical to what the Python original produces from the same input and seed;
+`airstrike`, `automata`, `bubblepop`, `malfunction`, `reverselife`, `roses`, `sunshower`, and
+`voronoi` are ttfx originals.
 
 |     |     |
 |:---:|:---:|
@@ -74,7 +78,11 @@ byte-identical to what the Python original produces from the same input and seed
 | <b>sweep</b><br><img src="docs/effects/sweep.gif" width="400" alt="sweep"><br><sub>Sweep across the canvas to reveal uncolored text, reverse sweep to color the text</sub> | <b>synthgrid</b><br><img src="docs/effects/synthgrid.gif" width="400" alt="synthgrid"><br><sub>Create a grid which fills with characters dissolving into the final text</sub> |
 | <b>thunderstorm</b><br><img src="docs/effects/thunderstorm.gif" width="400" alt="thunderstorm"><br><sub>Create a thunderstorm in the terminal</sub> | <b>unstable</b><br><img src="docs/effects/unstable.gif" width="400" alt="unstable"><br><sub>Spawn characters jumbled, explode them to the edge of the canvas, then reassemble them in the correct layout</sub> |
 | <b>vhstape</b><br><img src="docs/effects/vhstape.gif" width="400" alt="vhstape"><br><sub>Lines of characters glitch left and right and lose detail like an old VHS tape</sub> | <b>waves</b><br><img src="docs/effects/waves.gif" width="400" alt="waves"><br><sub>Waves travel across the terminal leaving behind the characters</sub> |
-| <b>wipe</b><br><img src="docs/effects/wipe.gif" width="400" alt="wipe"><br><sub>Wipes the text across the terminal to reveal characters</sub> |  |
+| <b>wipe</b><br><img src="docs/effects/wipe.gif" width="400" alt="wipe"><br><sub>Wipes the text across the terminal to reveal characters</sub> | <b>airstrike</b><br><img src="docs/effects/airstrike.gif?stock-logo=1" width="400" alt="airstrike"><br><sub>ASCII planes dive into the text, scattering it through fire and debris before it reassembles</sub> |
+| <b>automata</b><br><img src="docs/effects/automata.gif?stock-logo=1" width="400" alt="automata"><br><sub>An elementary cellular automaton grows a fractal lattice whose cells stream into the text</sub> | <b>malfunction</b><br><img src="docs/effects/malfunction.gif?stock-logo=2" width="400" alt="malfunction"><br><sub>A printer types nonsense, recovers happily, and prints readable text</sub> |
+| <b>reverselife</b><br><img src="docs/effects/reverselife.gif?stock-logo=1" width="400" alt="reverselife"><br><sub>Conway's Game of Life runs backward from chaos and resolves into readable text</sub> | <b>roses</b><br><img src="docs/effects/roses.gif?stock-logo=1" width="400" alt="roses"><br><sub>Curling vines grow pink roses, scatter petals, and flower into the text</sub> |
+| <b>sunshower</b><br><img src="docs/effects/sunshower.gif?stock-logo=2" width="400" alt="sunshower"><br><sub>Rain falls as the sun rises and paints a rainbow across the text</sub> | <b>voronoi</b><br><img src="docs/effects/voronoi.gif?stock-logo=1" width="400" alt="voronoi"><br><sub>Living crystal grows from the text, breathes as a faceted Voronoi mosaic, then returns as readable lettering</sub> |
+| <b>bubblepop</b><br><img src="docs/effects/bubblepop.gif?stock-logo=1" width="400" alt="bubblepop"><br><sub>Rainbow-shimmering bubbles float upward, pop, and reveal the text</sub> |  |
 
 Every effect takes its own options — `ttfx <effect> --help`. A few of the GIFs above shorten a
 timed phase so the loop stays watchable (`matrix --rain-time 3`, `thunderstorm --storm-time 3`,
@@ -115,7 +123,7 @@ no interpreter to load them.
 ```
 <producer> | ttfx [terminal options] <effect> [effect options]
 
-ttfx --help                 # all 37 effects and the terminal options
+ttfx --help                 # all 44 effects and the terminal options
 ttfx <effect> --help        # options for one effect
 ttfx --random-effect        # surprise me (--include-effects / --exclude-effects to filter)
 ttfx --print-completion bash|zsh

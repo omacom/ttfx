@@ -34,7 +34,7 @@ run_case() {
 }
 
 # effect subcommands present in both implementations
-mapfile -t effects < <($RUST --help 2>/dev/null | sed -n '/Commands:/,/Options:/p' | awk '/^  [a-z]/ {print $1}' | grep -v help)
+mapfile -t effects < <($RUST --help 2>/dev/null | sed -n '/Commands:/,/Options:/p' | awk '/^  [a-z]/ {print $1}' | grep -vE '^(help|airstrike|automata|bubblepop|malfunction|reverselife|roses|sunshower|voronoi)$')
 for effect in "${effects[@]}"; do
   run_case "tty-$effect" basic.txt "$effect"
 done
