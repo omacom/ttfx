@@ -277,7 +277,7 @@ scene_add_frame:
     mov     rdi, rcx
     mov     rsi, r8
     mov     ecx, r9d
-    call    visual_memo
+    call    visual_make
     mov     edx, r12d
     mov     r8, r13
     call    scene_append_frame
@@ -1446,8 +1446,9 @@ step_eased_scene:
 ; visual_memo(rdi=fg, rsi=bg, rdx=packed symbol, ecx=ATTR_* bits) -> eax:
 ; visual_make behind a small direct-mapped cache of recent visuals.
 ; visual_make's pool lookup compares the header stored with the visual,
-; a cache miss in a pool of thousands; scene frames and appearances mostly
-; repeat a few recent visuals, which this finds in one line. Handles never
+; a cache miss in a pool of thousands; appearances mostly repeat a few
+; recent visuals, which this finds in one line. (Scene frames repeat less
+; closely: there it measured neutral, so they call visual_make.) Handles never
 ; change within a run, so a cached one stays right. Same clobbers as
 ; visual_make (rax, rcx, rdx, rsi, rdi, r8-r11 and more when it formats).
 %define VMEMO_BITS  8
