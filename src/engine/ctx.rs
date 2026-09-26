@@ -17,7 +17,7 @@ use crate::engine::animation::SyncMetric;
 use crate::engine::character::CharId;
 use crate::engine::error::EngineError;
 use crate::engine::events::{CallerKey, CallerRef, EffectCallback, Event, EventAction};
-use crate::engine::motion::Segment;
+use crate::engine::motion::{Path, Segment};
 use crate::engine::motion::Waypoint;
 use crate::engine::terminal::{Terminal, TerminalConfig};
 use crate::utils::geometry::{self, Coord};
@@ -261,21 +261,22 @@ impl EngineCtx {
             Some(control) => geometry::find_length_of_bezier_curve(current_coord, control, first_waypoint.coord),
             None => geometry::find_length_of_line(current_coord, first_waypoint.coord, true),
         };
-        let new_origin_segment = Segment::new(
-            Waypoint { waypoint_id: ORIGIN_WAYPOINT_ID.with(Rc::clone), coord: current_coord, bezier_control: None },
-            first_waypoint,
-            distance_to_first_waypoint,
-        );
+        let new_origin_segment = Segment::new(Path::ORIGIN, 0, distance_to_first_waypoint);
         let layer = {
             let ch = &mut self.terminal.arena[id.0 as usize];
             ch.motion.active_path = ch.motion.paths.shared_key(path_id);
             let path = ch.motion.paths.get_mut(path_id).unwrap();
+            path.origin_waypoint = Some(Waypoint {
+                waypoint_id: ORIGIN_WAYPOINT_ID.with(Rc::clone),
+                coord: current_coord,
+                bezier_control: None,
+            });
             path.total_distance += distance_to_first_waypoint;
             if let Some(origin) = &path.origin_segment {
                 path.total_distance -= origin.distance;
-                path.segments[0] = new_origin_segment.clone();
+                path.segments[0] = new_origin_segment;
             } else {
-                path.segments.insert(0, new_origin_segment.clone());
+                path.segments.insert(0, new_origin_segment);
             }
             path.origin_segment = Some(new_origin_segment);
             path.current_step = 0;
@@ -326,7 +327,7 @@ impl EngineCtx {
         let mut distance_to_travel = {
             let p = path_mut!();
             if p.max_steps == 0 || p.current_step >= p.max_steps || p.total_distance == 0.0 {
-                return p.segments.last().expect("path has no segments").end.coord;
+                return p.waypoint_at(p.segments.last().expect("path has no segments").end).coord;
             }
             p.current_step += 1;
             let ratio = p.current_step as f64 / p.max_steps as f64;
@@ -354,7 +355,10 @@ impl EngineCtx {
                 active_segment_index = Some(i);
                 if !enter_triggered {
                     if self.observes_event(id, Event::SegmentEntered) {
-                        let seg_end_key = path!().segments[i].end.key();
+                        let seg_end_key = {
+                            let p = path!();
+                            p.waypoint_at(p.segments[i].end).key()
+                        };
                         path_mut!().segments[i].enter_event_triggered = true;
                         self.handle_event(hooks, id, Event::SegmentEntered, CallerRef::Waypoint(&seg_end_key));
                         resolve_slot!();
@@ -373,7 +377,10 @@ impl EngineCtx {
                     seg.enter_event_triggered = true;
                     seg.exit_event_triggered = true;
                 } else {
-                    let seg_end_key = path!().segments[i].end.key();
+                    let seg_end_key = {
+                        let p = path!();
+                        p.waypoint_at(p.segments[i].end).key()
+                    };
                     if !enter_triggered {
                         path_mut!().segments[i].enter_event_triggered = true;
                         self.handle_event(hooks, id, Event::SegmentEntered, CallerRef::Waypoint(&seg_end_key));
@@ -410,9 +417,11 @@ impl EngineCtx {
         } else {
             (distance_to_travel / seg_distance).min(1.0)
         };
-        match &seg.end.bezier_control {
-            Some(control) => geometry::find_coord_on_bezier_curve(seg.start.coord, control, seg.end.coord, t),
-            None => geometry::find_coord_on_line(seg.start.coord, seg.end.coord, t),
+        let start = p.waypoint_at(seg.start);
+        let end = p.waypoint_at(seg.end);
+        match &end.bezier_control {
+            Some(control) => geometry::find_coord_on_bezier_curve(start.coord, control, end.coord, t),
+            None => geometry::find_coord_on_line(start.coord, end.coord, t),
         }
     }
 
