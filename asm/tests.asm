@@ -3,13 +3,15 @@
 ; preserves callee-saved registers and aligns nothing it does not need to:
 ; the functions it wraps never call C unless they use CCALL.
 ;
-; Name them ttfx_test_<module>_<function>. Keep this file test-only glue:
+; Name them ttfx_test_<module>_<function> and declare them with EXPORT: each
+; tier's object gets its own copy, and asm/tier.asm's unsuffixed thunks
+; dispatch to the tier TTFX_ASM_TIER (or the CPU) selects. Keep this file test-only glue:
 ; no logic beyond marshalling arguments.
 
 section .text
 
 ; ttfx_test_rng_randint(rdi=state[4] in/out, rsi=a, rdx=b) -> rax
-global ttfx_test_rng_randint
+EXPORT ttfx_test_rng_randint
 ttfx_test_rng_randint:
     push    rbx
     push    r12
@@ -33,7 +35,7 @@ ttfx_test_rng_randint:
     ret
 
 ; ttfx_test_rng_uniform(rdi=state[4] in/out, xmm0=a, xmm1=b) -> xmm0
-global ttfx_test_rng_uniform
+EXPORT ttfx_test_rng_uniform
 ttfx_test_rng_uniform:
     push    rbx
     sub     rsp, 16
@@ -53,7 +55,7 @@ ttfx_test_rng_uniform:
     ret
 
 ; ttfx_test_rng_shuffle64(rdi=state[4] in/out, rsi=array, rdx=length)
-global ttfx_test_rng_shuffle64
+EXPORT ttfx_test_rng_shuffle64
 ttfx_test_rng_shuffle64:
     push    rbx
     push    r12
@@ -73,51 +75,51 @@ ttfx_test_rng_shuffle64:
     ret
 
 ; Easing utilities already follow SysV. Storage layouts are in easing.asm.
-global ttfx_test_ease
+EXPORT ttfx_test_ease
 ttfx_test_ease:
     jmp     ease
 
 ; ttfx_test_bezier_easing(rdi=&[x1, y1, x2, y2], xmm0=t) -> xmm0
-global ttfx_test_bezier_easing
+EXPORT ttfx_test_bezier_easing
 ttfx_test_bezier_easing:
     jmp     bezier_easing
 
-global ttfx_test_easing_tracker_new
+EXPORT ttfx_test_easing_tracker_new
 ttfx_test_easing_tracker_new:
     jmp     easing_tracker_new
 
-global ttfx_test_easing_tracker_step
+EXPORT ttfx_test_easing_tracker_step
 ttfx_test_easing_tracker_step:
     jmp     easing_tracker_step
 
-global ttfx_test_easing_tracker_reset
+EXPORT ttfx_test_easing_tracker_reset
 ttfx_test_easing_tracker_reset:
     jmp     easing_tracker_reset
 
-global ttfx_test_easing_tracker_is_complete
+EXPORT ttfx_test_easing_tracker_is_complete
 ttfx_test_easing_tracker_is_complete:
     jmp     easing_tracker_is_complete
 
-global ttfx_test_sequence_easer_new
+EXPORT ttfx_test_sequence_easer_new
 ttfx_test_sequence_easer_new:
     jmp     sequence_easer_new
 
-global ttfx_test_sequence_easer_step
+EXPORT ttfx_test_sequence_easer_step
 ttfx_test_sequence_easer_step:
     jmp     sequence_easer_step
 
-global ttfx_test_sequence_easer_reset
+EXPORT ttfx_test_sequence_easer_reset
 ttfx_test_sequence_easer_reset:
     jmp     sequence_easer_reset
 
-global ttfx_test_sequence_easer_is_complete
+EXPORT ttfx_test_sequence_easer_is_complete
 ttfx_test_sequence_easer_is_complete:
     jmp     sequence_easer_is_complete
 
 ; ttfx_test_arena_reset(): a fresh arena for the list-returning functions,
 ; releasing the previous one (tests never run an effect, which would do
 ; this itself).
-global ttfx_test_arena_reset
+EXPORT ttfx_test_arena_reset
 ttfx_test_arena_reset:
     push    rbx
     call    release_regions
@@ -129,26 +131,26 @@ ttfx_test_arena_reset:
 
 ; The internal functions below take SysV-shaped arguments and preserve the
 ; callee-saved registers, so their thunks are tail jumps.
-global ttfx_test_pycompat_round_half_even
-global ttfx_test_pycompat_f64_to_i64
-global ttfx_test_pycompat_floor_div
-global ttfx_test_pycompat_py_mod
+EXPORT ttfx_test_pycompat_round_half_even
+EXPORT ttfx_test_pycompat_f64_to_i64
+EXPORT ttfx_test_pycompat_floor_div
+EXPORT ttfx_test_pycompat_py_mod
 ttfx_test_pycompat_round_half_even: jmp round_half_even  ; (xmm0) -> rax
 ttfx_test_pycompat_f64_to_i64:      jmp f64_to_i64       ; (xmm0) -> rax
 ttfx_test_pycompat_floor_div:       jmp floor_div        ; (rdi, rsi) -> rax
 ttfx_test_pycompat_py_mod:          jmp py_mod           ; (rdi, rsi) -> rax
 
 ; Lists come back as rax = pointer, rdx = count: a two-word C struct.
-global ttfx_test_geometry_coords_on_circle
-global ttfx_test_geometry_coords_in_circle
-global ttfx_test_geometry_coords_in_rect
-global ttfx_test_geometry_coords_on_rect
-global ttfx_test_geometry_extrapolate_along_ray
-global ttfx_test_geometry_coord_on_bezier_curve
-global ttfx_test_geometry_coord_on_line
-global ttfx_test_geometry_length_of_bezier_curve
-global ttfx_test_geometry_length_of_line
-global ttfx_test_geometry_circle_iter_init
+EXPORT ttfx_test_geometry_coords_on_circle
+EXPORT ttfx_test_geometry_coords_in_circle
+EXPORT ttfx_test_geometry_coords_in_rect
+EXPORT ttfx_test_geometry_coords_on_rect
+EXPORT ttfx_test_geometry_extrapolate_along_ray
+EXPORT ttfx_test_geometry_coord_on_bezier_curve
+EXPORT ttfx_test_geometry_coord_on_line
+EXPORT ttfx_test_geometry_length_of_bezier_curve
+EXPORT ttfx_test_geometry_length_of_line
+EXPORT ttfx_test_geometry_circle_iter_init
 ttfx_test_geometry_coords_on_circle:      jmp find_coords_on_circle      ; (rdi=origin, rsi=radius, rdx=limit, ecx=unique)
 ttfx_test_geometry_coords_in_circle:      jmp find_coords_in_circle      ; (rdi=center, rsi=diameter)
 ttfx_test_geometry_coords_in_rect:        jmp find_coords_in_rect        ; (rdi=origin, rsi=distance)
@@ -162,7 +164,7 @@ ttfx_test_geometry_circle_iter_init:      jmp coords_in_circle_init      ; (rdi=
 
 ; ttfx_test_geometry_circle_iter_next(rdi=state, rsi=out coord) -> eax = 1
 ; while coordinates remain.
-global ttfx_test_geometry_circle_iter_next
+EXPORT ttfx_test_geometry_circle_iter_next
 ttfx_test_geometry_circle_iter_next:
     push    rbx
     mov     rbx, rsi
@@ -174,7 +176,7 @@ ttfx_test_geometry_circle_iter_next:
 
 ; ttfx_test_geometry_normalized_distance(rdi=bottom, rsi=top, rdx=left,
 ; rcx=right, r8=coord, r9=out f64) -> eax = 1 when inside.
-global ttfx_test_geometry_normalized_distance
+EXPORT ttfx_test_geometry_normalized_distance
 ttfx_test_geometry_normalized_distance:
     push    rbx
     mov     rbx, r9
@@ -183,13 +185,13 @@ ttfx_test_geometry_normalized_distance:
     pop     rbx
     ret
 
-global ttfx_test_color_adjust_color_brightness
-global ttfx_test_color_shift_color_towards
+EXPORT ttfx_test_color_adjust_color_brightness
+EXPORT ttfx_test_color_shift_color_towards
 ttfx_test_color_adjust_color_brightness: jmp adjust_color_brightness     ; (rdi=color, xmm0=brightness) -> rax
 ttfx_test_color_shift_color_towards:     jmp shift_color_towards         ; (rdi=color, rsi=target, xmm0=factor) -> rax, rdx
 
 ; ttfx_test_color_random_color(rdi=state[4] in/out) -> rax
-global ttfx_test_color_random_color
+EXPORT ttfx_test_color_random_color
 ttfx_test_color_random_color:
     push    rbx
     push    r12
@@ -206,7 +208,7 @@ ttfx_test_color_random_color:
 
 ; ttfx_test_rng_chance(rdi=state[4] in/out, xmm0=c) -> rax = 1 when
 ; random() < c, decided as RNG_BITS53 < rng_threshold(c).
-global ttfx_test_rng_chance
+EXPORT ttfx_test_rng_chance
 ttfx_test_rng_chance:
     push    rbx
     push    r12

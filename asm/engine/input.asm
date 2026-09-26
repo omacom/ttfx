@@ -53,10 +53,15 @@ count_capacity:
 screen_init:
     mov     rax, [char_capacity]
     add     rax, rax
+%if TIER >= 3
     lzcnt   rcx, rax
-    mov     eax, 1
     neg     cl
     add     cl, 64
+%else
+    bsr     rcx, rax                    ; 64 - lzcnt; rax >= 4 here
+    inc     ecx
+%endif
+    mov     eax, 1
     shl     rax, cl                     ; next power of two >= 2 * capacity
     mov     [screen_mask], rax
     dec     qword [screen_mask]
@@ -375,7 +380,7 @@ unsupported_sequence:
     mov     qword [rax + RQ_ERROR_KIND], ERR_ANSI
     mov     rsp, [fail_rsp]
     mov     eax, OUT_ERROR
-    jmp     ttfx_asm_run.return
+    jmp     ..@run_return
 
 ; csi_sequence(rbx=ESC, r8=end of parameters, rcx=final byte, rdx=end).
 csi_sequence:

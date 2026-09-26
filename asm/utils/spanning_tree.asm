@@ -368,11 +368,19 @@ pw_add_links:
 ; pw_lowest -> rcx = the lowest nonempty weight, or ZF set when none.
 pw_lowest:
     mov     rax, [pw_nonempty]
+%if TIER >= 3
     tzcnt   rcx, rax
     jnc     .found
     mov     rax, [pw_nonempty + 8]
     tzcnt   rcx, rax
     jc      .none
+%else
+    bsf     rcx, rax                    ; ZF (not CF) flags an empty word
+    jnz     .found
+    mov     rax, [pw_nonempty + 8]
+    bsf     rcx, rax
+    jz      .none
+%endif
     add     ecx, 64
 .found:
     or      eax, 1                      ; ZF clear
