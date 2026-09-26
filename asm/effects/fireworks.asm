@@ -142,9 +142,7 @@ fw_prepare_waypoints:
     mov     [fw_origin], rax
     mov     rdi, rax
     mov     rsi, [fw_distance]
-    call    find_coords_in_circle
-    mov     [fw_circle], rax
-    mov     [fw_circle_count], rdx
+    call    fw_fill_circle
 .paths:
     inc     r15
     ; start at (origin_x, canvas bottom); apex: 0.35, out_expo, layer 2
@@ -273,6 +271,54 @@ fw_prepare_waypoints:
     pop     r13
     pop     r12
     pop     rbp
+    pop     rbx
+    ret
+
+; fw_fill_circle(rdi=origin, rsi=distance): find_coords_in_circle into
+; fw_circle / fw_circle_count, reusing one buffer for every shell (it grows
+; by doubling, so the build allocates a few lists, not one per shell).
+; Clobbers C.
+fw_fill_circle:
+    push    rbx
+    push    r12
+    sub     rsp, CIRCLE_ITER_size + 8
+    mov     rdx, rsi
+    mov     rsi, rdi
+    mov     rdi, rsp
+    call    coords_in_circle_init
+    xor     ebx, ebx                    ; count
+.next:
+    mov     rdi, rsp
+    call    coords_in_circle_next
+    test    edx, edx
+    jz      .done
+    cmp     rbx, [fw_circle_cap]
+    jb      .store
+    ; grow: twice the capacity (at least 64), the coordinates so far copied
+    mov     r12, rax
+    mov     rdi, [fw_circle_cap]
+    add     rdi, rdi
+    mov     ecx, 64
+    cmp     rdi, rcx
+    cmovb   rdi, rcx
+    mov     [fw_circle_cap], rdi
+    shl     rdi, 3
+    call    alloc
+    mov     rsi, [fw_circle]
+    mov     [fw_circle], rax
+    mov     rdi, rax
+    mov     rcx, rbx
+    rep     movsq
+    mov     rax, r12
+.store:
+    mov     rcx, [fw_circle]
+    mov     [rcx + rbx * 8], rax
+    inc     rbx
+    jmp     .next
+.done:
+    mov     [fw_circle_count], rbx
+    add     rsp, CIRCLE_ITER_size + 8
+    pop     r12
     pop     rbx
     ret
 
@@ -673,6 +719,7 @@ fw_shells:              resq 1          ; shells not launched yet
 fw_origin:              resq 1
 fw_circle:              resq 1          ; explode waypoint candidates
 fw_circle_count:        resq 1
+fw_circle_cap:          resq 1
 fw_color:               resq 1          ; the shell color
 fw_color_index:         resq 1          ; its index in the colors
 fw_launch_color:        resd 1          ; the launch scene's visuals

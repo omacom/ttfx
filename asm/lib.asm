@@ -285,6 +285,7 @@ clock_virtual_now:
 ; next_frame -> eax = 1 when the effect produced a frame (the effect's
 ; next_frame followed by ctx.frame(): pacing, then the virtual clock).
 next_frame:
+    call    recycle_flush               ; engine/particles.asm
     call    [effect_next_frame]
     test    eax, eax
     jz      .done

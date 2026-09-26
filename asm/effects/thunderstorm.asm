@@ -932,10 +932,10 @@ ts_setup_strike:
     mov     [ts_available_count], rax
     mov     rcx, [ts_available]
     mov     ebx, [rcx + rax * 4]
-    mov     rax, [ch_scenes]
-    mov     dword [rax + rbx * 4], NONE
     mov     edi, ebx
-    call    event_clear
+    call    scenes_release
+    mov     edi, ebx
+    call    events_release
     mov     esi, r12d
     mov     rax, r13
     shl     rax, 32

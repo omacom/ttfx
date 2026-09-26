@@ -829,9 +829,13 @@ sequence_easer_step:
 ; ------------------------------------------------ Easing::CubicBezier curves
 ; A curve's four parameters live in a per-run table; its easing id is
 ; EASE_BEZIER_BASE + its index, so scenes and paths carry it like a named
-; easing and ease() dispatches it.
+; easing and ease() dispatches it. The table is a ring of BEZIER_RING
+; entries (thunderstorm makes a curve per strike, forever): ids stay unique,
+; so memos keyed by id never go stale, and an id stays valid while fewer
+; than BEZIER_RING curves are made after it.
 
-%define BEZIER_LIMIT        (1 << 20)
+%define BEZIER_RING         (1 << 12)
+%define BEZIER_LIMIT        (0xffffffff - EASE_BEZIER_BASE)  ; unique u32 ids
 
 ; bezier_new(xmm0=x1, xmm1=y1, xmm2=x2, xmm3=y2) -> eax = easing id.
 ; Easing::CubicBezier(x1, y1, x2, y2). Clobbers the C caller-saved set.
@@ -844,7 +848,7 @@ bezier_new:
     movsd   [rsp + 24], xmm3
     cmp     qword [bezier_table], 0
     jne     .have_table
-    mov     rdi, BEZIER_LIMIT * 32
+    mov     rdi, BEZIER_RING * 32
     call    reserve
     mov     [bezier_table], rax
 .have_table:
@@ -852,7 +856,8 @@ bezier_new:
     cmp     ebx, BEZIER_LIMIT
     jae     .full
     inc     dword [bezier_count]
-    mov     rax, rbx
+    mov     eax, ebx
+    and     eax, BEZIER_RING - 1
     shl     rax, 5
     add     rax, [bezier_table]
     movdqu  xmm0, [rsp]
@@ -884,6 +889,7 @@ ease_bezier_id:
     mov     [bezier_memo_id], edi
     mov     [bezier_memo_t], rax
     sub     edi, EASE_BEZIER_BASE
+    and     edi, BEZIER_RING - 1
     shl     rdi, 5
     add     rdi, [bezier_table]
     sub     rsp, 8
