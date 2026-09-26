@@ -97,7 +97,12 @@ reserve_small:
     call    reserve
     pop     rsi
     push    rax
+    ; reserve staggers the base within its first pages; madvise wants the
+    ; page it starts in
     mov     rdi, rax
+    and     rdi, -4096
+    sub     rax, rdi
+    add     rsi, rax
     mov     edx, MADV_NOHUGEPAGE
     SYSCALL SYS_madvise
     pop     rax
