@@ -556,27 +556,50 @@ un_restore:
     pop     rbx
     ret
 
+; UN_BIT_POP dest, bits: dest = the lowest set bit's index, cleared from
+; bits (bits != 0). Clobbers rcx below TIER 3.
+%macro UN_BIT_POP 2
+%if TIER >= 3
+    tzcnt   %1, %2
+    blsr    %2, %2
+%else
+    bsf     %1, %2
+    lea     rcx, [%2 - 1]
+    and     %2, rcx
+%endif
+%endmacro
+
 ; un_tick_active: tick every active character in ascending slot order (no
-; callbacks here, so the live set is its own snapshot).
+; callbacks here, so the live set is its own snapshot). Walks the bitmap a
+; word at a time; a tick only touches its own slot's bit.
 un_tick_active:
     push    rbx
+    push    r12
+    push    r13
+    mov     r13d, [char_count]
+    add     r13, 63
+    shr     r13, 6
     xor     ebx, ebx
-.slot:
-    cmp     ebx, [char_count]
+.word:
+    cmp     rbx, r13
     jae     .done
     mov     rax, [active_bits]
-    mov     ecx, ebx
-    shr     ecx, 6
-    mov     edx, ebx
-    and     edx, 63
-    bt      qword [rax + rcx * 8], rdx
-    jnc     .next
-    mov     edi, ebx
+    mov     r12, [rax + rbx * 8]
+.bit:
+    test    r12, r12
+    jz      .next
+    UN_BIT_POP rdi, r12
+    mov     rax, rbx
+    shl     rax, 6
+    add     rdi, rax
     call    tick
+    jmp     .bit
 .next:
-    inc     ebx
-    jmp     .slot
+    inc     rbx
+    jmp     .word
 .done:
+    pop     r13
+    pop     r12
     pop     rbx
     ret
 
@@ -584,20 +607,29 @@ un_tick_active:
 ; reached the phase's waypoint (and, reassembling, finished their scene).
 un_retain:
     push    rbx
+    push    rbp
     push    r12
     push    r13
+    push    r14
+    push    r15
+    sub     rsp, 8
     mov     r12d, edi
-    xor     ebx, ebx
-.slot:
-    cmp     ebx, [char_count]
+    mov     r15d, [char_count]
+    add     r15, 63
+    shr     r15, 6
+    xor     ebp, ebp                    ; word index
+.word:
+    cmp     rbp, r15
     jae     .done
     mov     rax, [active_bits]
-    mov     ecx, ebx
-    shr     ecx, 6
-    mov     edx, ebx
-    and     edx, 63
-    bt      qword [rax + rcx * 8], rdx
-    jnc     .next
+    mov     r14, [rax + rbp * 8]
+.slot:
+    test    r14, r14
+    jz      .next_word
+    UN_BIT_POP rbx, r14
+    mov     rax, rbp
+    shl     rax, 6
+    add     rbx, rax
     mov     edi, ebx
     call    char_coord
     mov     r13, rax
@@ -607,26 +639,31 @@ un_retain:
     shl     rax, 5
     add     rax, [un_recs]
     cmp     r13, [rax + UR_TARGET]
-    jne     .next
+    jne     .slot
     jmp     .remove
 .home:
     mov     edi, ebx
     call    char_input_coord
     cmp     r13, rax
-    jne     .next
+    jne     .slot
     mov     edi, ebx
     call    scene_is_complete
     test    eax, eax
-    jz      .next
+    jz      .slot
 .remove:
     mov     edi, ebx
     call    active_remove
-.next:
-    inc     ebx
     jmp     .slot
+.next_word:
+    inc     rbp
+    jmp     .word
 .done:
+    add     rsp, 8
+    pop     r15
+    pop     r14
     pop     r13
     pop     r12
+    pop     rbp
     pop     rbx
     ret
 
