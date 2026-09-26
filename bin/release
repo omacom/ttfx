@@ -2,29 +2,23 @@
 set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-PKGS="${OMARCHY_PKGS:-$HOME/Work/omacom/omarchy-pkgs}"
-SKIP_PKGS=0
 VERSION=""
 
 usage() {
   cat <<'EOF'
-Usage: bin/release [version] [--skip-pkgs]
+Usage: bin/release [version]
 
-Cuts a ttfx release: runs the tests, bumps Cargo.toml, tags and pushes, creates
-the GitHub release with generated notes, then points the omarchy-pkgs PKGBUILD
-at the new tarball.
+Cuts a ttfx release: runs the tests, bumps Cargo.toml, tags and pushes, and
+creates the GitHub release with generated notes. That is all a release needs:
+omarchy-pkgs watches this repository's releases (its sync-upstream job), and
+updates the ttfx package's version and checksum from the new tag on its own.
 
-  version      0.4.0 or v0.4.0. Defaults to bumping the last tag's patch number.
-  --skip-pkgs  Leave omarchy-pkgs alone. Implied when it isn't checked out.
-
-OMARCHY_PKGS overrides where omarchy-pkgs lives
-(default: $HOME/Work/omacom/omarchy-pkgs).
+  version  0.4.0 or v0.4.0. Defaults to bumping the last tag's patch number.
 EOF
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
-  --skip-pkgs) SKIP_PKGS=1 ;;
   -h | --help)
     usage
     exit 0
@@ -45,7 +39,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-for tool in cargo git gh curl sha256sum tar awk; do
+for tool in cargo git gh awk; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "$tool is required to release ttfx." >&2
     exit 1
@@ -131,64 +125,7 @@ git push origin "$TAG"
 
 RELEASE_URL="$(gh release create "$TAG" --title "$TAG" --generate-notes)"
 
-PKGBUILD="$PKGS/pkgbuilds/ttfx/PKGBUILD"
-SHA=""
-
-if [ "$SKIP_PKGS" -eq 1 ]; then
-  echo "Skipping omarchy-pkgs (--skip-pkgs)."
-elif [ ! -f "$PKGBUILD" ]; then
-  echo "Skipping omarchy-pkgs: no PKGBUILD at $PKGBUILD."
-else
-  TMP="$(mktemp -d)"
-  trap 'rm -rf "$TMP"' EXIT
-
-  TARBALL="$TMP/ttfx-$VERSION.tar.gz"
-  URL="https://github.com/omacom-io/ttfx/archive/refs/tags/$TAG.tar.gz"
-
-  # GitHub can lag a few seconds behind the tag push.
-  attempt=1
-  while ! curl -fsSL -o "$TARBALL" "$URL"; do
-    if [ "$attempt" -ge 5 ]; then
-      echo "Could not download $URL" >&2
-      exit 1
-    fi
-    echo "  tarball not ready yet, retrying"
-    sleep 3
-    attempt=$((attempt + 1))
-  done
-
-  if ! tar tzf "$TARBALL" | grep -q "^ttfx-$VERSION/"; then
-    echo "Tarball doesn't contain ttfx-$VERSION/." >&2
-    exit 1
-  fi
-
-  SHA="$(sha256sum "$TARBALL" | cut -d' ' -f1)"
-
-  # Only the first sha256sums entry is the tarball; later ones are local files.
-  awk -v v="$VERSION" -v sha="$SHA" -v q="'" '
-    /^pkgver=/ { print "pkgver=" v; next }
-    /^pkgrel=/ { print "pkgrel=1"; next }
-    !hashed && /^sha256sums=/ { sub(q "[^" q "]*" q, q sha q); hashed = 1 }
-    { print }
-  ' "$PKGBUILD" >"$PKGBUILD.new" && mv "$PKGBUILD.new" "$PKGBUILD"
-
-  if ! grep -q "^pkgver=$VERSION$" "$PKGBUILD" || ! grep -q "$SHA" "$PKGBUILD"; then
-    echo "PKGBUILD was not updated as expected; leaving it for you to inspect." >&2
-    exit 1
-  fi
-
-  if command -v bash >/dev/null 2>&1; then
-    bash -n "$PKGBUILD"
-  fi
-
-  git -C "$PKGS" add pkgbuilds/ttfx
-  git -C "$PKGS" commit -m "Update ttfx to $TAG"
-  git -C "$PKGS" push
-fi
-
 echo
 echo "Released ttfx $TAG"
 echo "  $RELEASE_URL"
-if [ -n "$SHA" ]; then
-  echo "  omarchy-pkgs updated to $SHA"
-fi
+echo "omarchy-pkgs picks it up with its next sync-upstream run."
