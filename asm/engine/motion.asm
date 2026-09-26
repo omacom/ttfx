@@ -868,9 +868,9 @@ chain_paths:
 ; factor table, ease(step / max_steps) at [etab_base + eax * 8 + step * 8]
 ; for step 1..=max_steps. Tables are shared by every path with the same
 ; easing and max_steps (found through a direct-mapped map; a collision just
-; makes a fresh table) and filled on first use; an entry of 0 means not yet
-; computed. ETAB_NONE: too many steps, or the region is full - use ease().
-; Clobbers rax, rcx, rdx, rsi, rdi, r8.
+; makes a fresh table) and filled when made; an entry of 0 means not
+; stored (ease gave +0.0). ETAB_NONE: too many steps, or the region is
+; full - use ease(). A new table is filled at once. Clobbers C.
 path_ease_table:
     mov     rax, [rbp + PA_MAX]
     cmp     rax, ETAB_MAX_STEPS
@@ -914,6 +914,37 @@ path_ease_table:
     mov     [rdi], rsi
     mov     [rdi + 8], eax
     mov     [rbp + PA_ETAB], eax
+    ; fill it now: the paths that make a table nearly always walk it to
+    ; the end, and then no step needs to call ease
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    mov     r14, rsp
+    and     rsp, -16
+    mov     ebx, eax
+    mov     r12, [rbp + PA_MAX]
+    mov     r13d, 1
+.fill:
+    cmp     r13, r12
+    ja      .filled
+    cvtsi2sd xmm0, r13
+    cvtsi2sd xmm1, r12
+    divsd   xmm0, xmm1                  ; path_step's ratio
+    mov     edi, [rbp + PA_EASE]
+    call    ease
+    mov     rax, [etab_base]
+    lea     rax, [rax + rbx * 8]
+    movsd   [rax + r13 * 8], xmm0
+    inc     r13
+    jmp     .fill
+.filled:
+    mov     rsp, r14
+    mov     eax, ebx
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
     ret
 .none:
     mov     eax, ETAB_NONE
