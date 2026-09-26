@@ -69,11 +69,60 @@ vhstape_build:
     shl     rdi, 4
     call    alloc
     mov     [vhs_snow_memo], rax
-    ; the glitch line colors' visuals for the character being built
+    ; the glitch line colors, reversed (GLITCH_BWD's frames)
     mov     rdi, [rbx + VHSTAPE.line_count]
-    shl     rdi, 2
+    lea     rdi, [rdi * 8 + 8]
     call    alloc
-    mov     [vhs_line_handles], rax
+    mov     [vhs_line_colors_rev], rax
+    mov     rcx, [rbx + VHSTAPE.line_count]
+    mov     rsi, [rbx + VHSTAPE.line_colors]
+    xor     edx, edx
+.reverse:
+    test    rcx, rcx
+    jz      .reversed
+    dec     rcx
+    mov     r8, [rsi + rcx * 8]
+    mov     [rax + rdx * 8], r8
+    inc     rdx
+    jmp     .reverse
+.reversed:
+    xor     r12d, r12d
+.snow_memo:
+    cmp     r12, [rbx + VHSTAPE.noise_count]
+    jae     .snow_memo_done
+    xor     r13d, r13d
+.snow_memo_symbol:
+    mov     rax, [rbx + VHSTAPE.noise_colors]
+    mov     rdi, [rax + r12 * 8]
+    mov     rsi, NONE
+    lea     rax, [vhs_snow_symbols]
+    movzx   edx, byte [rax + r13]
+    bts     rdx, 32                     ; one byte long
+    xor     ecx, ecx
+    call    visual_make
+    lea     rcx, [r12 * 4 + r13]
+    mov     rdx, [vhs_snow_memo]
+    mov     [rdx + rcx * 4], eax
+    inc     r13d
+    cmp     r13d, 4
+    jb      .snow_memo_symbol
+    inc     r12
+    jmp     .snow_memo
+.snow_memo_done:
+    ; choice(noise_colors)'s draw: the top max(bit_length(n - 1), 1) bits
+    mov     rax, [rbx + VHSTAPE.noise_count]
+    dec     rax
+    xor     ecx, ecx
+    bsr     rax, rax
+    jz      .noise_bits
+    lea     ecx, [rax + 1]
+.noise_bits:
+    mov     eax, 1
+    cmp     ecx, eax
+    cmovb   ecx, eax
+    neg     ecx
+    add     ecx, 64
+    mov     [vhs_noise_shift], cl
     ; the redraw block: "█" in white
     mov     edi, 0x2588
     call    utf8_pack
@@ -144,9 +193,8 @@ vhstape_build:
 %define L_FINAL_FG  32
 %define L_FINAL_BG  40
 %define L_COORD     48                  ; input coordinate
-%define L_COUNTER   56
-%define L_FINAL_SNOW 64
-%define L_SIZE      72
+%define L_FINAL_SNOW 56
+%define L_SIZE      72                  ; (keeps the stack aligned)
 
 ; SHIFTED delta: rsi = the input coordinate moved delta columns. Clobbers rax.
 %macro SHIFTED 1
@@ -296,42 +344,27 @@ vhs_build_line_effects:
     xor     r9d, r9d
     call    scene_add_frame
     ; the input symbol in each glitch line color
-    xor     r14d, r14d
-.handle:
     mov     rax, [effect_config]
-    cmp     r14, [rax + VHSTAPE.line_count]
-    jae     .forward
-    mov     rax, [rax + VHSTAPE.line_colors]
-    mov     rdi, [rax + r14 * 8]
-    mov     rsi, NONE
-    mov     rdx, [ch_sym]
-    mov     rdx, [rdx + rbp * 8]
-    xor     ecx, ecx
-    call    visual_make
-    mov     rcx, [vhs_line_handles]
-    mov     [rcx + r14 * 4], eax
-    inc     r14d
-    jmp     .handle
-.forward:
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbp * 8]
+    mov     rsi, [rax + VHSTAPE.line_colors]
+    mov     rdx, [rax + VHSTAPE.line_count]
+    mov     rcx, NONE
+    xor     r8d, r8d                    ; one color list
+    call    visual_run
+    mov     [vhs_line_handles], rax
     mov     edi, ebp
     mov     esi, GLITCH_FWD
     mov     edx, SCF_SYNC_STEP
     mov     ecx, NONE
     call    scene_new
-    mov     r15d, eax
-    xor     r14d, r14d
-.fwd_frame:
+    mov     edi, eax
+    mov     rsi, [vhs_line_handles]
     mov     rax, [effect_config]
-    cmp     r14, [rax + VHSTAPE.line_count]
-    jae     .backward
-    mov     rax, [vhs_line_handles]
-    mov     esi, [rax + r14 * 4]
-    mov     edi, r15d
-    mov     edx, 1
-    call    scene_add_frame_visual
-    inc     r14d
-    jmp     .fwd_frame
-.backward:
+    mov     rdx, [rax + VHSTAPE.line_count]
+    mov     ecx, 1
+    call    visual_frames
+    ; backward: the same visuals in reverse
     mov     edi, ebp
     mov     esi, GLITCH_BWD
     mov     edx, SCF_SYNC_STEP
@@ -339,33 +372,26 @@ vhs_build_line_effects:
     call    scene_new
     mov     r15d, eax
     mov     rax, [effect_config]
-    mov     r14, [rax + VHSTAPE.line_count]
-.bwd_frame:
-    test    r14, r14
-    jz      .snow
-    dec     r14
-    mov     rax, [vhs_line_handles]
-    mov     esi, [rax + r14 * 4]
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbp * 8]
+    mov     rsi, [vhs_line_colors_rev]
+    mov     rdx, [rax + VHSTAPE.line_count]
+    mov     rcx, NONE
+    mov     r8d, 1                      ; the reversed list
+    call    visual_run
     mov     edi, r15d
-    mov     edx, 1
-    call    scene_add_frame_visual
-    jmp     .bwd_frame
-.snow:
+    mov     rsi, rax
+    mov     ecx, 1
+    call    visual_frames
     mov     edi, ebp
     mov     esi, SNOW
     xor     edx, edx
     mov     ecx, NONE
     call    scene_new
     mov     r15d, eax
-    mov     qword [rsp + L_COUNTER], 25
-.snow_frame:
-    call    vhs_snow_visual
-    mov     esi, eax
-    mov     edi, r15d
-    mov     edx, 2
-    call    scene_add_frame_visual
-    dec     qword [rsp + L_COUNTER]
-    jnz     .snow_frame
+    mov     edi, eax
+    mov     esi, 25
+    call    vhs_snow_frames
     mov     edi, r15d
     mov     rsi, [ch_sym]
     mov     rsi, [rsi + rbp * 8]
@@ -398,15 +424,9 @@ vhs_build_line_effects:
     mov     r8, [rsp + L_FINAL_BG]
     xor     r9d, r9d
     call    scene_add_frame
-    mov     qword [rsp + L_COUNTER], 30
-.final_snow_frame:
-    call    vhs_snow_visual
-    mov     esi, eax
     mov     edi, [rsp + L_FINAL_SNOW]
-    mov     edx, 2
-    call    scene_add_frame_visual
-    dec     qword [rsp + L_COUNTER]
-    jnz     .final_snow_frame
+    mov     esi, 30
+    call    vhs_snow_frames
     ; --- events
     push    0
     push    0
@@ -429,38 +449,52 @@ vhs_build_line_effects:
     pop     rbx
     ret
 
-; vhs_snow_visual -> eax = the handle for choice(snow_chars) then
-; choice(noise_colors), drawn in that order.
-vhs_snow_visual:
+; vhs_snow_frames(edi=scene, esi=count <= 32): count frames of 2 ticks,
+; each choice(snow_chars) then choice(noise_colors), drawn in that order
+; (vhs_snow_memo holds every pair's visual). snow_chars has four
+; symbols, so its draw is the top two bits and never rejects.
+vhs_snow_frames:
     push    rbx
+    push    rbp
     push    r12
     push    r13
-    mov     edi, 4
-    call    rng_below
-    mov     ebx, eax                    ; symbol index
+    push    r14
+    push    r15
+    sub     rsp, 136
+    mov     ebp, edi
+    mov     r14d, esi
     mov     rax, [effect_config]
-    mov     rdi, [rax + VHSTAPE.noise_count]
-    call    rng_below
-    mov     r12d, eax                   ; color index
-    lea     r13d, [rax * 4 + rbx]
-    mov     rcx, [vhs_snow_memo]
-    mov     eax, [rcx + r13 * 4]
-    test    eax, eax
-    jnz     .hit
-    mov     rax, [effect_config]
-    mov     rax, [rax + VHSTAPE.noise_colors]
-    mov     rdi, [rax + r12 * 8]
-    mov     rsi, NONE
-    lea     rax, [vhs_snow_symbols]
-    movzx   edx, byte [rax + rbx]
-    bts     rdx, 32                     ; one byte long
-    xor     ecx, ecx
-    call    visual_make
-    mov     rcx, [vhs_snow_memo]
-    mov     [rcx + r13 * 4], eax
-.hit:
+    mov     r15, [rax + VHSTAPE.noise_count]
+    mov     r8, [vhs_snow_memo]
+    movzx   ecx, byte [vhs_noise_shift]
+    RNG_OPEN r12, r13
+    xor     ebx, ebx
+.draw:
+    RNG_TAKE rax, r12, r13
+    shr     rax, 62                     ; symbol index
+.color:
+    RNG_TAKE rdx, r12, r13
+    shr     rdx, cl
+    cmp     rdx, r15
+    jae     .color
+    lea     rax, [rdx * 4 + rax]
+    mov     eax, [r8 + rax * 4]
+    mov     [rsp + rbx * 4], eax
+    inc     ebx
+    cmp     ebx, r14d
+    jb      .draw
+    RNG_CLOSE r12
+    mov     edi, ebp
+    mov     rsi, rsp
+    mov     edx, r14d
+    mov     ecx, 2
+    call    visual_frames
+    add     rsp, 136
+    pop     r15
+    pop     r14
     pop     r13
     pop     r12
+    pop     rbp
     pop     rbx
     ret
 
@@ -1080,6 +1114,7 @@ vhs_lines:          resq 1                  ; groups: (u32 *slots, u64 count)
 vhs_line_count:     resq 1
 vhs_snow_memo:      resq 1
 vhs_line_handles:   resq 1
+vhs_line_colors_rev: resq 1
 vhs_final_spectrum: resq 1
 vhs_final_map:      resq 1
 vhs_final_map_width: resq 1
@@ -1092,5 +1127,6 @@ vhs_glitch_lines:   resq 3
 vhs_elapsed:        resq 1
 vhs_to_redraw:      resq 1
 vhs_block_visual:   resd 1
+vhs_noise_shift:    resb 1
 vhs_phase:      resb 1
 vhs_redrawing:      resb 1

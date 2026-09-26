@@ -144,6 +144,7 @@ swarm_build:
     mov     rcx, [rbx + SWARM.base_colors]
     mov     rax, [rcx + rax * 8]
     mov     [swm_pair], rax
+    mov     [swm_base], rax
     mov     rax, [rbx + SWARM.flash_color]
     mov     [swm_pair + 8], rax
     lea     rdi, [swm_pair]
@@ -380,21 +381,20 @@ swm_build_char:
     mov     ecx, NONE
     call    scene_new
     mov     r12d, eax
-    xor     ebp, ebp
-.flash:
-    cmp     rbp, [swm_mirror_len]
-    jae     .areas
-    lea     rax, [swm_mirror]
-    mov     rcx, [rax + rbp * 8]
-    mov     rsi, [ch_sym]
-    mov     rsi, [rsi + rbx * 8]
+    ; the swarm's mirrored gradient over the input symbol; the visuals are
+    ; shared by symbol and base color (tagged apart from the landing keys)
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + rbx * 8]
+    lea     rsi, [swm_mirror]
+    mov     rdx, [swm_mirror_len]
+    mov     rcx, NONE
+    mov     r8, [swm_base]
+    bts     r8, 47
+    call    visual_run
     mov     edi, r12d
-    mov     edx, 1
-    mov     r8, NONE
-    xor     r9d, r9d
-    call    scene_add_frame
-    inc     rbp
-    jmp     .flash
+    mov     rsi, rax
+    mov     ecx, 1
+    call    visual_frames
 .areas:
     xor     r13d, r13d                  ; area index
 .area:
@@ -528,23 +528,28 @@ swm_landing_frames:
     add     rax, rcx
     sub     rax, [text_left]
     mov     rcx, [swm_final_map]
-    mov     rax, [rcx + rax * 8]
+    mov     r15, [rcx + rax * 8]
+    ; flash -> final color over the symbol, shared by symbol and color
+    mov     rdi, [swm_sym]
+    mov     rsi, r15
+    mov     rdx, NONE
+    call    visual_run_find
+    test    rax, rax
+    jnz     .plain_frames
+    mov     rax, r15
     call    swm_to_color                ; eax = 11
-    mov     r13d, eax
-    xor     r14d, r14d
-.plain:
-    cmp     r14d, r13d
-    jae     .done
-    lea     rax, [swm_spectrum]
-    mov     rcx, [rax + r14 * 8]
-    mov     rsi, [swm_sym]
+    mov     rdi, [swm_sym]
+    lea     rsi, [swm_spectrum]
+    mov     edx, eax
+    mov     rcx, NONE
+    mov     r8, r15
+    call    visual_run
+.plain_frames:
     mov     edi, ebx
-    mov     edx, 3
-    mov     r8, NONE
-    xor     r9d, r9d
-    call    scene_add_frame
-    inc     r14d
-    jmp     .plain
+    mov     rsi, rax
+    mov     ecx, 3
+    call    visual_frames
+    jmp     .done
 .dynamic:
     mov     r13, [ch_fg]
     mov     r13, [r13 + r12 * 8]
@@ -869,8 +874,20 @@ swarm_next_frame:
     mov     eax, [rax + rbx * 4]
     cmp     eax, NONE
     je      .lead
+    ; the path's name, cached per character (ch_user0: path + 1, name)
+    ; while the character stays on it: path records are cold
+    mov     rdx, [ch_user0]
+    lea     ecx, [rax + 1]
+    cmp     ecx, [rdx + rbx * 8]
+    jne     .name
+    mov     ebp, [rdx + rbx * 8 + 4]
+    jmp     .named
+.name:
+    mov     [rdx + rbx * 8], ecx
     PATH_PTR rcx, rax
     mov     ebp, [rcx + PA_NAME]
+    mov     [rdx + rbx * 8 + 4], ebp
+.named:
     cmp     ebp, [swm_active_area]
     je      .lead
     cmp     ebp, NAME_LITERAL
@@ -930,6 +947,7 @@ swm_speed_land:     dq 0.45
 section .tstate
 alignb 8
 swm_size:           resq 1
+swm_base:           resq 1          ; the swarm's base color
 swm_order:          resq 1          ; u32 slots, in swarm order
 swm_bounds:         resq 1          ; (start, end) per swarm
 swm_nswarms:        resq 1          ; swarms not yet launched

@@ -17,7 +17,7 @@
 %define VISUAL_MAX          128         ; longest visual the pool accepts
 %define VISUAL_HEADER       32
 %define POOL_RESERVE        (POOL_LIMIT + 4096)
-%define VISUAL_TABLE_INITIAL (1 << 12)  ; entries; the arena is lazily committed
+%define VISUAL_TABLE_INITIAL (1 << 15)  ; entries (256 KB of the arena's first huge page)
 
 ; header fields, relative to the visual's bytes
 %define VH_SYMBOL           -32
@@ -157,6 +157,8 @@ visual_make:
     mov     r12, NONE
     mov     r13, NONE
 .attrs:
+    test    r15d, r15d
+    jz      .colors
     lea     r8, [sgr_attr_codes]
     xor     r9d, r9d
 .attr:
@@ -170,6 +172,7 @@ visual_make:
     inc     r9d
     cmp     r9d, 7
     jb      .attr
+.colors:
     cmp     r12, NONE
     je      .no_fg
     mov     rdi, r12
@@ -287,6 +290,253 @@ visual_table_grow:
     pop     rbx
     ret
 
+; visual_run(rdi=symbol, rsi=fg colors, rdx=count, rcx=bg color or NONE,
+;            r8=key) -> rax = pointer to count u32 handles, edx = count:
+; visual_make of the symbol in each fg color over bg, no attributes - the
+; frames of a per-character gradient. Memoized by (symbol, key, bg): callers
+; give equal keys only for equal color lists (typically the color or colors
+; the list was made from), so characters sharing a symbol and colors skip
+; visual_make, and with visual_run_find even making the list. The handles
+; stay valid for the run. Clobbers rax, rcx, rdx, rsi, rdi, r8-r11 (and what
+; visual_make does).
+%define VFRAMES_MAX  64                 ; frames visual_frames appends at once
+%define VRUN_INITIAL 1024               ; 32-byte entries: symbol, key, bg, handles
+visual_run:
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    push    rbp
+    sub     rsp, 8
+    mov     r12, rdi                    ; symbol
+    mov     r13, rsi                    ; colors
+    mov     r14, rdx                    ; count
+    mov     r15, rcx                    ; bg
+    mov     rbp, r8                     ; key
+    mov     rsi, r8
+    mov     rdx, rcx
+    call    visual_run_find
+    test    rax, rax
+    jnz     .done
+    ; make the handles (after their count) and keep them
+    mov     [rsp], rcx                  ; the empty entry
+    lea     rdi, [r14 * 4 + 4]
+    call    alloc
+    mov     [rax], r14d
+    add     rax, 4
+    mov     rdx, [rsp]
+    mov     [rsp], rax
+    mov     [rdx], r12
+    mov     [rdx + 8], rbp
+    mov     [rdx + 16], r15
+    mov     [rdx + 24], rax
+    xor     ebx, ebx
+.each:
+    cmp     rbx, r14
+    jae     .made
+    mov     rdi, [r13 + rbx * 8]
+    mov     rsi, r15
+    mov     rdx, r12
+    xor     ecx, ecx
+    call    visual_make
+    mov     rcx, [rsp]
+    mov     [rcx + rbx * 4], eax
+    inc     rbx
+    jmp     .each
+.made:
+    ; at half load, double the table
+    inc     dword [vrun_count]
+    mov     eax, [vrun_count]
+    add     eax, eax
+    cmp     eax, [vrun_mask]
+    jbe     .kept
+    call    visual_run_grow
+.kept:
+    mov     rax, [rsp]
+    mov     edx, r14d
+.done:
+    add     rsp, 8
+    pop     rbp
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+; visual_frames(edi=scene, rsi=u32 handles, edx=count, ecx=duration): a
+; frame of each visual - scene_add_frame_visual for each, appended in one
+; go when nothing needs checking (a positive duration, no preexisting
+; colors to apply) - since scene_add_frame_visual would only append.
+; Clobbers C except rbx, rbp, r12-r15.
+visual_frames:
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    push    rbp
+    sub     rsp, 8 + VFRAMES_MAX * FRAME_SIZE
+    mov     r12d, edi
+    mov     r13, rsi
+    mov     r14d, edx
+    mov     r15d, ecx
+    cmp     ecx, 1
+    jl      .each
+    cmp     edx, VFRAMES_MAX
+    ja      .each
+    mov     eax, edi
+    shl     rax, SCENE_SHIFT
+    add     rax, [scenes]
+    test    dword [rax + SC_FLAGS], SCF_PREEXISTING | SCF_PRE_BOLD
+    jnz     .each
+    ; the frame records: handle, duration
+    mov     rdx, r15
+    shl     rdx, 32
+    xor     ecx, ecx
+.record:
+    cmp     ecx, r14d
+    jae     .append
+    mov     eax, [r13 + rcx * 4]
+    or      rax, rdx
+    mov     [rsp + rcx * FRAME_SIZE], rax
+    inc     ecx
+    jmp     .record
+.append:
+    mov     edi, r12d
+    mov     rsi, rsp
+    mov     edx, r14d
+    call    scene_append_frames
+    jmp     .done
+.each:
+    xor     ebx, ebx
+.frame:
+    cmp     ebx, r14d
+    jae     .done
+    mov     edi, r12d
+    mov     esi, [r13 + rbx * 4]
+    mov     edx, r15d
+    call    scene_add_frame_visual
+    inc     ebx
+    jmp     .frame
+.done:
+    add     rsp, 8 + VFRAMES_MAX * FRAME_SIZE
+    pop     rbp
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+; VRUN_HASH symbol, key, bg, out, tmp: visual_run's table index (before the
+; mask) in the 32-bit register out's 64-bit form.
+%macro VRUN_HASH 5
+    mov     %5, 0x9e3779b97f4a7c15
+    mov     %4, %2
+    imul    %4, %5
+    xor     %4, %1
+    ror     %4, 29
+    add     %4, %3
+    imul    %4, %5
+    shr     %4, 32
+%endmacro
+
+; visual_run_find(rdi=symbol, rsi=key, rdx=bg) -> rax = visual_run's handles
+; for these, edx = their count; or rax = 0 and rcx = the empty memo entry.
+; Clobbers rax, rcx, rdx, rdi, r8-r11.
+visual_run_find:
+    mov     r8, [vrun_table]
+    test    r8, r8
+    jnz     .hash
+    push    rdi
+    push    rsi
+    push    rdx
+    mov     edi, VRUN_INITIAL * 32
+    call    alloc
+    mov     [vrun_table], rax
+    mov     dword [vrun_mask], VRUN_INITIAL - 1
+    mov     r8, rax
+    pop     rdx
+    pop     rsi
+    pop     rdi
+.hash:
+    VRUN_HASH rdi, rsi, rdx, rcx, r9
+    mov     r9d, [vrun_mask]
+.probe:
+    and     ecx, r9d
+    mov     r10, rcx
+    shl     r10, 5
+    add     r10, r8                     ; the entry
+    mov     rax, [r10 + 24]
+    test    rax, rax
+    jz      .miss
+    cmp     [r10], rdi
+    jne     .next
+    cmp     [r10 + 8], rsi
+    jne     .next
+    cmp     [r10 + 16], rdx
+    jne     .next
+    mov     edx, [rax - 4]
+    ret
+.next:
+    inc     ecx
+    jmp     .probe
+.miss:
+    mov     rcx, r10
+    ret
+
+; visual_run_grow: double visual_run's table. Clobbers rax, rcx, rdx, rsi,
+; rdi, r8-r11.
+visual_run_grow:
+    push    rbx
+    push    r12
+    push    r13
+    mov     r12, [vrun_table]
+    mov     r13d, [vrun_mask]
+    inc     r13d                        ; old capacity
+    mov     edi, r13d
+    shl     rdi, 6                      ; twice the entries, 32 bytes each
+    call    alloc
+    mov     [vrun_table], rax
+    lea     ecx, [r13 * 2 - 1]
+    mov     [vrun_mask], ecx
+    mov     r8, rax
+    mov     r9d, ecx
+    xor     ebx, ebx
+.each:
+    cmp     ebx, r13d
+    jae     .done
+    mov     rsi, rbx
+    shl     rsi, 5
+    add     rsi, r12
+    cmp     qword [rsi + 24], 0
+    je      .skip
+    VRUN_HASH qword [rsi], qword [rsi + 8], qword [rsi + 16], rcx, r10
+.probe:
+    and     ecx, r9d
+    mov     rdi, rcx
+    shl     rdi, 5
+    add     rdi, r8
+    cmp     qword [rdi + 24], 0
+    je      .put
+    inc     ecx
+    jmp     .probe
+.put:
+    movdqu  xmm0, [rsi]
+    movdqu  xmm1, [rsi + 16]
+    movdqu  [rdi], xmm0
+    movdqu  [rdi + 16], xmm1
+.skip:
+    inc     ebx
+    jmp     .each
+.done:
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
 ; visual_meta(eax=handle) -> rax = pointer to the visual's bytes; the header
 ; fields are at negative offsets (VH_*).
 visual_meta:
@@ -385,3 +635,6 @@ space_handle:   resd 1
 table_base:     resq 1
 table_mask:     resd 1
 table_count:    resd 1
+vrun_table:     resq 1              ; visual_run's memo
+vrun_count:     resd 1
+vrun_mask:      resd 1

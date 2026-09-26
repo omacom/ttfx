@@ -298,9 +298,24 @@ fw_prepare_scenes:
     mov     rbx, [effect_config]
     mov     rdi, [rbx + FIREWORKS.color_count]
     call    rng_below
+    mov     [fw_color_index], rax
     mov     rcx, [rbx + FIREWORKS.colors]
     mov     rax, [rcx + rax * 8]
     mov     [fw_color], rax
+    ; the launch visuals: the firework symbol in the shell color, and white
+    mov     rdi, rax
+    mov     rsi, NONE
+    mov     rdx, [rbx + FIREWORKS.symbol]
+    xor     ecx, ecx
+    call    visual_make
+    mov     [fw_launch_color], eax
+    mov     edi, FW_WHITE
+    mov     rsi, NONE
+    mov     rdx, [rbx + FIREWORKS.symbol]
+    xor     ecx, ecx
+    call    visual_make
+    mov     [fw_launch_white], eax
+    mov     rax, [fw_color]
     ; Gradient::with_steps([color, white, color], 5)
     mov     [fw_stops], rax
     mov     qword [fw_stops + 8], FW_WHITE
@@ -363,21 +378,13 @@ fw_char_scenes:
     call    scene_new
     mov     r12d, eax
     mov     edi, eax
-    mov     rsi, [effect_config]
-    mov     rsi, [rsi + FIREWORKS.symbol]
+    mov     esi, [fw_launch_color]
     mov     edx, 2
-    mov     rcx, [fw_color]
-    mov     r8, NONE
-    xor     r9d, r9d
-    call    scene_add_frame
+    call    scene_add_frame_visual
     mov     edi, r12d
-    mov     rsi, [effect_config]
-    mov     rsi, [rsi + FIREWORKS.symbol]
+    mov     esi, [fw_launch_white]
     mov     edx, 1
-    mov     ecx, FW_WHITE
-    mov     r8, NONE
-    xor     r9d, r9d
-    call    scene_add_frame
+    call    scene_add_frame_visual
     ; bloom: the shell gradient over the input symbol, synced to steps
     mov     edi, ebx
     mov     esi, AUTO
@@ -385,20 +392,17 @@ fw_char_scenes:
     mov     ecx, NONE
     call    scene_new
     mov     r13d, eax
-    xor     r14d, r14d
-.bloom:
-    cmp     r14, [fw_shell_len]
-    jae     .fall
-    lea     rax, [fw_shell_spectrum]
-    mov     rcx, [rax + r14 * 8]
+    mov     rdi, [fw_sym]
+    lea     rsi, [fw_shell_spectrum]
+    mov     rdx, [fw_shell_len]
+    mov     rcx, NONE
+    mov     r8, [fw_color]              ; the shell spectrum's color, tagged
+    bts     r8, 47                      ; apart from the fall's keys
+    call    visual_run
     mov     edi, r13d
-    mov     rsi, [fw_sym]
-    mov     edx, 2
-    mov     r8, NONE
-    xor     r9d, r9d
-    call    scene_add_frame
-    inc     r14
-    jmp     .bloom
+    mov     rsi, rax
+    mov     ecx, 2
+    call    visual_frames
 .fall:
     mov     edi, ebx
     mov     esi, FW_SCN_FALL
@@ -422,19 +426,32 @@ fw_char_scenes:
     mov     rcx, [fw_final_map]
     mov     rax, [rcx + rax * 8]
     mov     [fw_stops + 8], rax
+    ; apply_gradient_to_symbols([symbol], 10, the pair's spectrum): a frame
+    ; per color, the visuals shared by symbol and pair (colors fit in 41
+    ; bits, so the shell color's index above them keys the pair exactly)
+    mov     rbp, [fw_color_index]
+    shl     rbp, 48
+    or      rbp, rax
+    mov     rdi, [fw_sym]
+    mov     rsi, rbp
+    mov     rdx, NONE
+    call    visual_run_find
+    test    rax, rax
+    jnz     .fall_frames
     lea     rdi, [fw_stops]
     lea     r8, [fw_fg_spectrum]
     call    fw_pair_gradient
-    push    0
-    push    0
+    mov     rdi, [fw_sym]
+    lea     rsi, [fw_fg_spectrum]
+    mov     edx, eax
+    mov     rcx, NONE
+    mov     r8, rbp
+    call    visual_run
+.fall_frames:
     mov     edi, r14d
-    lea     rsi, [fw_sym]
-    mov     edx, 1
+    mov     rsi, rax
     mov     ecx, 10
-    lea     r8, [fw_fg_spectrum]
-    mov     r9d, eax
-    call    scene_apply_gradient
-    add     rsp, 16
+    call    visual_frames
     jmp     .activate
 .dynamic:
     ; gradients toward whichever input colors exist, else colorless
@@ -657,6 +674,9 @@ fw_origin:              resq 1
 fw_circle:              resq 1          ; explode waypoint candidates
 fw_circle_count:        resq 1
 fw_color:               resq 1          ; the shell color
+fw_color_index:         resq 1          ; its index in the colors
+fw_launch_color:        resd 1          ; the launch scene's visuals
+fw_launch_white:        resd 1
 fw_sym:                 resq 1
 fw_shell_len:           resq 1
 fw_final_spectrum:      resq 1

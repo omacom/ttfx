@@ -113,25 +113,20 @@ wipe_build:
     mov     [wipe_pair_len], eax
 .gradient:
     ; apply_gradient_to_symbols with one symbol and an fg gradient: one
-    ; frame per spectrum color
+    ; frame per spectrum color (the visuals shared by symbol and final color)
     push    rbp
     push    r13
-    xor     r13d, r13d
-.color:
-    cmp     r13d, [wipe_pair_len]
-    jae     .colored
-    mov     rcx, [wipe_pair_spectrum]
-    mov     rcx, [rcx + r13 * 8]
-    mov     r8, NONE
-    mov     rsi, [ch_sym]
-    mov     rsi, [rsi + r15 * 8]
+    mov     rdi, [ch_sym]
+    mov     rdi, [rdi + r15 * 8]
+    mov     rsi, [wipe_pair_spectrum]
+    mov     edx, [wipe_pair_len]
+    mov     rcx, NONE
+    mov     r8, [wipe_last_fg]
+    call    visual_run
     mov     edi, r14d
-    mov     edx, [rbx + WIPE.final_frames]
-    xor     r9d, r9d
-    call    scene_add_frame
-    inc     r13d
-    jmp     .color
-.colored:
+    mov     rsi, rax
+    mov     ecx, [rbx + WIPE.final_frames]
+    call    visual_frames
     pop     r13
     pop     rbp
     inc     rbp
