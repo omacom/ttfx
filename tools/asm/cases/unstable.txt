@@ -11,3 +11,4 @@
 --final-gradient-stops 123456 --final-gradient-steps 4 --final-gradient-direction diagonal
 --final-gradient-stops 45 201 --final-gradient-steps 2 --unstable-color 45
 --final-gradient-stops ff9200 --unstable-color ff9200 --explosion-speed 0.05 --reassembly-speed 0.05
+--explosion-speed inf --reassembly-speed inf
