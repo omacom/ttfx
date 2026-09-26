@@ -277,44 +277,93 @@ scene_add_frame_visual:
 ; in place while its frames end the region - the usual case, since effects
 ; build one scene at a time - and otherwise first moves them to the end. So a
 ; character's scenes lie in creation order, which is roughly tick order.
+; Preserves rax, rdx, r8; clobbers rcx, rsi, rdi, r9.
 scene_append_frame:
-    push    rbx
-    mov     ebx, eax
+    mov     ecx, [r8 + SC_COUNT]
+    mov     rdi, [r8 + SC_FRAMES]
+    lea     rdi, [rdi + rcx * FRAME_SIZE]   ; where the next frame goes
+    cmp     rdi, [frame_region_end]
+    jne     .relocate
+.append:
+    mov     r9d, edx
+    shl     r9, 32
+    mov     esi, eax
+    or      r9, rsi
+    mov     [rdi], r9                   ; FR_HANDLE, FR_DURATION
+    add     rdi, FRAME_SIZE
+    mov     [frame_region_end], rdi
+    add     [r8 + SC_EASE_TOTAL], edx
+    lea     esi, [rcx + 1]
+    mov     [r8 + SC_COUNT], esi
+    and     dword [r8 + SC_FLAGS], ~(SCF_SHAPE | SCF_SHARED)
+    cmp     ecx, [r8 + SC_HEAD]
+    jne     .done
+    mov     [r8 + SC_HEAD_HANDLE], eax
+    mov     [r8 + SC_HEAD_DURATION], edx
+    mov     dword [r8 + SC_TICKS], 0    ; (so no synced frame is cached)
+.done:
+    ret
+.relocate:
+    ; move this scene's frames to the end of the region
+    mov     rsi, [r8 + SC_FRAMES]
+    mov     rdi, [frame_region_end]
+    mov     [r8 + SC_FRAMES], rdi
+    shl     ecx, FRAME_SHIFT
+    rep     movsb
+    mov     ecx, [r8 + SC_COUNT]
+    jmp     .append
+
+; scene_append_frames(edi=scene, rsi=frames, rdx=count): append a list of
+; frames (FRAME_SIZE records, e.g. another scene's SC_FRAMES) in one go -
+; scene_add_frame_visual for each, without re-checking durations or
+; rebuilding visuals for preexisting colors (callers copy frames made for
+; an equivalent scene). Clobbers rax, rcx, rdx, rsi, rdi, r8-r11.
+scene_append_frames:
+    test    rdx, rdx
+    jz      .none
+    SCENE_PTR r8, rdi
+    mov     r9, rsi                     ; source
+    mov     r10, rdx                    ; count
     mov     ecx, [r8 + SC_COUNT]
     mov     rdi, rcx
     shl     rdi, FRAME_SHIFT
-    add     rdi, [r8 + SC_FRAMES]       ; where the next frame goes
+    add     rdi, [r8 + SC_FRAMES]
     cmp     rdi, [frame_region_end]
     je      .append
     ; relocate this scene's frames to the end of the region
     mov     rsi, [r8 + SC_FRAMES]
     mov     rdi, [frame_region_end]
     mov     [r8 + SC_FRAMES], rdi
-    push    rcx
     shl     ecx, FRAME_SHIFT
     rep     movsb
-    pop     rcx
 .append:
-    mov     rax, [r8 + SC_FRAMES]
-    mov     rdi, rcx
-    shl     rdi, FRAME_SHIFT
-    add     rdi, rax
-    lea     rax, [rdi + FRAME_SIZE]
-    mov     [frame_region_end], rax
-    mov     [rdi + FR_HANDLE], ebx
-    mov     [rdi + FR_DURATION], edx
-    mov     esi, [r8 + SC_EASE_TOTAL]
-    add     esi, edx
-    mov     [r8 + SC_EASE_TOTAL], esi
-    inc     dword [r8 + SC_COUNT]
-    and     dword [r8 + SC_FLAGS], ~(SCF_SHAPE | SCF_SHARED)
+    ; rdi = where the first new frame goes; copy and sum the durations
+    mov     ecx, [r8 + SC_COUNT]
     cmp     ecx, [r8 + SC_HEAD]
-    jne     .done
-    mov     [r8 + SC_HEAD_HANDLE], ebx
-    mov     [r8 + SC_HEAD_DURATION], edx
-    mov     dword [r8 + SC_TICKS], 0    ; (so no synced frame is cached)
-.done:
-    pop     rbx
+    jne     .copy
+    mov     eax, [r9 + FR_HANDLE]       ; the new head
+    mov     [r8 + SC_HEAD_HANDLE], eax
+    mov     eax, [r9 + FR_DURATION]
+    mov     [r8 + SC_HEAD_DURATION], eax
+    mov     dword [r8 + SC_TICKS], 0
+.copy:
+    add     ecx, r10d
+    mov     [r8 + SC_COUNT], ecx
+    xor     r11d, r11d                  ; the durations' sum
+    xor     ecx, ecx
+.frame:
+    mov     rax, [r9 + rcx * FRAME_SIZE]
+    mov     [rdi + rcx * FRAME_SIZE], rax
+    shr     rax, 32
+    add     r11d, eax
+    inc     rcx
+    cmp     rcx, r10
+    jb      .frame
+    lea     rdi, [rdi + rcx * FRAME_SIZE]
+    mov     [frame_region_end], rdi
+    add     [r8 + SC_EASE_TOTAL], r11d
+    and     dword [r8 + SC_FLAGS], ~(SCF_SHAPE | SCF_SHARED)
+.none:
     ret
 
 ; scene_load_head(r8=scene record): refresh the head cache after the head

@@ -279,6 +279,12 @@ Rust keys events by name, so keep Rust's names distinct the same way.
   - `scene_add_frame(edi=scene, rsi=symbol, edx=duration, rcx=fg/NONE, r8=bg/NONE, r9d=ATTR_*)`
   - `scene_add_frame_visual(edi=scene, esi=handle, edx=duration)`, when you cached the
     visual yourself
+  - `scene_append_frames(edi=scene, rsi=frames, rdx=count)` appends a list of frame
+    records (`FRAME_SIZE` each, e.g. a copy of another scene's `SC_FRAMES`) in one
+    go. Use it instead of a loop of `scene_add_frame_visual` when every character
+    gets the same frames (waves' template copy: build 28% faster). It does not
+    re-check durations or apply preexisting colors, so only copy frames made for
+    an equivalent scene.
   - `scene_apply_gradient(edi=scene, rsi=symbols, rdx=count, ecx=duration, r8=fg spectrum/0, r9=fg count, stack: bg spectrum/0, bg count)`
   - `scene_copy(edi=slot, esi=src, edx=name) -> eax` for `scene.clone()` inserted
     elsewhere, and `scene_reset(edi=scene)`
