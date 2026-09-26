@@ -192,14 +192,16 @@ render_init:
     lea     rdi, [rdi * 4 + 64]
     call    alloc
     mov     [handle_grid], rax
+    ; The renderer's character arrays touch the same small slot prefix as
+    ; the effect's fields, so use the same page policy.
     mov     rdi, CHAR_LIMIT * 8
-    call    reserve
+    call    reserve_small
     mov     [rs_link], rax
     mov     rdi, CHAR_LIMIT * 8
-    call    reserve
+    call    reserve_small
     mov     [rs_cell], rax
     mov     rdi, CHAR_LIMIT * 4
-    call    reserve
+    call    reserve_small
     mov     [rs_handle], rax
     mov     rdi, [grid_cells]
     lea     rdi, [rdi * 8 + 64]

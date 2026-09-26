@@ -24,7 +24,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("baseline", type=Path)
     parser.add_argument("candidate", type=Path)
-    parser.add_argument("--cpu", type=int, default=min(os.sched_getaffinity(0)))
+    affinity = parser.add_mutually_exclusive_group()
+    affinity.add_argument("--cpu", type=int, default=min(os.sched_getaffinity(0)))
+    affinity.add_argument("--cpus", type=int, nargs="+", help="allow multiple CPUs for threaded rendering")
+    parser.add_argument("--threads", choices=("auto", "1"), default="auto")
     parser.add_argument("--runs", type=int, default=5)
     parser.add_argument("--warmups", type=int, default=1)
     parser.add_argument("--effects", nargs="+")
@@ -52,15 +55,20 @@ def main():
     engines = {"baseline": (baseline, "force"), "candidate": (candidate, "force")}
     if args.rust:
         engines["rust"] = (baseline, "0")
-    os.sched_setaffinity(0, {args.cpu})
-    environment = {**os.environ, "COLUMNS": str(args.canvas_width), "LINES": str(args.canvas_height)}
+    cpus = sorted(set(args.cpus or [args.cpu]))
+    os.sched_setaffinity(0, cpus)
+    environment = {**os.environ, "COLUMNS": str(args.canvas_width), "LINES": str(args.canvas_height),
+                   "TTFX_ASM_THREADS": args.threads}
     result = {
         "platform": platform.platform(),
-        "cpu": args.cpu,
+        "cpu": cpus[0] if len(cpus) == 1 else None,
+        "cpus": cpus,
+        "TTFX_ASM_THREADS": args.threads,
         "cpu_model": next(line.split(":", 1)[1].strip() for line in Path("/proc/cpuinfo").read_text().splitlines() if line.startswith("model name")),
         "runs": args.runs,
         "warmups": args.warmups,
         "TTFX_ASM_TIER": os.environ.get("TTFX_ASM_TIER"),
+        "LD_PRELOAD": os.environ.get("LD_PRELOAD"),
         "thp_policy": Path("/sys/kernel/mm/transparent_hugepage/enabled").read_text().strip(),
         "input_sha256": hashlib.sha256(data).hexdigest(),
         "input_bytes": len(data),
