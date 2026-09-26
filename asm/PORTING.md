@@ -131,6 +131,10 @@ budget:
   - Allocate with `alloc` (bump arena, 64-byte aligned, zeroed) or reserve a region with
     `reserve` for big growable arrays. There is no free. Reserved regions are released
     automatically on the next run.
+  - With transparent huge pages on, the first touch of a reserved region commits and
+    zeroes 2 MB. For a region sized for a limit (`CHAR_LIMIT`, ...) but usually filled
+    to a few kilobytes, use `reserve_small` (engine/chars.asm), which keeps it on 4 KB
+    pages: the character arrays alone cost 2-3 ms of kernel time per run before.
 - **Errors:**
   - `FAIL label` returns `OUT_ERROR` with the message at `label` (define it with
     `STR label, "text"`). Rust prints `Error: <text>`, so match Rust's message exactly.
