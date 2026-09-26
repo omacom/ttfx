@@ -145,23 +145,11 @@ sweep_build:
     mov     ecx, NONE
     call    scene_new
     mov     r14d, eax
-    xor     r15d, r15d
-.gray:
-    cmp     r15, [rbx + SWEEP.symbol_count]
-    jae     .gray_done
-    mov     edi, SW_GRAY_COUNT
-    call    rng_below
-    mov     rdi, [sw_gray_memo]
-    lea     rsi, [sw_grays]
-    mov     edx, SW_GRAY_COUNT
-    call    sw_memo_visual
-    mov     esi, eax
-    mov     edi, r14d
-    mov     edx, 5
-    call    scene_add_frame_visual
-    inc     r15
-    jmp     .gray
-.gray_done:
+    mov     edi, eax
+    mov     rsi, [sw_gray_memo]
+    lea     rdx, [sw_grays]
+    mov     ecx, SW_GRAY_COUNT
+    call    sw_symbol_frames
     mov     edi, r14d
     mov     rsi, [ch_sym]
     mov     rsi, [rsi + rbp * 8]
@@ -180,23 +168,11 @@ sweep_build:
     mov     [rcx + rbp * 8], r14d
     mov     [rcx + rbp * 8 + 4], eax
     mov     r14d, eax
-    xor     r15d, r15d
-.color:
-    cmp     r15, [rbx + SWEEP.symbol_count]
-    jae     .color_done
-    mov     rdi, [sw_palette_len]
-    call    rng_below
-    mov     rdi, [sw_color_memo]
-    mov     rsi, [sw_palette]
-    mov     rdx, [sw_palette_len]
-    call    sw_memo_visual
-    mov     esi, eax
-    mov     edi, r14d
-    mov     edx, 5
-    call    scene_add_frame_visual
-    inc     r15
-    jmp     .color
-.color_done:
+    mov     edi, eax
+    mov     rsi, [sw_color_memo]
+    mov     rdx, [sw_palette]
+    mov     rcx, [sw_palette_len]
+    call    sw_symbol_frames
     mov     edi, r14d
     mov     rsi, [ch_sym]
     mov     rsi, [rsi + rbp * 8]
@@ -232,31 +208,79 @@ sweep_build:
     pop     rbx
     ret
 
-; sw_memo_visual(eax=color index, rdi=memo, rsi=colors, rdx=color count;
-; r15 = symbol index) -> eax = the (symbol, color) visual, no bg, no attrs.
-sw_memo_visual:
+; sw_symbol_frames(edi=scene, rsi=memo, rdx=colors, rcx=color count): a
+; 5-tick frame per sweep symbol, each in choice(colors) - the draws in
+; symbol order, then the (symbol, color) visuals from the memo (made on
+; first use; no bg, no attrs).
+%define SW_CHUNK    64
+sw_symbol_frames:
     push    rbx
+    push    rbp
     push    r12
-    sub     rsp, 8
-    mov     rbx, rdi
-    imul    rdx, r15
-    lea     r12, [rdx + rax]            ; memo index
-    mov     edx, [rbx + r12 * 4]
-    test    edx, edx
-    jnz     .hit
-    mov     rdi, [rsi + rax * 8]
-    mov     rcx, [effect_config]
-    mov     rcx, [rcx + SWEEP.symbols]
-    mov     rdx, [rcx + r15 * 8]
+    push    r13
+    push    r14
+    push    r15
+    sub     rsp, SW_CHUNK * 4 + 8
+    mov     ebp, edi
+    mov     r12, rsi
+    mov     r13, rdx
+    mov     r14, rcx
+    xor     r15d, r15d                  ; symbol index
+.chunk:
+    mov     rax, [effect_config]
+    mov     rbx, [rax + SWEEP.symbol_count]
+    sub     rbx, r15
+    jbe     .done
+    mov     eax, SW_CHUNK
+    cmp     rbx, rax
+    cmova   rbx, rax                    ; this chunk's symbols
+    mov     rdi, r14
+    mov     rsi, rsp
+    mov     rdx, rbx
+    call    rng_below_fill
+    ; color index -> visual, in place
+    xor     ecx, ecx
+.visual:
+    mov     eax, [rsp + rcx * 4]        ; color index
+    lea     rdx, [r15 + rcx]
+    imul    rdx, r14
+    add     rdx, rax                    ; memo index
+    mov     r8d, [r12 + rdx * 4]
+    test    r8d, r8d
+    jnz     .known
+    push    rcx
+    push    rdx
+    mov     rdi, [r13 + rax * 8]
+    mov     rax, [effect_config]
+    mov     rax, [rax + SWEEP.symbols]
+    lea     rdx, [r15 + rcx]
+    mov     rdx, [rax + rdx * 8]
     mov     rsi, NONE
     xor     ecx, ecx
     call    visual_make
-    mov     [rbx + r12 * 4], eax
-    mov     edx, eax
-.hit:
-    mov     eax, edx
-    add     rsp, 8
+    pop     rdx
+    pop     rcx
+    mov     [r12 + rdx * 4], eax
+    mov     r8d, eax
+.known:
+    mov     [rsp + rcx * 4], r8d
+    inc     ecx
+    cmp     rcx, rbx
+    jb      .visual
+    mov     edi, ebp
+    mov     rsi, rsp
+    mov     edx, ebx
+    mov     ecx, 5
+    call    visual_frames
+    add     r15, rbx
+    jmp     .chunk
+.done:
+    add     rsp, SW_CHUNK * 4 + 8
+    pop     r15
+    pop     r14
+    pop     r13
     pop     r12
+    pop     rbp
     pop     rbx
     ret
 

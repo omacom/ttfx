@@ -1083,6 +1083,43 @@ canvas_random_column:
     mov     rsi, [canvas_right]
     jmp     rng_randint
 
+; rng_below_fill(rdi=n > 0, rsi=u32 out, rdx=count): count rng_below(n)
+; draws in a row, stored in order - the same draws, without a call and the
+; batch position's memory round trip per draw. Clobbers rax, rcx, rdx, rsi,
+; rdi, r8-r11.
+rng_below_fill:
+    test    rdx, rdx
+    jz      .none
+    push    rbx
+    push    r12
+    lea     rax, [rdi - 1]
+    xor     ecx, ecx                    ; bit_length(n - 1)
+    bsr     rax, rax
+    jz      .bits
+    lea     ecx, [rax + 1]
+.bits:
+    mov     eax, 1
+    cmp     ecx, eax
+    cmovb   ecx, eax                    ; at least one bit
+    neg     ecx
+    add     ecx, 64                     ; the shift
+    lea     r8, [rsi + rdx * 4]         ; the end
+    RNG_OPEN rbx, r12
+.draw:
+    RNG_TAKE rax, rbx, r12
+    shr     rax, cl
+    cmp     rax, rdi
+    jae     .draw                       ; rejected
+    mov     [rsi], eax
+    add     rsi, 4
+    cmp     rsi, r8
+    jb      .draw
+    RNG_CLOSE rbx
+    pop     r12
+    pop     rbx
+.none:
+    ret
+
 ; canvas_random_row(edi=within text) -> rax  (Canvas.random_row)
 canvas_random_row:
     test    edi, edi
