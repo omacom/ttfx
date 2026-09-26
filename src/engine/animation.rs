@@ -2,7 +2,7 @@
 //! Scene/Animation stepping that fires events lives on EngineCtx (ctx.rs);
 //! everything here is state plus event-free logic.
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
 use crate::utils::ansi::{self, ColorCode};
@@ -54,7 +54,119 @@ fn resolve_color_code(
 thread_local! {
     /// Reused assembly buffer for CharacterVisual::new's SGR string.
     static FORMAT_SCRATCH: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+    /// Live visuals, one per distinct symbol and styling, shared by every
+    /// frame that shows them (beams: 227,002 frames, 378 visuals). Weak
+    /// references, swept as the table grows, so effects that keep making
+    /// new colors do not accumulate dead ones.
+    static SHARED_VISUALS: std::cell::RefCell<SharedVisuals> = std::cell::RefCell::new(SharedVisuals {
+        table: HashMap::new(),
+        sweep_at: SharedVisuals::MIN_SWEEP,
+    });
 }
+
+struct SharedVisuals {
+    table: HashMap<VisualKey, std::rc::Weak<CharacterVisual>>,
+    /// Size at which dead entries are dropped; doubles after each sweep.
+    sweep_at: usize,
+}
+
+impl SharedVisuals {
+    const MIN_SWEEP: usize = 1024;
+
+    fn get(&self, symbol: &str, params: &VisualParams) -> Option<Rc<CharacterVisual>> {
+        self.table.get(&(symbol, params) as &dyn VisualLookup)?.upgrade()
+    }
+
+    fn insert(&mut self, key: VisualKey, visual: &Rc<CharacterVisual>) {
+        self.table.insert(key, Rc::downgrade(visual));
+        if self.table.len() >= self.sweep_at {
+            self.table.retain(|_, weak| weak.strong_count() > 0);
+            self.sweep_at = (self.table.len() * 2).max(SharedVisuals::MIN_SWEEP);
+        }
+    }
+}
+
+/// Everything that determines a CharacterVisual, owned, for the share table.
+struct VisualKey {
+    symbol: Box<str>,
+    params: VisualParams,
+}
+
+/// The share table is keyed by `dyn VisualLookup`, which the owned key and a
+/// borrowed `(&str, &VisualParams)` pair both implement with the same Hash
+/// and Eq, so a lookup allocates nothing. Equality is field by field with
+/// colors compared by their ColorArg, the equality upstream gives visuals.
+trait VisualLookup {
+    fn symbol(&self) -> &str;
+    fn params(&self) -> &VisualParams;
+}
+
+impl VisualLookup for VisualKey {
+    fn symbol(&self) -> &str {
+        &self.symbol
+    }
+    fn params(&self) -> &VisualParams {
+        &self.params
+    }
+}
+
+impl VisualLookup for (&str, &VisualParams) {
+    fn symbol(&self) -> &str {
+        self.0
+    }
+    fn params(&self) -> &VisualParams {
+        self.1
+    }
+}
+
+impl<'a> std::borrow::Borrow<dyn VisualLookup + 'a> for VisualKey {
+    fn borrow(&self) -> &(dyn VisualLookup + 'a) {
+        self
+    }
+}
+
+impl std::hash::Hash for dyn VisualLookup + '_ {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.symbol().hash(state);
+        let p = self.params();
+        [p.bold, p.dim, p.italic, p.underline, p.blink, p.reverse, p.hidden, p.strike].hash(state);
+        p.colors.is_some().hash(state);
+        p.colors.as_ref().and_then(|c| c.fg_color).hash(state);
+        p.colors.as_ref().and_then(|c| c.bg_color).hash(state);
+        p.fg_color_code.hash(state);
+        p.bg_color_code.hash(state);
+    }
+}
+
+impl PartialEq for dyn VisualLookup + '_ {
+    fn eq(&self, other: &Self) -> bool {
+        let (a, b) = (self.params(), other.params());
+        self.symbol() == other.symbol()
+            && [a.bold, a.dim, a.italic, a.underline, a.blink, a.reverse, a.hidden, a.strike]
+                == [b.bold, b.dim, b.italic, b.underline, b.blink, b.reverse, b.hidden, b.strike]
+            && a.colors.is_some() == b.colors.is_some()
+            && a.colors.as_ref().and_then(|c| c.fg_color) == b.colors.as_ref().and_then(|c| c.fg_color)
+            && a.colors.as_ref().and_then(|c| c.bg_color) == b.colors.as_ref().and_then(|c| c.bg_color)
+            && a.fg_color_code == b.fg_color_code
+            && a.bg_color_code == b.bg_color_code
+    }
+}
+
+impl Eq for dyn VisualLookup + '_ {}
+
+impl std::hash::Hash for VisualKey {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (self as &dyn VisualLookup).hash(state)
+    }
+}
+
+impl PartialEq for VisualKey {
+    fn eq(&self, other: &Self) -> bool {
+        (self as &dyn VisualLookup) == (other as &dyn VisualLookup)
+    }
+}
+
+impl Eq for VisualKey {}
 
 /// Inline capacity for a formatted symbol. A 24-bit foreground and background
 /// pair plus a reset is 42 bytes, so all but pathological styling fits.
@@ -188,6 +300,21 @@ impl CharacterVisual {
         CharacterVisual::new(symbol, VisualParams::default())
     }
 
+    /// The one shared visual for this symbol and styling, built on first use.
+    /// Visuals are immutable once built and compared by content everywhere,
+    /// so sharing is not observable; it just stops every frame of every
+    /// character owning its own copy.
+    pub fn shared(symbol: &str, params: VisualParams) -> Rc<CharacterVisual> {
+        SHARED_VISUALS.with(|shared| {
+            if let Some(visual) = shared.borrow().get(symbol, &params) {
+                return visual;
+            }
+            let visual = Rc::new(CharacterVisual::new(symbol, params.clone()));
+            shared.borrow_mut().insert(VisualKey { symbol: symbol.into(), params }, &visual);
+            visual
+        })
+    }
+
     /// SGR emission in upstream's fixed order; `dim` intentionally omitted;
     /// bare symbol when nothing applies.
     fn format_symbol_into(&self, fmt: &mut String) {
@@ -309,9 +436,9 @@ impl Scene {
         if duration < 1 {
             return Err(format!("Frame duration must be at least 1. Received: {duration}"));
         }
-        let visual = CharacterVisual::new(symbol, params);
+        let visual = CharacterVisual::shared(symbol, params);
         let frame_index = self.all_frames.len();
-        self.all_frames.push(Frame { character_visual: Rc::new(visual), duration, ticks_elapsed: 0 });
+        self.all_frames.push(Frame { character_visual: visual, duration, ticks_elapsed: 0 });
         self.frames.push_back(frame_index);
         for _ in 0..duration {
             self.frame_index_map.push(frame_index);
@@ -417,6 +544,13 @@ impl Scene {
             bg_gradient.unwrap().spectrum.iter().map(|c| ColorPair::new(None, Some(c.clone()))).collect()
         };
 
+        // Every frame of the scene is known up front; size the stores once
+        // instead of letting them double their way up.
+        let frame_count = symbols.len().max(color_pairs.len());
+        self.all_frames.reserve_exact(frame_count);
+        self.frames.reserve_exact(frame_count);
+        self.frame_index_map.reserve_exact(frame_count * duration.max(0) as usize);
+
         if symbols.len() >= color_pairs.len() {
             for (symbol, colors) in cyclic_distribution(symbols, &color_pairs) {
                 self.add_frame(symbol, duration, VisualParams { colors: Some(*colors), ..Default::default() })?;
@@ -470,7 +604,7 @@ impl Animation {
             input_bg_color: None,
             input_bold: false,
             active_scene_current_step: 0,
-            current_character_visual: Rc::new(CharacterVisual::plain(input_symbol)),
+            current_character_visual: CharacterVisual::shared(input_symbol, VisualParams::default()),
         }
     }
 
@@ -651,5 +785,60 @@ impl Animation {
             round_half_even(green * 255.0) as u8,
             round_half_even(blue * 255.0) as u8,
         )
+    }
+}
+
+#[cfg(test)]
+mod shared_visual_tests {
+    use super::*;
+
+    fn params(hex: &str) -> VisualParams {
+        let color = Color::from_hex(hex).unwrap();
+        VisualParams {
+            colors: Some(ColorPair::new(Some(color), None)),
+            fg_color_code: Some(ColorCode::Rgb(hex.to_string())),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn equal_symbol_and_styling_share_one_visual() {
+        let a = CharacterVisual::shared("█", params("ff0000"));
+        let b = CharacterVisual::shared("█", params("ff0000"));
+        assert!(Rc::ptr_eq(&a, &b));
+        assert_eq!(a.formatted_symbol.as_str(), "\x1b[38;2;255;0;0m█\x1b[0m");
+    }
+
+    #[test]
+    fn different_symbol_or_styling_do_not_share() {
+        let base = CharacterVisual::shared("█", params("00ff00"));
+        assert!(!Rc::ptr_eq(&base, &CharacterVisual::shared("▀", params("00ff00"))));
+        assert!(!Rc::ptr_eq(&base, &CharacterVisual::shared("█", params("00ff01"))));
+        let mut bold = params("00ff00");
+        bold.bold = true;
+        assert!(!Rc::ptr_eq(&base, &CharacterVisual::shared("█", bold)));
+        // dim is never emitted, but it is still part of the visual
+        let mut dim = params("00ff00");
+        dim.dim = true;
+        assert!(!Rc::ptr_eq(&base, &CharacterVisual::shared("█", dim)));
+    }
+
+    #[test]
+    fn dropped_visuals_are_swept_out_of_the_table() {
+        let before = SHARED_VISUALS.with(|s| s.borrow().table.len());
+        for i in 0..(SharedVisuals::MIN_SWEEP * 4) {
+            drop(CharacterVisual::shared(&format!("{i}"), VisualParams::default()));
+        }
+        let after = SHARED_VISUALS.with(|s| s.borrow().table.len());
+        assert!(after < before + SharedVisuals::MIN_SWEEP * 2, "table kept growing: {before} -> {after}");
+    }
+
+    #[test]
+    fn scene_frames_share_visuals_across_scenes() {
+        let mut a = Scene::new("a", false, None, None, false, false);
+        let mut b = Scene::new("b", false, None, None, false, false);
+        a.add_frame("x", 1, params("123456")).unwrap();
+        b.add_frame("x", 1, params("123456")).unwrap();
+        assert!(Rc::ptr_eq(&a.all_frames[0].character_visual, &b.all_frames[0].character_visual));
     }
 }
