@@ -247,8 +247,10 @@ visual_make:
     mov     esi, msg_pool_full_len
     jmp     fatal
 
-; visual_table_grow: double the table and reinsert every entry at its
-; stored hash. Clobbers rax, rcx, rdx, rsi, rdi, r8-r11.
+; visual_table_grow: quadruple the table and reinsert every entry at its
+; stored hash (four times, not two: effects that make many visuals make
+; hundreds of thousands, and each growth rehashes them all).
+; Clobbers rax, rcx, rdx, rsi, rdi, r8-r11.
 visual_table_grow:
     push    rbx
     push    r12
@@ -258,7 +260,7 @@ visual_table_grow:
     mov     r12, [table_base]
     mov     r13d, [table_mask]
     inc     r13d                        ; old capacity
-    lea     ecx, [r13 * 2]
+    lea     ecx, [r13 * 4]
     call    visual_table_alloc
     mov     r14, [table_base]
     mov     r10d, [table_mask]
