@@ -19,15 +19,14 @@
 default rel
 bits 64
 
-; The instruction-set budget (PORTING.md "CPU tiers"). NASM's CPU levels stop
-; at Ivy Bridge and do not flag BMI or LZCNT, so they only catch part of an
-; overspend at TIERs 1-2; tools/asm/isa-audit.sh checks every tier's object
-; exactly. build.rs passes -DTTFX_NO_CPU_CHECK for its unchecked dev build.
+; The instruction-set budget (PORTING.md "CPU tiers"). Only TIER 1 has a
+; NASM CPU level that fits: NASM 3.02's levels stop at Ivy Bridge, do not
+; flag BMI or LZCNT, and its nehalem/westmere levels reject SSSE3 and SSE4.
+; tools/asm/isa-audit.sh checks every tier's object exactly. build.rs passes
+; -DTTFX_NO_CPU_CHECK for its unchecked dev build.
 %ifndef TTFX_NO_CPU_CHECK
 %if TIER == 1
 cpu x86-64
-%elif TIER == 2
-cpu nehalem
 %endif
 %endif
 

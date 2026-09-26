@@ -88,9 +88,10 @@ budget:
   build left out, is a decline (exit 3 under `TTFX_ASM=force`).
   `TTFX_ASM_SHOW_TIER=1` prints the tier chosen on stderr. The same variable picks
   the tier for `cargo test --release --test asm_diff`.
-- **Build-time checks.** At TIER 1 and 2, `ttfx.inc` sets NASM's `cpu x86-64` /
-  `cpu nehalem`. NASM's levels stop at Ivy Bridge and do not flag BMI, LZCNT or
-  TZCNT, so this only catches part of an overspend. The exact check is
+- **Build-time checks.** At TIER 1, `ttfx.inc` sets NASM's `cpu x86-64`. NASM 3.02's
+  levels stop at Ivy Bridge, do not flag BMI, LZCNT or TZCNT, and its `nehalem` and
+  `westmere` levels wrongly reject SSSE3/SSE4.1/SSE4.2, so there is no directive for
+  TIERs 2-4 and TIER 1's only catches part of an overspend. The exact check is
   `tools/asm/isa-audit.sh`, which classifies every instruction in each tier's
   object by encoding (EVEX, VEX, opmask, the 0F 38/0F 3A maps), mnemonic and
   register class, and prints each one above its tier as `file:line`. It also
