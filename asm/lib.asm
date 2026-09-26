@@ -90,6 +90,7 @@ ttfx_asm_run:
     call    update_init
     call    render_init
     call    clock_init
+    call    pipeline_plan
     call    [effect_build]
     cmp     byte [cfg_parity_dump], 0
     jne     .dump

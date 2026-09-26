@@ -211,9 +211,6 @@ render_init:
     mov     rdi, CHAR_LIMIT * 8
     call    reserve
     mov     [rs_cell], rax
-    mov     rdi, CHAR_LIMIT * 4
-    call    reserve
-    mov     [rs_handle], rax
     mov     rdi, [grid_cells]
     lea     rdi, [rdi * 8 + 64]
     call    reserve
@@ -392,6 +389,8 @@ enter_cell:
     mov     rcx, [ch_cell]
     mov     [rcx + rdi * 4], eax
     mov     rcx, [log_ptr]
+    cmp     byte [log_handles], 0
+    je      .unlogged
     mov     rdx, [ch_handle]
     mov     edx, [rdx + rdi * 4]
     mov     [rcx], edi                  ; LOG_HANDLE
@@ -407,6 +406,38 @@ enter_cell:
     mov     [rcx + 20], eax
     add     rcx, 24
     mov     [log_ptr], rcx
+    ret
+.unlogged:
+    ; the renderer reads the visual from ch_handle
+    mov     rdx, [ch_layer]
+    mov     edx, [rdx + rdi * 4]
+    mov     [rcx + 4], edx
+    mov     edx, edi
+    or      edx, LOG_LAYER
+    mov     [rcx], edx
+    xor     edx, LOG_LAYER | LOG_MOVE
+    mov     [rcx + 8], edx
+    mov     [rcx + 12], eax
+    add     rcx, 16
+    mov     [log_ptr], rcx
+    ret
+
+; handle_direct(edi=slot, eax=handle, ecx=its cell): SET_HANDLE without a
+; render thread: the cell shows the visual at once when the character owns
+; it. The grid is only the renderer's between frames, and one whose move is
+; still in the log settles when the log is replayed. Clobbers rcx.
+handle_direct:
+    push    rdx
+    mov     rdx, [owner_grid]
+    cmp     [rdx + rcx * 4], edi
+    jne     .done
+    mov     rdx, [handle_grid]
+    cmp     [rdx + rcx * 4], eax
+    je      .done
+    mov     [rdx + rcx * 4], eax
+    MARK_DIRTY rcx, rdx
+.done:
+    pop     rdx
     ret
 
 ; coordinate_changed(edi=slot): the character's current coordinate changed;
@@ -1336,11 +1367,19 @@ render_catch_up:
     mov     [log_ptr], rsi
     jmp     render_apply
 
-; pipeline_start: start the render thread when it can help: output that is
-; not paced on the real clock, at least two CPUs to run on, and no
-; TTFX_ASM_THREADS=1 (which keeps every run single-threaded, for testing).
-; Clobbers C.
-pipeline_start:
+; pipeline_plan: before the effect is built, decide whether the frames will
+; go to a render thread: output that is not paced on the real clock (and not
+; the parity dump), at least two CPUs to run on, and no TTFX_ASM_THREADS=1
+; (which keeps every run single-threaded, for testing). With one, visual
+; changes are logged for the renderer (log_handles), which keeps a visual
+; array of its own. Without, a visual change shows in the grid on the spot
+; (handle_direct), and the renderer reads ch_handle itself: it only ever
+; runs between frames. Clobbers C.
+pipeline_plan:
+    mov     rax, [ch_handle]
+    mov     [rs_handle], rax
+    cmp     byte [cfg_parity_dump], 0
+    jne     .done
     cmp     byte [clock_is_virtual], 0
     jne     .unpaced
     cmp     qword [cfg_frame_rate], 0
@@ -1382,6 +1421,18 @@ pipeline_start:
     add     rsp, 128
     cmp     ecx, 2
     jb      .done
+    mov     byte [log_handles], 1
+    mov     rdi, CHAR_LIMIT * 4
+    call    reserve
+    mov     [rs_handle], rax
+.done:
+    ret
+
+; pipeline_start: start the render thread planned for (pipeline_plan). Without
+; it, frames are rendered on the main thread. Clobbers C.
+pipeline_start:
+    cmp     byte [log_handles], 0
+    je      .done
     lea     rdi, [render_thread]
     lea     rsi, [render_tid]
     call    thread_start
@@ -1539,6 +1590,7 @@ full_blocks:    resq 1
 row_blocks:     resq 1
 render_tid:     resq 1
 pipe_running:   resb 1                  ; frames go to the render thread
+log_handles:    resb 1                  ; visual changes are logged for it
 ; what each thread writes as it goes, each on lines of its own
 alignb 64
 log_ptr:        resq 1                  ; the main side's end of the open log

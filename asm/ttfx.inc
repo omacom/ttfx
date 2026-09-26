@@ -403,13 +403,20 @@ global %1
 %define FS_SHIFT            6
 
 ; SET_HANDLE: slot edi's current visual becomes handle eax. A character with
-; a render cell logs the change. Clobbers rcx.
+; a render cell logs the change for a render thread, or without one shows
+; it in the grid (handle_direct). Clobbers rcx.
 %macro SET_HANDLE 0
     mov     rcx, [ch_handle]
     mov     [rcx + rdi * 4], eax
     mov     rcx, [ch_cell]
-    cmp     dword [rcx + rdi * 4], NONE
+    mov     ecx, [rcx + rdi * 4]
+    cmp     ecx, NONE
     je      %%done
+    cmp     byte [log_handles], 0
+    jne     %%log
+    call    handle_direct
+    jmp     %%done
+%%log:
     mov     rcx, [log_ptr]
     mov     [rcx], edi
     mov     [rcx + 4], eax
