@@ -241,7 +241,8 @@ colorshift_build:
 ; cs_symbol_handles(rdi=symbol) -> rax = the symbol's visual handles, one
 ; u32 per spectrum index (0 = not made yet): a direct-mapped memo of
 ; (symbol, spectrum color) -> visual_make handle. A colliding symbol takes
-; the entry over with a fresh array. Clobbers C.
+; the entry and its array over, cleared (visuals are interned, so remaking
+; a handle gives the same one). Clobbers C.
 cs_symbol_handles:
     mov     rax, 0x9e3779b97f4a7c15
     imul    rax, rdi
@@ -256,6 +257,17 @@ cs_symbol_handles:
     jne     .miss
     ret
 .miss:
+    mov     [rcx], rdi
+    test    rax, rax
+    jz      .fresh
+    mov     rdx, rax                    ; a collision: clear the array
+    mov     rdi, rax
+    mov     rcx, [cs_len]
+    xor     eax, eax
+    rep     stosd
+    mov     rax, rdx
+    ret
+.fresh:
     push    rcx
     push    rdi
     mov     rdi, [cs_len]
@@ -263,7 +275,6 @@ cs_symbol_handles:
     call    alloc
     pop     rdi
     pop     rcx
-    mov     [rcx], rdi
     mov     [rcx + 8], rax
     ret
 
