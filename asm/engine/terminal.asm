@@ -399,6 +399,10 @@ make_fill_characters:
     lea     rdi, [rdi * 4 + 64]
     call    reserve
     mov     [outer_fill_chars], rax
+    mov     edi, [char_count]
+    mov     rsi, [coord_map_cells]
+    sub     rsi, [input_count]          ; the fill characters to come
+    call    populate_chars
     mov     r12, 1                      ; row
 .row:
     cmp     r12, [canvas_top]
@@ -459,59 +463,60 @@ make_fill_characters:
     pop     rbx
     ret
 
-; setup_neighbors: north/east/south/west of every mapped character.
+; setup_neighbors: north/east/south/west of every mapped character, straight
+; from the grid (every cell holds a character once the fill is made).
 setup_neighbors:
     push    rbx
-    push    r12
-    push    r13
-    mov     r12, 1
+    mov     r8, [coord_map]
+    mov     r9, [canvas_right]          ; row stride
+    mov     r10, [ch_nbr]
+    mov     r11, [canvas_top]
+    mov     rbx, r9
+    shl     rbx, 2                      ; stride in bytes
+    mov     edx, 1                      ; row
 .row:
-    cmp     r12, [canvas_top]
+    cmp     rdx, r11
     jg      .done
-    mov     r13, 1
+    mov     esi, 1                      ; column
 .column:
-    cmp     r13, [canvas_right]
+    cmp     rsi, r9
     jg      .next_row
-    mov     rsi, r12
-    shl     rsi, 32
-    or      rsi, r13
-    call    coord_map_index
-    mov     rcx, [coord_map]
-    mov     ebx, [rcx + rax * 4]        ; this character
-    mov     r8, rbx
-    shl     r8, 4
-    add     r8, [ch_nbr]
-    lea     rsi, [r12 + 1]              ; north: row + 1
-    shl     rsi, 32
-    or      rsi, r13
-    call    char_at_input_coord
-    mov     [r8 + NBR_NORTH], eax
-    mov     rsi, r12
-    shl     rsi, 32
-    lea     rax, [r13 + 1]              ; east: column + 1
-    or      rsi, rax
-    call    char_at_input_coord
-    mov     [r8 + NBR_EAST], eax
-    lea     rsi, [r12 - 1]              ; south: row - 1
-    shl     rsi, 32
-    or      rsi, r13
-    call    char_at_input_coord
-    mov     [r8 + NBR_SOUTH], eax
-    mov     rsi, r12
-    shl     rsi, 32
-    lea     rax, [r13 - 1]              ; west: column - 1
-    mov     eax, eax
-    or      rsi, rax
-    call    char_at_input_coord
-    mov     [r8 + NBR_WEST], eax
-    inc     r13
+    mov     ecx, [r8]                   ; this character
+    shl     rcx, 4
+    add     rcx, r10
+    mov     eax, NONE                   ; north: row + 1
+    cmp     rdx, r11
+    jge     .north
+    mov     eax, [r8 + rbx]
+.north:
+    mov     [rcx + NBR_NORTH], eax
+    mov     eax, NONE                   ; east: column + 1
+    cmp     rsi, r9
+    jge     .east
+    mov     eax, [r8 + 4]
+.east:
+    mov     [rcx + NBR_EAST], eax
+    mov     eax, NONE                   ; south: row - 1
+    cmp     rdx, 1
+    jle     .south
+    mov     rax, r8
+    sub     rax, rbx
+    mov     eax, [rax]
+.south:
+    mov     [rcx + NBR_SOUTH], eax
+    mov     eax, NONE                   ; west: column - 1
+    cmp     rsi, 1
+    jle     .west
+    mov     eax, [r8 - 4]
+.west:
+    mov     [rcx + NBR_WEST], eax
+    add     r8, 4
+    inc     rsi
     jmp     .column
 .next_row:
-    inc     r12
+    inc     rdx
     jmp     .row
 .done:
-    pop     r13
-    pop     r12
     pop     rbx
     ret
 

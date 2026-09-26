@@ -25,32 +25,99 @@ input_init:
     jmp     finish_lines
 
 ; count_capacity: an upper bound on parsed characters (tabs expand to at most
-; tab_width cells).
+; tab_width cells), counted per byte: the input is valid UTF-8, so every
+; codepoint is one byte outside 0x80-0xBF. Also finds whether the input is
+; plain - no ESC and no carriage return - so the cursor only ever moves
+; forward and down and no cell is written twice (see put_char).
 count_capacity:
     mov     rsi, [input_ptr]
     mov     r9, rsi
     add     r9, [input_len]
-    xor     r10d, r10d
+    xor     r10d, r10d                  ; codepoints
+    xor     r11d, r11d                  ; tabs
+    xor     r8d, r8d                    ; newlines
+    xor     edi, edi                    ; ESC or CR seen
 .loop:
     cmp     rsi, r9
     jae     .done
-    call    utf8_decode
-    add     rsi, rdx
+    movzx   eax, byte [rsi]
+    inc     rsi
+    mov     ecx, eax
+    and     ecx, 0xC0
+    cmp     ecx, 0x80
+    je      .loop                       ; continuation byte
+    inc     r10
+    cmp     eax, 13
+    ja      .check_escape
     cmp     eax, 9
     je      .tab
-    inc     r10
+    cmp     eax, 10
+    je      .newline
+    cmp     eax, 13
+    jne     .loop
+    mov     edi, 1
+    jmp     .loop
+.check_escape:
+    cmp     eax, 0x1b
+    jne     .loop
+    mov     edi, 1
     jmp     .loop
 .tab:
-    add     r10, [cfg_tab_width]
+    inc     r11
+    jmp     .loop
+.newline:
+    inc     r8
     jmp     .loop
 .done:
-    add     r10, 2
+    mov     rax, [cfg_tab_width]
+    dec     rax
+    imul    rax, r11
+    lea     r10, [r10 + rax + 2]
     mov     [char_capacity], r10
+    test    edi, edi
+    jnz     .mapped
+    ; plain: per row, the count of characters written to it
+    lea     rdi, [r8 * 8 + 64]
+    call    alloc
+    mov     [plain_rows], rax
+.mapped:
+    mov     edi, [char_count]
+    mov     rsi, [char_capacity]
+    jmp     populate_chars
+
+; populate_chars(edi=first slot, rsi=count): commit the character arrays'
+; pages for these slots with one call per array rather than a page fault
+; per page (MADV_POPULATE_WRITE; an old kernel refuses it, and the pages
+; fault in as before). Clobbers rax, rcx, rdx, rsi, rdi, r8-r11.
+populate_chars:
+    mov     r8d, edi
+    mov     r9, rsi
+%macro POPULATE_FIELD 3
+    imul    rdi, r8, %2
+    add     rdi, [%1]
+    imul    rsi, r9, %2
+    call    populate
+%endmacro
+    CHAR_FIELDS POPULATE_FIELD
+    ret
+
+; populate(rdi=start, rsi=bytes): MADV_POPULATE_WRITE over the pages holding
+; [start, start + bytes). Clobbers rax, rcx, rdx, rsi, rdi, r11.
+%define MADV_POPULATE_WRITE 23
+populate:
+    mov     rax, rdi
+    and     rdi, -4096
+    sub     rax, rdi
+    add     rsi, rax
+    mov     edx, MADV_POPULATE_WRITE
+    SYSCALL SYS_madvise
     ret
 
 ; screen_init: an open-addressing map (row << 32 | column) -> slot, sized
 ; for every parsed character at half load.
 screen_init:
+    cmp     qword [plain_rows], 0
+    jne     .plain
     mov     rax, [char_capacity]
     add     rax, rax
 %if TIER >= 3
@@ -69,6 +136,7 @@ screen_init:
     shl     rdi, 4                      ; 16 bytes: key, slot
     call    reserve
     mov     [screen], rax
+.plain:
     ret
 
 ; screen_slot(rdi=key) -> rax = pointer to the entry for key (empty or found).
@@ -173,8 +241,17 @@ preprocess:
     ret
 
 ; put_char(rdi=packed symbol): build_character with the current SGR state at
-; (row r12, column r13), then advance.
+; (row r12, column r13), then advance. Plain input writes its cells in
+; row-major order, each once, so it only counts them per row (build_lines
+; lays them out); otherwise the screen map finds the cell.
 put_char:
+    mov     rax, [plain_rows]
+    test    rax, rax
+    jz      .mapped
+    inc     qword [rax + r12 * 8]
+    call    build_character
+    jmp     .extent
+.mapped:
     push    rdi
     mov     rdi, r12
     shl     rdi, 32
@@ -197,6 +274,7 @@ put_char:
     mov     [r15], rcx
     inc     eax
     mov     [r15 + 8], eax
+.extent:
     cmp     r12, [max_row]
     jbe     .col
     mov     [max_row], r12
@@ -818,6 +896,8 @@ build_lines:
     lea     rdi, [rdi * 4 + 64]
     call    reserve
     mov     [cells], rax
+    cmp     qword [plain_rows], 0
+    jne     .plain
     xor     r12d, r12d                  ; row
 .row:
     cmp     r12, rbx
@@ -852,6 +932,44 @@ build_lines:
 .next_row:
     inc     r12
     jmp     .row
+.plain:
+    ; each row's characters in slot order from its first column, then
+    ; padding to the width
+    mov     rdi, [cells]
+    xor     ecx, ecx                    ; next slot (input characters come first)
+    xor     r12d, r12d
+.plain_row:
+    cmp     r12, rbx
+    jae     .done
+    mov     rax, r12
+    imul    rax, r14
+    mov     rdx, [row_start]
+    mov     [rdx + r12 * 8], rax
+    mov     rdx, [row_len]
+    mov     [rdx + r12 * 8], r14
+    mov     rdx, [plain_rows]
+    mov     r8, [rdx + r12 * 8]         ; characters in the row
+    mov     r9, r14
+    sub     r9, r8                      ; padding
+    add     [next_character_id], r9d
+.plain_char:
+    test    r8, r8
+    jz      .plain_pad
+    mov     [rdi], ecx
+    add     rdi, 4
+    inc     ecx
+    dec     r8
+    jmp     .plain_char
+.plain_pad:
+    test    r9, r9
+    jz      .plain_next
+    mov     dword [rdi], NONE
+    add     rdi, 4
+    dec     r9
+    jmp     .plain_pad
+.plain_next:
+    inc     r12
+    jmp     .plain_row
 .done:
     pop     r14
     pop     r13
@@ -1171,6 +1289,7 @@ max_row:            resq 1
 max_col:            resq 1
 screen:             resq 1
 screen_mask:        resq 1
+plain_rows:         resq 1          ; plain input: characters per row
 sgr_fg:             resq 1
 sgr_bg:             resq 1
 sgr_standard:       resq 1
