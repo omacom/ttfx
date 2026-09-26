@@ -312,13 +312,22 @@ scene_append_frame:
     ret
 
 ; scene_load_head(r8=scene record): refresh the head cache after the head
-; moved. Clobbers rax, rcx.
+; moved, and prefetch the frame after it. Frames retire long after they
+; were written, and between two retirements of one scene every other
+; character's are walked, so the next frame is out of cache by then; one
+; retirement ahead is soon enough and late enough to stay cached.
+; Clobbers rax, rcx.
 scene_load_head:
     mov     ecx, [r8 + SC_HEAD]
     cmp     ecx, [r8 + SC_COUNT]
     jae     .done
+    lea     eax, [rcx + 1]
     shl     rcx, FRAME_SHIFT
     add     rcx, [r8 + SC_FRAMES]
+    cmp     eax, [r8 + SC_COUNT]
+    jae     .last
+    prefetcht0 [rcx + FRAME_SIZE]
+.last:
     mov     eax, [rcx + FR_HANDLE]
     mov     [r8 + SC_HEAD_HANDLE], eax
     mov     eax, [rcx + FR_DURATION]
