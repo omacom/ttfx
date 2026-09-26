@@ -1,0 +1,242 @@
+[
+  {
+    "effect": "binarypath",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "1248937581;;cycles:u;208050744;83.00;;\n2300366108;;instructions:u;208075358;83.00;;\n497713688;;branches:u;208063074;83.00;;\n11336246;;branch-misses:u;208844145;83.00;;\n86506657;;L1-dcache-load-misses:u;209071371;83.00;;\n43497676;;cache-misses:u;208196948;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "1304842525;;cycles:u;216089374;83.00;;\n2338124144;;instructions:u;216834373;83.00;;\n496567938;;branches:u;217198404;83.00;;\n11416283;;branch-misses:u;217135184;83.00;;\n87207951;;L1-dcache-load-misses:u;217148763;83.00;;\n43543356;;cache-misses:u;216299322;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "1298099202;;cycles:u;217701691;83.00;;\n2335487501;;instructions:u;217740337;83.00;;\n495190896;;branches:u;217732249;83.00;;\n11379410;;branch-misses:u;218254326;83.00;;\n87261022;;L1-dcache-load-misses:u;218730992;83.00;;\n43449240;;cache-misses:u;218448195;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "1276819066;;cycles:u;213180201;83.00;;\n2309140235;;instructions:u;213302705;83.00;;\n496284774;;branches:u;213181538;83.00;;\n11372065;;branch-misses:u;213270879;83.00;;\n86752367;;L1-dcache-load-misses:u;214198051;83.00;;\n43280428;;cache-misses:u;214012366;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "1271619379;;cycles:u;211278912;83.00;;\n2312574512;;instructions:u;211248406;83.00;;\n495844239;;branches:u;212221873;83.00;;\n11406014;;branch-misses:u;212267017;83.00;;\n86604018;;L1-dcache-load-misses:u;212240811;83.00;;\n43359384;;cache-misses:u;212082126;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "1197341496;;cycles:u;200078316;83.00;;\n2337613646;;instructions:u;199955487;83.00;;\n495020653;;branches:u;200046997;83.00;;\n11189456;;branch-misses:u;200014371;83.00;;\n86429619;;L1-dcache-load-misses:u;199991541;83.00;;\n45231620;;cache-misses:u;199949868;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 3,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "1136997927;;cycles:u;187946350;83.00;;\n2320976971;;instructions:u;187968419;83.00;;\n498506190;;branches:u;187958048;83.00;;\n11135821;;branch-misses:u;188053701;83.00;;\n85652115;;L1-dcache-load-misses:u;188918522;83.00;;\n44346139;;cache-misses:u;188873060;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 3,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "1167783893;;cycles:u;192609843;83.00;;\n2352476231;;instructions:u;192617573;83.00;;\n493138714;;branches:u;192628428;83.00;;\n11106871;;branch-misses:u;193241744;83.00;;\n86994502;;L1-dcache-load-misses:u;193623795;83.00;;\n45424507;;cache-misses:u;193367832;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 4,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "1164339250;;cycles:u;193181334;83.00;;\n2336488531;;instructions:u;193181641;83.00;;\n496126821;;branches:u;193301895;83.00;;\n11171638;;branch-misses:u;193326135;83.00;;\n86497174;;L1-dcache-load-misses:u;194221918;83.00;;\n44970255;;cache-misses:u;193883422;83.00;;\n"
+  },
+  {
+    "effect": "binarypath",
+    "run": 4,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "1136315750;;cycles:u;189688678;83.00;;\n2306357104;;instructions:u;189730504;83.00;;\n495901350;;branches:u;189699048;83.00;;\n11236270;;branch-misses:u;189705622;83.00;;\n85711892;;L1-dcache-load-misses:u;189796348;83.00;;\n44748528;;cache-misses:u;189889000;83.00;;\n"
+  },
+  {
+    "effect": "blackhole",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "380057114;;cycles:u;63021178;82.00;;\n733295308;;instructions:u;63057667;82.00;;\n147261132;;branches:u;63077920;82.00;;\n3120824;;branch-misses:u;63627191;83.00;;\n33499681;;L1-dcache-load-misses:u;64058068;84.00;;\n6495589;;cache-misses:u;63394836;83.00;;\n"
+  },
+  {
+    "effect": "blackhole",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "389117371;;cycles:u;65206063;83.00;;\n744013450;;instructions:u;65161798;83.00;;\n143574554;;branches:u;65236863;83.00;;\n3105334;;branch-misses:u;65188982;83.00;;\n33608418;;L1-dcache-load-misses:u;65183079;83.00;;\n6533715;;cache-misses:u;64979420;83.00;;\n"
+  },
+  {
+    "effect": "blackhole",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "382098686;;cycles:u;63785664;83.00;;\n727021927;;instructions:u;63811667;83.00;;\n148345688;;branches:u;63812096;83.00;;\n3085055;;branch-misses:u;63815923;83.00;;\n33509449;;L1-dcache-load-misses:u;64215702;83.00;;\n6208733;;cache-misses:u;64601873;84.00;;\n"
+  },
+  {
+    "effect": "blackhole",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "398646249;;cycles:u;65772761;82.00;;\n740186959;;instructions:u;66339784;83.00;;\n145274236;;branches:u;66770587;83.00;;\n3085513;;branch-misses:u;66827839;83.00;;\n33944195;;L1-dcache-load-misses:u;66771429;83.00;;\n6015153;;cache-misses:u;66437845;83.00;;\n"
+  },
+  {
+    "effect": "blackhole",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "395137106;;cycles:u;65859283;83.00;;\n739062108;;instructions:u;66141134;83.00;;\n143436843;;branches:u;66155770;83.00;;\n3085805;;branch-misses:u;66176790;83.00;;\n33689125;;L1-dcache-load-misses:u;66151200;83.00;;\n6087516;;cache-misses:u;65276818;82.00;;\n"
+  },
+  {
+    "effect": "blackhole",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "381188595;;cycles:u;62714793;82.00;;\n737133449;;instructions:u;62612141;82.00;;\n146480661;;branches:u;62646737;82.00;;\n3121032;;branch-misses:u;63564072;84.00;;\n33625910;;L1-dcache-load-misses:u;63626860;84.00;;\n6282397;;cache-misses:u;63126162;83.00;;\n"
+  },
+  {
+    "effect": "blackhole",
+    "run": 3,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "392275234;;cycles:u;65685561;83.00;;\n741712757;;instructions:u;66063786;83.00;;\n145261511;;branches:u;66073273;83.00;;\n3089268;;branch-misses:u;66086973;83.00;;\n33780947;;L1-dcache-load-misses:u;66082510;83.00;;\n6358602;;cache-misses:u;65423087;82.00;;\n"
+  },
+  {
+    "effect": "blackhole",
+    "run": 3,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "377105135;;cycles:u;62014863;82.00;;\n733538678;;instructions:u;62017140;82.00;;\n147559052;;branches:u;62199459;82.00;;\n3134139;;branch-misses:u;62993866;83.00;;\n33489792;;L1-dcache-load-misses:u;63042374;84.00;;\n6658396;;cache-misses:u;62813158;83.00;;\n"
+  },
+  {
+    "effect": "blackhole",
+    "run": 4,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "383984975;;cycles:u;64051514;83.00;;\n746874059;;instructions:u;64026305;83.00;;\n144317012;;branches:u;64085800;83.00;;\n3096706;;branch-misses:u;64034332;83.00;;\n33799831;;L1-dcache-load-misses:u;64753389;84.00;;\n6246999;;cache-misses:u;64258720;83.00;;\n"
+  },
+  {
+    "effect": "blackhole",
+    "run": 4,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "381346576;;cycles:u;62740233;82.00;;\n734879497;;instructions:u;62718951;82.00;;\n147405063;;branches:u;62731818;82.00;;\n3125218;;branch-misses:u;63182257;83.00;;\n33389904;;L1-dcache-load-misses:u;63712107;84.00;;\n6423787;;cache-misses:u;63579354;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "659730836;;cycles:u;106335201;82.00;;\n1128034078;;instructions:u;106760849;83.00;;\n224535039;;branches:u;107373792;83.00;;\n7203778;;branch-misses:u;107346953;83.00;;\n48338081;;L1-dcache-load-misses:u;107300126;83.00;;\n16276918;;cache-misses:u;106612779;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "655157905;;cycles:u;105576845;82.00;;\n1111948247;;instructions:u;106282344;83.00;;\n226831561;;branches:u;106538399;83.00;;\n7225157;;branch-misses:u;106558308;83.00;;\n47724552;;L1-dcache-load-misses:u;106630919;83.00;;\n16318298;;cache-misses:u;106194755;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "651589106;;cycles:u;105667674;83.00;;\n1121662370;;instructions:u;106029718;83.00;;\n225017928;;branches:u;106107878;83.00;;\n7203264;;branch-misses:u;106010754;83.00;;\n47852730;;L1-dcache-load-misses:u;106057062;83.00;;\n16413474;;cache-misses:u;105367734;82.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "644384579;;cycles:u;103570220;83.00;;\n1112512769;;instructions:u;103574346;83.00;;\n226680636;;branches:u;103488378;83.00;;\n7231112;;branch-misses:u;103589797;83.00;;\n47317727;;L1-dcache-load-misses:u;104197282;83.00;;\n16341822;;cache-misses:u;104339852;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "663556390;;cycles:u;107086018;82.00;;\n1131270241;;instructions:u;107097177;82.00;;\n225819935;;branches:u;107064666;82.00;;\n7329558;;branch-misses:u;108027978;83.00;;\n47847242;;L1-dcache-load-misses:u;108065741;83.00;;\n16486444;;cache-misses:u;108085395;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "642766019;;cycles:u;103467665;83.00;;\n1116312979;;instructions:u;103404973;83.00;;\n225962473;;branches:u;103461938;83.00;;\n7235307;;branch-misses:u;103449723;83.00;;\n47582760;;L1-dcache-load-misses:u;104397950;83.00;;\n16827813;;cache-misses:u;103999246;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 3,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "657322376;;cycles:u;105768933;82.00;;\n1127822728;;instructions:u;106587542;83.00;;\n224537295;;branches:u;106751950;83.00;;\n7210099;;branch-misses:u;106740118;83.00;;\n48228327;;L1-dcache-load-misses:u;106839182;83.00;;\n16241644;;cache-misses:u;106210930;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 3,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "642836150;;cycles:u;104144376;83.00;;\n1110532096;;instructions:u;104218703;83.00;;\n227513253;;branches:u;104124778;83.00;;\n7302291;;branch-misses:u;104182666;83.00;;\n47529902;;L1-dcache-load-misses:u;104307897;83.00;;\n16366590;;cache-misses:u;104908405;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 4,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "655336793;;cycles:u;105497423;82.00;;\n1131145762;;instructions:u;106141018;83.00;;\n224486502;;branches:u;106493717;83.00;;\n7285254;;branch-misses:u;106492322;83.00;;\n47985496;;L1-dcache-load-misses:u;106542276;83.00;;\n16370832;;cache-misses:u;106475199;83.00;;\n"
+  },
+  {
+    "effect": "rings",
+    "run": 4,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "649466371;;cycles:u;105383523;83.00;;\n1112877674;;instructions:u;105432591;83.00;;\n227657041;;branches:u;105393750;83.00;;\n7243438;;branch-misses:u;105401026;83.00;;\n47733129;;L1-dcache-load-misses:u;105350358;83.00;;\n16409160;;cache-misses:u;105001787;83.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "194841807;;cycles:u;35543070;81.00;;\n391324939;;instructions:u;36291079;83.00;;\n72715127;;branches:u;36532710;83.00;;\n2278810;;branch-misses:u;36556407;83.00;;\n23843511;;L1-dcache-load-misses:u;36551155;83.00;;\n239304;;cache-misses:u;36293344;83.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 0,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "207265963;;cycles:u;38203017;82.00;;\n396645082;;instructions:u;38173911;82.00;;\n71127669;;branches:u;38180724;82.00;;\n2301137;;branch-misses:u;38585743;83.00;;\n24157759;;L1-dcache-load-misses:u;39215668;84.00;;\n277551;;cache-misses:u;38550637;83.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "201542410;;cycles:u;37040431;82.00;;\n390767844;;instructions:u;37002920;82.00;;\n72034011;;branches:u;37338748;82.00;;\n2280732;;branch-misses:u;38020777;84.00;;\n23866923;;L1-dcache-load-misses:u;38031382;84.00;;\n263225;;cache-misses:u;37623192;83.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 1,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "200246049;;cycles:u;37351962;82.00;;\n396846287;;instructions:u;37284599;82.00;;\n71893422;;branches:u;37693734;83.00;;\n2283148;;branch-misses:u;38334181;84.00;;\n23748023;;L1-dcache-load-misses:u;38295429;84.00;;\n257204;;cache-misses:u;37609175;82.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "199526301;;cycles:u;36970240;82.00;;\n397753678;;instructions:u;36962495;82.00;;\n71804247;;branches:u;37213032;82.00;;\n2278832;;branch-misses:u;37953410;84.00;;\n23636919;;L1-dcache-load-misses:u;37962235;84.00;;\n281005;;cache-misses:u;37795913;84.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 2,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "192228000;;cycles:u;35590138;83.00;;\n396093897;;instructions:u;35590049;83.00;;\n71298048;;branches:u;35597139;83.00;;\n2288224;;branch-misses:u;35603455;83.00;;\n23631901;;L1-dcache-load-misses:u;35586770;83.00;;\n194150;;cache-misses:u;35004494;82.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 3,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "193821884;;cycles:u;35168420;82.00;;\n392255178;;instructions:u;35484141;83.00;;\n72287149;;branches:u;35469383;83.00;;\n2286491;;branch-misses:u;35485403;83.00;;\n23868116;;L1-dcache-load-misses:u;35481957;83.00;;\n238892;;cache-misses:u;35329661;83.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 3,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "201334425;;cycles:u;36845246;82.00;;\n399728133;;instructions:u;36845024;82.00;;\n70132811;;branches:u;37668448;84.00;;\n2295428;;branch-misses:u;37837641;84.00;;\n24104546;;L1-dcache-load-misses:u;37833345;84.00;;\n218940;;cache-misses:u;37144396;82.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 4,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+    "counters": "200503313;;cycles:u;36452200;82.00;;\n402513615;;instructions:u;36829094;82.00;;\n70083943;;branches:u;37432885;84.00;;\n2311201;;branch-misses:u;37427935;84.00;;\n23961260;;L1-dcache-load-misses:u;37445387;84.00;;\n182562;;cache-misses:u;36568419;82.00;;\n"
+  },
+  {
+    "effect": "bouncyballs",
+    "run": 4,
+    "binary": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+    "counters": "193452071;;cycles:u;35295015;82.00;;\n391780081;;instructions:u;35623202;83.00;;\n72484898;;branches:u;35630115;83.00;;\n2284408;;branch-misses:u;35603332;83.00;;\n23909678;;L1-dcache-load-misses:u;35590882;83.00;;\n215168;;cache-misses:u;35315264;82.00;;\n"
+  }
+]

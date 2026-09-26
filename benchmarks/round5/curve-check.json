@@ -1,0 +1,4455 @@
+{
+  "baseline_sha256": "0c5c2c30d433acd298281cf4414ffa9b8620f513bca5de5c0adab19c38125bfa",
+  "candidate_sha256": "a93e75708d8fa150986181d179d666f83af26047d8e747586d0f7130a6a6f63f",
+  "comparison": "exit status, stdout/stderr SHA-256 and byte count; forced assembly, CPU affinity 2,4; single and automatic threads",
+  "results": [
+    {
+      "effect": "beams",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "beams"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "10424097 d0220bfce3b3c2df30d85aaec637dc5e0ba91ffe9d214f72c79d3fe5e0022c04\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "10424097 d0220bfce3b3c2df30d85aaec637dc5e0ba91ffe9d214f72c79d3fe5e0022c04\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "binarypath",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "binarypath"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "7657580 cfb50e67ba82781aefd8cce2ec0723370d3c730e83c0ee57bfe726eb951bc7b2\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "7657580 cfb50e67ba82781aefd8cce2ec0723370d3c730e83c0ee57bfe726eb951bc7b2\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "blackhole",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "blackhole"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "6653714 1611434d7bde8e68dc631b0493ddde659c5214dbf0d6b4b75efcec56b38f8222\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "6653714 1611434d7bde8e68dc631b0493ddde659c5214dbf0d6b4b75efcec56b38f8222\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "bouncyballs",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "bouncyballs"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "4400725 3f24421714f31d1d5afcd37ecbd58dd21819d198734a7915572d072880e62a15\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "4400725 3f24421714f31d1d5afcd37ecbd58dd21819d198734a7915572d072880e62a15\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "bubbles",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "bubbles"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "6499533 d88b2b5309f524d04086e920e893f38e3ddad3faf1debb5dea92de0a1e73c551\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "6499533 d88b2b5309f524d04086e920e893f38e3ddad3faf1debb5dea92de0a1e73c551\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "burn",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "burn"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "4584221 b70391edfb6fa5b0e594a63c54af28b46ed037030de5c7a743ab9bbfe42eba74\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "4584221 b70391edfb6fa5b0e594a63c54af28b46ed037030de5c7a743ab9bbfe42eba74\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "colorshift",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "colorshift"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "5182721 870b7ee5b78f08dbde2e45ad2e74355d26ca57d625a029a176ecf51498a68b2f\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "5182721 870b7ee5b78f08dbde2e45ad2e74355d26ca57d625a029a176ecf51498a68b2f\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "crumble",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "crumble"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "3974537 070c8e3bd7e45bbff3b206ceff48ee99e760e0266b7eea69d521336157165bd9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "3974537 070c8e3bd7e45bbff3b206ceff48ee99e760e0266b7eea69d521336157165bd9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "decrypt",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "decrypt"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "7000678 e4814b4641559ad729af64422dd847047286dce90f06f0e51c2a95584209f5c3\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "7000678 e4814b4641559ad729af64422dd847047286dce90f06f0e51c2a95584209f5c3\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "errorcorrect",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "errorcorrect"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "3997873 b4fb1170b89b11f4d661209a47358ad4997b5a7553d00bb698d2dc5974b4f92a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "3997873 b4fb1170b89b11f4d661209a47358ad4997b5a7553d00bb698d2dc5974b4f92a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "expand",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "expand"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "908885 e991535bcb5c7e640f3d7c371d46d09798cb363ca44179441046b8ee36f01295\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "908885 e991535bcb5c7e640f3d7c371d46d09798cb363ca44179441046b8ee36f01295\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "fireworks",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "fireworks"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "8294454 29515bbcb6670f2aa9ed8e5bead04bd796524b04586d18d21f39f86795fd5dba\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "8294454 29515bbcb6670f2aa9ed8e5bead04bd796524b04586d18d21f39f86795fd5dba\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "highlight",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "highlight"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1305363 1f6a0a7afc8c79c6fb7a729e2309a2fd9c1268145b635af6c219d77ff7dda087\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1305363 1f6a0a7afc8c79c6fb7a729e2309a2fd9c1268145b635af6c219d77ff7dda087\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "laseretch",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "laseretch"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "6426786 95df17f57f5ae47728bda5d22b3ba995c997b9e234741bc44b53910987deaa18\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "6426786 95df17f57f5ae47728bda5d22b3ba995c997b9e234741bc44b53910987deaa18\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "matrix",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "matrix"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "35501085 caa0350a5c2b302e64cc6cd25c1dc675b4fe57f131cfab11239d48a957cd6c35\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "35501085 caa0350a5c2b302e64cc6cd25c1dc675b4fe57f131cfab11239d48a957cd6c35\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "middleout",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "middleout"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "737799 56d7bb9dd8dd41fbdca8762727b7c20a829c88bea16f7307cc34c2b28cb56f48\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "737799 56d7bb9dd8dd41fbdca8762727b7c20a829c88bea16f7307cc34c2b28cb56f48\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "orbittingvolley",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "orbittingvolley"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "8994499 a971d23440dacd8946e9c446496fd4be9210ce80d2c3c6a4d6f31b19b786628c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "8994499 a971d23440dacd8946e9c446496fd4be9210ce80d2c3c6a4d6f31b19b786628c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "overflow",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "overflow"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1907837 707c3ff523aad2e3ab82c5d11fa8f668c8b9fc506cc63a6cc189a4ac6f058af0\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1907837 707c3ff523aad2e3ab82c5d11fa8f668c8b9fc506cc63a6cc189a4ac6f058af0\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "pour",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "pour"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "2998586 6548a145be6779efa61e67f29e065d2d50626c64e2445a48bcb624a6fa3baaf7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "2998586 6548a145be6779efa61e67f29e065d2d50626c64e2445a48bcb624a6fa3baaf7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "print",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "print"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "3786924 1f1e69592f56c1114c8b6c64e438fafe60bdbf040245244c736a1884d9fe4ca7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "3786924 1f1e69592f56c1114c8b6c64e438fafe60bdbf040245244c736a1884d9fe4ca7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "rain",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "rain"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "2347098 770f46e4d37d0852b3a71625e4844512d67eba012e5133a257184cc956d06a08\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "2347098 770f46e4d37d0852b3a71625e4844512d67eba012e5133a257184cc956d06a08\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "randomsequence",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "randomsequence"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1680248 591509f36c69185e830d4cc4ab2ebe7c901004408deacd80c46ef547f562a390\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1680248 591509f36c69185e830d4cc4ab2ebe7c901004408deacd80c46ef547f562a390\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "rings",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "rings"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "11564668 280612f3c4eccf0b1f17bdd75d431a6d722c070d62e7ffd5bcb1d1d8248e75b1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "11564668 280612f3c4eccf0b1f17bdd75d431a6d722c070d62e7ffd5bcb1d1d8248e75b1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "scattered",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "scattered"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1721758 da44c9999d1bd55e1db23dd87aa16973aae76644c8519d49e68192313e5b482a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1721758 da44c9999d1bd55e1db23dd87aa16973aae76644c8519d49e68192313e5b482a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "slice",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "slice"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1490130 d0d7339c722df5cc0f91b7cea226b7a62ff11f24829903bde6eb5ab2b587cb44\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1490130 d0d7339c722df5cc0f91b7cea226b7a62ff11f24829903bde6eb5ab2b587cb44\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "slide",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "slide"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1047963 4064b0bac6fb16378c5b47099efef97680ac71a3181e1fd92f128b483f0461f4\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1047963 4064b0bac6fb16378c5b47099efef97680ac71a3181e1fd92f128b483f0461f4\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "smoke",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "smoke"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "9730044 0f5e1f9051ce014a5637478577c4f2343e33d0bb7ebbba14562f933a528c9369\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "9730044 0f5e1f9051ce014a5637478577c4f2343e33d0bb7ebbba14562f933a528c9369\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "spotlights",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "spotlights"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "6300732 462500b13ddfaac8bf0b7bfa6f741f7f2f05c4ac28d2d1c4c370e07ca870c1da\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "6300732 462500b13ddfaac8bf0b7bfa6f741f7f2f05c4ac28d2d1c4c370e07ca870c1da\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "spray",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "spray"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "3665712 823e2e9691ec2d029da03359d553ede62f458d0a00dc79f18b5bfef12920795e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "3665712 823e2e9691ec2d029da03359d553ede62f458d0a00dc79f18b5bfef12920795e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "swarm",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "swarm"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "18011466 03baf2641596fdc199ad01854d4510f324a606909cf000d87ec386bc0dbffaf9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "18011466 03baf2641596fdc199ad01854d4510f324a606909cf000d87ec386bc0dbffaf9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "sweep",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "sweep"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "7539533 22f138c2c8dafbefd2037bc0219689348b976009d93ade954ac70ad24bbfb207\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "7539533 22f138c2c8dafbefd2037bc0219689348b976009d93ade954ac70ad24bbfb207\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "synthgrid",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "synthgrid"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "11304121 804f79ce6d1d82a5e92e93267f5addedeb9e54c9e25b8f88f4ce39ed33e34300\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "11304121 804f79ce6d1d82a5e92e93267f5addedeb9e54c9e25b8f88f4ce39ed33e34300\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "thunderstorm",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "thunderstorm"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "9755951 99433abeeb7c13f0d67ccedd215582813347ed3f32159568eb69eecf01b20c7a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "9755951 99433abeeb7c13f0d67ccedd215582813347ed3f32159568eb69eecf01b20c7a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "unstable",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "unstable"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "2616888 6e3c5ddbfef1b4863bc0365d46b0814cec2b6048b9e1f4f5412c39d8e21fae99\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "2616888 6e3c5ddbfef1b4863bc0365d46b0814cec2b6048b9e1f4f5412c39d8e21fae99\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "vhstape",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "vhstape"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "6802400 ccdfa82bc81048717918aa81f7168b622f0c3f4e113460ee0e3b0e4c6779b2a7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "6802400 ccdfa82bc81048717918aa81f7168b622f0c3f4e113460ee0e3b0e4c6779b2a7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "waves",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "waves"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "5336890 03f6fca22c3e45e674a92536e297e8ed129b0b0eca441fe25ecfbdabb8d90aac\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "5336890 03f6fca22c3e45e674a92536e297e8ed129b0b0eca441fe25ecfbdabb8d90aac\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "wipe",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "wipe"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "980383 49f7f0675bee339f5942768b39ea773acd861d393926b291ec2cd18ffd17e181\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "980383 49f7f0675bee339f5942768b39ea773acd861d393926b291ec2cd18ffd17e181\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "beams",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "beams"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "116901715 0d072e6cd9bf6e8511fda7ccc637d4e0cc3474d78f8c687e05a93d8617986161\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "116901715 0d072e6cd9bf6e8511fda7ccc637d4e0cc3474d78f8c687e05a93d8617986161\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "binarypath",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "binarypath"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "237327299 6af9164c135b68ed1b62d997bc00aabb8d60aff2de3be73afb560641da450ea8\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "237327299 6af9164c135b68ed1b62d997bc00aabb8d60aff2de3be73afb560641da450ea8\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "blackhole",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "blackhole"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "160713222 20396de56c2aa18f00739ce211b1f41067f4e23f1b95f3aee0a55133dc184200\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "160713222 20396de56c2aa18f00739ce211b1f41067f4e23f1b95f3aee0a55133dc184200\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "bouncyballs",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "bouncyballs"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "858438196 db8bb3c7af0dcf9cff046f8642164f2d0304fe37c5c0706f0df116c501b9bc1d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "858438196 db8bb3c7af0dcf9cff046f8642164f2d0304fe37c5c0706f0df116c501b9bc1d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "bubbles",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "bubbles"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1128254018 8bc2e235621f2946d2bf796f7da8055fc8d15c4a919b4dfe446bfce165f82d6d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1128254018 8bc2e235621f2946d2bf796f7da8055fc8d15c4a919b4dfe446bfce165f82d6d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "burn",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "burn"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "548646669 bcd610456824d8067122f5e729bb297c581bfc0fb1b36a3f84584b13c0b75faf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "548646669 bcd610456824d8067122f5e729bb297c581bfc0fb1b36a3f84584b13c0b75faf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "colorshift",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "colorshift"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "86972035 e39cad2e8d0129f17735832bf0378e7b0213d013b0a7f078d857d625c7f5467e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "86972035 e39cad2e8d0129f17735832bf0378e7b0213d013b0a7f078d857d625c7f5467e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "crumble",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "crumble"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "111796489 bdc387f93adce19ed31bf528e9e6fd109720b89782ae45bdbdd77135d86a393f\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "111796489 bdc387f93adce19ed31bf528e9e6fd109720b89782ae45bdbdd77135d86a393f\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "decrypt",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "decrypt"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "509841822 dfa93000353be673821b03e029eb7fd5e95375ca5c203b6aa70ea7d040966e9b\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "509841822 dfa93000353be673821b03e029eb7fd5e95375ca5c203b6aa70ea7d040966e9b\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "errorcorrect",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "errorcorrect"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "881874651 6359e1d72ede3d72db39c74820b1c8ae01054927763f695d56d32559b4119abb\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "881874651 6359e1d72ede3d72db39c74820b1c8ae01054927763f695d56d32559b4119abb\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "expand",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "expand"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "35065217 9ea6fef28abca8601b94c62faacdb345ab060b64a4809939840445714084dd6c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "35065217 9ea6fef28abca8601b94c62faacdb345ab060b64a4809939840445714084dd6c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "fireworks",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "fireworks"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "142771490 64837d9eef28afabe5eeb9b13b9207eda3274c8e196d678c6dee0a1d3bfbdff1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "142771490 64837d9eef28afabe5eeb9b13b9207eda3274c8e196d678c6dee0a1d3bfbdff1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "highlight",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "highlight"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "21945255 6acac29b6c34c018e638fdbd670fbac710e5e379fd5a289890cabc1e46c455f9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "21945255 6acac29b6c34c018e638fdbd670fbac710e5e379fd5a289890cabc1e46c455f9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "laseretch",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "laseretch"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1321522768 45c2a4ba370322d7f3807525981dee75e7a39c88883c3577111f03ebd234fc5e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1321522768 45c2a4ba370322d7f3807525981dee75e7a39c88883c3577111f03ebd234fc5e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "matrix",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "matrix"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "312024030 30188b8f92aaa70e5ce6b8eb3013e99625c4c2bee269965c58236747b9f634fb\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "312024030 30188b8f92aaa70e5ce6b8eb3013e99625c4c2bee269965c58236747b9f634fb\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "middleout",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "middleout"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "10564558 1f7738f332da49ec08788107dd43198f29f55ebf1d64e5e96aca97a8f040e385\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "10564558 1f7738f332da49ec08788107dd43198f29f55ebf1d64e5e96aca97a8f040e385\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "orbittingvolley",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "orbittingvolley"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "113215116 d87e698da8ed250fca854fb20499b665f6aff42ee7274fc9c2c983dcd287e3e1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "113215116 d87e698da8ed250fca854fb20499b665f6aff42ee7274fc9c2c983dcd287e3e1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "overflow",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "overflow"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "54256001 ebf64ef09e1c6450b126f68cd720bd46608c378631ff6fd1f97928ac56643b47\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "54256001 ebf64ef09e1c6450b126f68cd720bd46608c378631ff6fd1f97928ac56643b47\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "pour",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "pour"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "648054713 52590d193ef9fdc27a8b723f7bd14a8a8513b2d0e6e264e8fa736c44066533c0\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "648054713 52590d193ef9fdc27a8b723f7bd14a8a8513b2d0e6e264e8fa736c44066533c0\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "print",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "print"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1098183437 39089638c7a74a746444089c3269b6fbc92ba44c53f39a75c3781c8ed240fd37\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1098183437 39089638c7a74a746444089c3269b6fbc92ba44c53f39a75c3781c8ed240fd37\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "rain",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "rain"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "447053633 a6a81459b2dfc7d9af14c78c8427c7c553a8c13f72e1974332dd19917b879268\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "447053633 a6a81459b2dfc7d9af14c78c8427c7c553a8c13f72e1974332dd19917b879268\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "randomsequence",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "randomsequence"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "22905348 110450de691a6e008abecf0552219d048ca965d1253d54168a0063909db5134b\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "22905348 110450de691a6e008abecf0552219d048ca965d1253d54168a0063909db5134b\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "rings",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "rings"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "102633967 81a95119a9f17cacf0eaedbfc5b61e3f90add92a81bd1bca9646558c4fa1485e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "102633967 81a95119a9f17cacf0eaedbfc5b61e3f90add92a81bd1bca9646558c4fa1485e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "scattered",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "scattered"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "63778175 6e0f09a9c9ca2b69338800d4608d4bff7f08ee00c0891d7aab4291220407131d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "63778175 6e0f09a9c9ca2b69338800d4608d4bff7f08ee00c0891d7aab4291220407131d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "slice",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "slice"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "46211450 06e1afe81284723d49328e871042de7bc6b1777ff200527f8e50c41410734348\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "46211450 06e1afe81284723d49328e871042de7bc6b1777ff200527f8e50c41410734348\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "slide",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "slide"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "34076313 723fe899967232f023ded7acb7124d93db3775b3a037fb33b348f13c09e01055\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "34076313 723fe899967232f023ded7acb7124d93db3775b3a037fb33b348f13c09e01055\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "smoke",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "smoke"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "153204445 64c050686719b864e214dfc77b850640c0766adbffa1b3a7fb96602e1ff97838\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "153204445 64c050686719b864e214dfc77b850640c0766adbffa1b3a7fb96602e1ff97838\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "spotlights",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "spotlights"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "130038678 b8138de4db82ee36e4ff0af8fb20c20b096215597328ce2ded3128126fef5250\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "130038678 b8138de4db82ee36e4ff0af8fb20c20b096215597328ce2ded3128126fef5250\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "spray",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "spray"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "83369087 994e0031fa7e64bed82d14c5aa41e63e9902d339eb1026b0c9a268db9933ff75\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "83369087 994e0031fa7e64bed82d14c5aa41e63e9902d339eb1026b0c9a268db9933ff75\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "swarm",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "swarm"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "479694453 a7bcd3d1a6847b35eae2c2cead9533bf03e744ed4fa63ed4ccd25bdde4d0fc01\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "479694453 a7bcd3d1a6847b35eae2c2cead9533bf03e744ed4fa63ed4ccd25bdde4d0fc01\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "sweep",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "sweep"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "40558092 130c2d3960839ffbce6235eb91e14390d6e861e7f65aba7e3e61cfd3aff5df76\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "40558092 130c2d3960839ffbce6235eb91e14390d6e861e7f65aba7e3e61cfd3aff5df76\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "synthgrid",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "synthgrid"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "80480896 b6af81ff2159240a194d7ad0fb87af3439c1211fc49a580dbf1b49a46fe60ebf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "80480896 b6af81ff2159240a194d7ad0fb87af3439c1211fc49a580dbf1b49a46fe60ebf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "thunderstorm",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "thunderstorm"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "179088309 97d11b8396042c195977a9a84aef5116394861e7982caa68f6d00af717ca5f7c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "179088309 97d11b8396042c195977a9a84aef5116394861e7982caa68f6d00af717ca5f7c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "unstable",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "unstable"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "60918774 146b7d39ecba48adebf803b256d79b8bb5f1df25f462e510f1ab8c8b8729e749\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "60918774 146b7d39ecba48adebf803b256d79b8bb5f1df25f462e510f1ab8c8b8729e749\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "vhstape",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "vhstape"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "124300235 012d27c3bef5bb9b79657ad1d3d0e86af4689f415d0e5cb9fc7e48abd1eb637d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "124300235 012d27c3bef5bb9b79657ad1d3d0e86af4689f415d0e5cb9fc7e48abd1eb637d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "waves",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "waves"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "100826178 a71ae9b55ffbc5a86c69e7394f31805b951abdc3d73c3b51f57fadf6c8350e22\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "100826178 a71ae9b55ffbc5a86c69e7394f31805b951abdc3d73c3b51f57fadf6c8350e22\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "wipe",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "wipe"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "15133509 5a3784350bef5ccdb62028bddcb1ce34b8bb7c5123c9f1651f4ba4a618f20fdf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "15133509 5a3784350bef5ccdb62028bddcb1ce34b8bb7c5123c9f1651f4ba4a618f20fdf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "beams",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "beams"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "10424097 d0220bfce3b3c2df30d85aaec637dc5e0ba91ffe9d214f72c79d3fe5e0022c04\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "10424097 d0220bfce3b3c2df30d85aaec637dc5e0ba91ffe9d214f72c79d3fe5e0022c04\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "binarypath",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "binarypath"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "7657580 cfb50e67ba82781aefd8cce2ec0723370d3c730e83c0ee57bfe726eb951bc7b2\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "7657580 cfb50e67ba82781aefd8cce2ec0723370d3c730e83c0ee57bfe726eb951bc7b2\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "blackhole",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "blackhole"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "6653714 1611434d7bde8e68dc631b0493ddde659c5214dbf0d6b4b75efcec56b38f8222\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "6653714 1611434d7bde8e68dc631b0493ddde659c5214dbf0d6b4b75efcec56b38f8222\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "bouncyballs",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "bouncyballs"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "4400725 3f24421714f31d1d5afcd37ecbd58dd21819d198734a7915572d072880e62a15\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "4400725 3f24421714f31d1d5afcd37ecbd58dd21819d198734a7915572d072880e62a15\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "bubbles",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "bubbles"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "6499533 d88b2b5309f524d04086e920e893f38e3ddad3faf1debb5dea92de0a1e73c551\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "6499533 d88b2b5309f524d04086e920e893f38e3ddad3faf1debb5dea92de0a1e73c551\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "burn",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "burn"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "4584221 b70391edfb6fa5b0e594a63c54af28b46ed037030de5c7a743ab9bbfe42eba74\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "4584221 b70391edfb6fa5b0e594a63c54af28b46ed037030de5c7a743ab9bbfe42eba74\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "colorshift",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "colorshift"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "5182721 870b7ee5b78f08dbde2e45ad2e74355d26ca57d625a029a176ecf51498a68b2f\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "5182721 870b7ee5b78f08dbde2e45ad2e74355d26ca57d625a029a176ecf51498a68b2f\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "crumble",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "crumble"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "3974537 070c8e3bd7e45bbff3b206ceff48ee99e760e0266b7eea69d521336157165bd9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "3974537 070c8e3bd7e45bbff3b206ceff48ee99e760e0266b7eea69d521336157165bd9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "decrypt",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "decrypt"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "7000678 e4814b4641559ad729af64422dd847047286dce90f06f0e51c2a95584209f5c3\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "7000678 e4814b4641559ad729af64422dd847047286dce90f06f0e51c2a95584209f5c3\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "errorcorrect",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "errorcorrect"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "3997873 b4fb1170b89b11f4d661209a47358ad4997b5a7553d00bb698d2dc5974b4f92a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "3997873 b4fb1170b89b11f4d661209a47358ad4997b5a7553d00bb698d2dc5974b4f92a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "expand",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "expand"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "908885 e991535bcb5c7e640f3d7c371d46d09798cb363ca44179441046b8ee36f01295\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "908885 e991535bcb5c7e640f3d7c371d46d09798cb363ca44179441046b8ee36f01295\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "fireworks",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "fireworks"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "8294454 29515bbcb6670f2aa9ed8e5bead04bd796524b04586d18d21f39f86795fd5dba\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "8294454 29515bbcb6670f2aa9ed8e5bead04bd796524b04586d18d21f39f86795fd5dba\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "highlight",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "highlight"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1305363 1f6a0a7afc8c79c6fb7a729e2309a2fd9c1268145b635af6c219d77ff7dda087\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1305363 1f6a0a7afc8c79c6fb7a729e2309a2fd9c1268145b635af6c219d77ff7dda087\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "laseretch",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "laseretch"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "6426786 95df17f57f5ae47728bda5d22b3ba995c997b9e234741bc44b53910987deaa18\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "6426786 95df17f57f5ae47728bda5d22b3ba995c997b9e234741bc44b53910987deaa18\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "matrix",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "matrix"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "35501085 caa0350a5c2b302e64cc6cd25c1dc675b4fe57f131cfab11239d48a957cd6c35\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "35501085 caa0350a5c2b302e64cc6cd25c1dc675b4fe57f131cfab11239d48a957cd6c35\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "middleout",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "middleout"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "737799 56d7bb9dd8dd41fbdca8762727b7c20a829c88bea16f7307cc34c2b28cb56f48\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "737799 56d7bb9dd8dd41fbdca8762727b7c20a829c88bea16f7307cc34c2b28cb56f48\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "orbittingvolley",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "orbittingvolley"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "8994499 a971d23440dacd8946e9c446496fd4be9210ce80d2c3c6a4d6f31b19b786628c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "8994499 a971d23440dacd8946e9c446496fd4be9210ce80d2c3c6a4d6f31b19b786628c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "overflow",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "overflow"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1907837 707c3ff523aad2e3ab82c5d11fa8f668c8b9fc506cc63a6cc189a4ac6f058af0\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1907837 707c3ff523aad2e3ab82c5d11fa8f668c8b9fc506cc63a6cc189a4ac6f058af0\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "pour",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "pour"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "2998586 6548a145be6779efa61e67f29e065d2d50626c64e2445a48bcb624a6fa3baaf7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "2998586 6548a145be6779efa61e67f29e065d2d50626c64e2445a48bcb624a6fa3baaf7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "print",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "print"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "3786924 1f1e69592f56c1114c8b6c64e438fafe60bdbf040245244c736a1884d9fe4ca7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "3786924 1f1e69592f56c1114c8b6c64e438fafe60bdbf040245244c736a1884d9fe4ca7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "rain",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "rain"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "2347098 770f46e4d37d0852b3a71625e4844512d67eba012e5133a257184cc956d06a08\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "2347098 770f46e4d37d0852b3a71625e4844512d67eba012e5133a257184cc956d06a08\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "randomsequence",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "randomsequence"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1680248 591509f36c69185e830d4cc4ab2ebe7c901004408deacd80c46ef547f562a390\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1680248 591509f36c69185e830d4cc4ab2ebe7c901004408deacd80c46ef547f562a390\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "rings",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "rings"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "11564668 280612f3c4eccf0b1f17bdd75d431a6d722c070d62e7ffd5bcb1d1d8248e75b1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "11564668 280612f3c4eccf0b1f17bdd75d431a6d722c070d62e7ffd5bcb1d1d8248e75b1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "scattered",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "scattered"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1721758 da44c9999d1bd55e1db23dd87aa16973aae76644c8519d49e68192313e5b482a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1721758 da44c9999d1bd55e1db23dd87aa16973aae76644c8519d49e68192313e5b482a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "slice",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "slice"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1490130 d0d7339c722df5cc0f91b7cea226b7a62ff11f24829903bde6eb5ab2b587cb44\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1490130 d0d7339c722df5cc0f91b7cea226b7a62ff11f24829903bde6eb5ab2b587cb44\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "slide",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "slide"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1047963 4064b0bac6fb16378c5b47099efef97680ac71a3181e1fd92f128b483f0461f4\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1047963 4064b0bac6fb16378c5b47099efef97680ac71a3181e1fd92f128b483f0461f4\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "smoke",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "smoke"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "9730044 0f5e1f9051ce014a5637478577c4f2343e33d0bb7ebbba14562f933a528c9369\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "9730044 0f5e1f9051ce014a5637478577c4f2343e33d0bb7ebbba14562f933a528c9369\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "spotlights",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "spotlights"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "6300732 462500b13ddfaac8bf0b7bfa6f741f7f2f05c4ac28d2d1c4c370e07ca870c1da\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "6300732 462500b13ddfaac8bf0b7bfa6f741f7f2f05c4ac28d2d1c4c370e07ca870c1da\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "spray",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "spray"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "3665712 823e2e9691ec2d029da03359d553ede62f458d0a00dc79f18b5bfef12920795e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "3665712 823e2e9691ec2d029da03359d553ede62f458d0a00dc79f18b5bfef12920795e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "swarm",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "swarm"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "18011466 03baf2641596fdc199ad01854d4510f324a606909cf000d87ec386bc0dbffaf9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "18011466 03baf2641596fdc199ad01854d4510f324a606909cf000d87ec386bc0dbffaf9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "sweep",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "sweep"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "7539533 22f138c2c8dafbefd2037bc0219689348b976009d93ade954ac70ad24bbfb207\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "7539533 22f138c2c8dafbefd2037bc0219689348b976009d93ade954ac70ad24bbfb207\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "synthgrid",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "synthgrid"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "11304121 804f79ce6d1d82a5e92e93267f5addedeb9e54c9e25b8f88f4ce39ed33e34300\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "11304121 804f79ce6d1d82a5e92e93267f5addedeb9e54c9e25b8f88f4ce39ed33e34300\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "thunderstorm",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "thunderstorm"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "9755951 99433abeeb7c13f0d67ccedd215582813347ed3f32159568eb69eecf01b20c7a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "9755951 99433abeeb7c13f0d67ccedd215582813347ed3f32159568eb69eecf01b20c7a\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "unstable",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "unstable"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "2616888 6e3c5ddbfef1b4863bc0365d46b0814cec2b6048b9e1f4f5412c39d8e21fae99\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "2616888 6e3c5ddbfef1b4863bc0365d46b0814cec2b6048b9e1f4f5412c39d8e21fae99\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "vhstape",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "vhstape"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "6802400 ccdfa82bc81048717918aa81f7168b622f0c3f4e113460ee0e3b0e4c6779b2a7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "6802400 ccdfa82bc81048717918aa81f7168b622f0c3f4e113460ee0e3b0e4c6779b2a7\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "waves",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "waves"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "5336890 03f6fca22c3e45e674a92536e297e8ed129b0b0eca441fe25ecfbdabb8d90aac\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "5336890 03f6fca22c3e45e674a92536e297e8ed129b0b0eca441fe25ecfbdabb8d90aac\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "wipe",
+      "input": "benchmarks/round2/unicode-input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "29",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "80",
+        "--canvas-height",
+        "24",
+        "--ignore-terminal-dimensions",
+        "wipe"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "980383 49f7f0675bee339f5942768b39ea773acd861d393926b291ec2cd18ffd17e181\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "980383 49f7f0675bee339f5942768b39ea773acd861d393926b291ec2cd18ffd17e181\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "beams",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "beams"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "116901715 0d072e6cd9bf6e8511fda7ccc637d4e0cc3474d78f8c687e05a93d8617986161\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "116901715 0d072e6cd9bf6e8511fda7ccc637d4e0cc3474d78f8c687e05a93d8617986161\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "binarypath",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "binarypath"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "237327299 6af9164c135b68ed1b62d997bc00aabb8d60aff2de3be73afb560641da450ea8\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "237327299 6af9164c135b68ed1b62d997bc00aabb8d60aff2de3be73afb560641da450ea8\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "blackhole",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "blackhole"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "160713222 20396de56c2aa18f00739ce211b1f41067f4e23f1b95f3aee0a55133dc184200\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "160713222 20396de56c2aa18f00739ce211b1f41067f4e23f1b95f3aee0a55133dc184200\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "bouncyballs",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "bouncyballs"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "858438196 db8bb3c7af0dcf9cff046f8642164f2d0304fe37c5c0706f0df116c501b9bc1d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "858438196 db8bb3c7af0dcf9cff046f8642164f2d0304fe37c5c0706f0df116c501b9bc1d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "bubbles",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "bubbles"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1128254018 8bc2e235621f2946d2bf796f7da8055fc8d15c4a919b4dfe446bfce165f82d6d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1128254018 8bc2e235621f2946d2bf796f7da8055fc8d15c4a919b4dfe446bfce165f82d6d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "burn",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "burn"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "548646669 bcd610456824d8067122f5e729bb297c581bfc0fb1b36a3f84584b13c0b75faf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "548646669 bcd610456824d8067122f5e729bb297c581bfc0fb1b36a3f84584b13c0b75faf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "colorshift",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "colorshift"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "86972035 e39cad2e8d0129f17735832bf0378e7b0213d013b0a7f078d857d625c7f5467e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "86972035 e39cad2e8d0129f17735832bf0378e7b0213d013b0a7f078d857d625c7f5467e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "crumble",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "crumble"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "111796489 bdc387f93adce19ed31bf528e9e6fd109720b89782ae45bdbdd77135d86a393f\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "111796489 bdc387f93adce19ed31bf528e9e6fd109720b89782ae45bdbdd77135d86a393f\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "decrypt",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "decrypt"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "509841822 dfa93000353be673821b03e029eb7fd5e95375ca5c203b6aa70ea7d040966e9b\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "509841822 dfa93000353be673821b03e029eb7fd5e95375ca5c203b6aa70ea7d040966e9b\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "errorcorrect",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "errorcorrect"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "881874651 6359e1d72ede3d72db39c74820b1c8ae01054927763f695d56d32559b4119abb\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "881874651 6359e1d72ede3d72db39c74820b1c8ae01054927763f695d56d32559b4119abb\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "expand",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "expand"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "35065217 9ea6fef28abca8601b94c62faacdb345ab060b64a4809939840445714084dd6c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "35065217 9ea6fef28abca8601b94c62faacdb345ab060b64a4809939840445714084dd6c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "fireworks",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "fireworks"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "142771490 64837d9eef28afabe5eeb9b13b9207eda3274c8e196d678c6dee0a1d3bfbdff1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "142771490 64837d9eef28afabe5eeb9b13b9207eda3274c8e196d678c6dee0a1d3bfbdff1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "highlight",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "highlight"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "21945255 6acac29b6c34c018e638fdbd670fbac710e5e379fd5a289890cabc1e46c455f9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "21945255 6acac29b6c34c018e638fdbd670fbac710e5e379fd5a289890cabc1e46c455f9\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "laseretch",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "laseretch"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1321522768 45c2a4ba370322d7f3807525981dee75e7a39c88883c3577111f03ebd234fc5e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1321522768 45c2a4ba370322d7f3807525981dee75e7a39c88883c3577111f03ebd234fc5e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "matrix",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "matrix"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "312024030 30188b8f92aaa70e5ce6b8eb3013e99625c4c2bee269965c58236747b9f634fb\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "312024030 30188b8f92aaa70e5ce6b8eb3013e99625c4c2bee269965c58236747b9f634fb\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "middleout",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "middleout"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "10564558 1f7738f332da49ec08788107dd43198f29f55ebf1d64e5e96aca97a8f040e385\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "10564558 1f7738f332da49ec08788107dd43198f29f55ebf1d64e5e96aca97a8f040e385\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "orbittingvolley",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "orbittingvolley"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "113215116 d87e698da8ed250fca854fb20499b665f6aff42ee7274fc9c2c983dcd287e3e1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "113215116 d87e698da8ed250fca854fb20499b665f6aff42ee7274fc9c2c983dcd287e3e1\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "overflow",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "overflow"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "54256001 ebf64ef09e1c6450b126f68cd720bd46608c378631ff6fd1f97928ac56643b47\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "54256001 ebf64ef09e1c6450b126f68cd720bd46608c378631ff6fd1f97928ac56643b47\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "pour",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "pour"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "648054713 52590d193ef9fdc27a8b723f7bd14a8a8513b2d0e6e264e8fa736c44066533c0\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "648054713 52590d193ef9fdc27a8b723f7bd14a8a8513b2d0e6e264e8fa736c44066533c0\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "print",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "print"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "1098183437 39089638c7a74a746444089c3269b6fbc92ba44c53f39a75c3781c8ed240fd37\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "1098183437 39089638c7a74a746444089c3269b6fbc92ba44c53f39a75c3781c8ed240fd37\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "rain",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "rain"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "447053633 a6a81459b2dfc7d9af14c78c8427c7c553a8c13f72e1974332dd19917b879268\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "447053633 a6a81459b2dfc7d9af14c78c8427c7c553a8c13f72e1974332dd19917b879268\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "randomsequence",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "randomsequence"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "22905348 110450de691a6e008abecf0552219d048ca965d1253d54168a0063909db5134b\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "22905348 110450de691a6e008abecf0552219d048ca965d1253d54168a0063909db5134b\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "rings",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "rings"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "102633967 81a95119a9f17cacf0eaedbfc5b61e3f90add92a81bd1bca9646558c4fa1485e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "102633967 81a95119a9f17cacf0eaedbfc5b61e3f90add92a81bd1bca9646558c4fa1485e\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "scattered",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "scattered"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "63778175 6e0f09a9c9ca2b69338800d4608d4bff7f08ee00c0891d7aab4291220407131d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "63778175 6e0f09a9c9ca2b69338800d4608d4bff7f08ee00c0891d7aab4291220407131d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "slice",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "slice"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "46211450 06e1afe81284723d49328e871042de7bc6b1777ff200527f8e50c41410734348\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "46211450 06e1afe81284723d49328e871042de7bc6b1777ff200527f8e50c41410734348\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "slide",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "slide"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "34076313 723fe899967232f023ded7acb7124d93db3775b3a037fb33b348f13c09e01055\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "34076313 723fe899967232f023ded7acb7124d93db3775b3a037fb33b348f13c09e01055\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "smoke",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "smoke"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "153204445 64c050686719b864e214dfc77b850640c0766adbffa1b3a7fb96602e1ff97838\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "153204445 64c050686719b864e214dfc77b850640c0766adbffa1b3a7fb96602e1ff97838\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "spotlights",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "spotlights"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "130038678 b8138de4db82ee36e4ff0af8fb20c20b096215597328ce2ded3128126fef5250\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "130038678 b8138de4db82ee36e4ff0af8fb20c20b096215597328ce2ded3128126fef5250\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "spray",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "spray"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "83369087 994e0031fa7e64bed82d14c5aa41e63e9902d339eb1026b0c9a268db9933ff75\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "83369087 994e0031fa7e64bed82d14c5aa41e63e9902d339eb1026b0c9a268db9933ff75\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "swarm",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "swarm"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "479694453 a7bcd3d1a6847b35eae2c2cead9533bf03e744ed4fa63ed4ccd25bdde4d0fc01\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "479694453 a7bcd3d1a6847b35eae2c2cead9533bf03e744ed4fa63ed4ccd25bdde4d0fc01\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "sweep",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "sweep"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "40558092 130c2d3960839ffbce6235eb91e14390d6e861e7f65aba7e3e61cfd3aff5df76\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "40558092 130c2d3960839ffbce6235eb91e14390d6e861e7f65aba7e3e61cfd3aff5df76\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "synthgrid",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "synthgrid"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "80480896 b6af81ff2159240a194d7ad0fb87af3439c1211fc49a580dbf1b49a46fe60ebf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "80480896 b6af81ff2159240a194d7ad0fb87af3439c1211fc49a580dbf1b49a46fe60ebf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "thunderstorm",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "thunderstorm"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "179088309 97d11b8396042c195977a9a84aef5116394861e7982caa68f6d00af717ca5f7c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "179088309 97d11b8396042c195977a9a84aef5116394861e7982caa68f6d00af717ca5f7c\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "unstable",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "unstable"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "60918774 146b7d39ecba48adebf803b256d79b8bb5f1df25f462e510f1ab8c8b8729e749\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "60918774 146b7d39ecba48adebf803b256d79b8bb5f1df25f462e510f1ab8c8b8729e749\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "vhstape",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "vhstape"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "124300235 012d27c3bef5bb9b79657ad1d3d0e86af4689f415d0e5cb9fc7e48abd1eb637d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "124300235 012d27c3bef5bb9b79657ad1d3d0e86af4689f415d0e5cb9fc7e48abd1eb637d\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "waves",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "waves"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "100826178 a71ae9b55ffbc5a86c69e7394f31805b951abdc3d73c3b51f57fadf6c8350e22\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "100826178 a71ae9b55ffbc5a86c69e7394f31805b951abdc3d73c3b51f57fadf6c8350e22\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    },
+    {
+      "effect": "wipe",
+      "input": "target/refresh/pass4/input.txt",
+      "threads": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "wipe"
+      ],
+      "equal": true,
+      "results": [
+        {
+          "exit": 0,
+          "stdout": "15133509 5a3784350bef5ccdb62028bddcb1ce34b8bb7c5123c9f1651f4ba4a618f20fdf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        },
+        {
+          "exit": 0,
+          "stdout": "15133509 5a3784350bef5ccdb62028bddcb1ce34b8bb7c5123c9f1651f4ba4a618f20fdf\n",
+          "stderr": "0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 6K of event 'cycles:u'
+# Event count (approx.): 686520595
+#
+# Overhead  Command       Shared Object         Symbol
+# ........  ............  ....................  ..............................................................................................................................................................................................................................................................................................................
+#
+     9.22%  profile-pr35  profile-pr35          [.] motion_batch.linear
+     3.67%  profile-pr35  profile-pr35          [.] motion_batch.group
+     3.61%  profile-pr35  profile-pr35          [.] step_animation_awake
+     2.88%  profile-pr35  profile-pr35          [.] cell_unlink.owner
+     2.75%  profile-pr35  profile-pr35          [.] emit_blocks.quad
+     2.53%  profile-pr35  profile-pr35          [.] mv_sync
+     2.46%  profile-pr35  libm.so.6             [.] hypot
+     2.21%  profile-pr35  profile-pr35          [.] cell_unlink
+     2.18%  profile-pr35  profile-pr35          [.] coordinate_changed
+     2.18%  profile-pr35  profile-pr35          [.] find_coord_on_line
+     2.08%  profile-pr35  profile-pr35          [.] motion_batch.try
+     2.02%  profile-pr35  profile-pr35          [.] paint_rec
+     1.62%  profile-pr35  profile-pr35          [.] motion_batch.factor
+     1.60%  profile-pr35  profile-pr35          [.] ring_activate
+     1.56%  profile-pr35  profile-pr35          [.] motion_batch.resolve
+     1.46%  profile-pr35  profile-pr35          [.] mv_retire
+     1.46%  profile-pr35  profile-pr35          [.] render_apply.next
+     1.44%  profile-pr35  profile-pr35          [.] motion_batch.lanes8
+     1.43%  profile-pr35  profile-pr35          [.] update.tick_bit
+     1.38%  profile-pr35  profile-pr35          [.] path_step.ratio_only
+     1.35%  profile-pr35  profile-pr35          [.] motion_move
+     1.31%  profile-pr35  profile-pr35          [.] entry_matches
+     1.30%  profile-pr35  profile-pr35          [.] motion_apply
+     1.15%  profile-pr35  profile-pr35          [.] path_step
+     1.15%  profile-pr35  profile-pr35          [.] update.ticked
+     1.12%  profile-pr35  profile-pr35          [.] cell_link
+     1.12%  profile-pr35  profile-pr35          [.] handle_event.action
+     1.11%  profile-pr35  profile-pr35          [.] set_coordinate
+     1.08%  profile-pr35  profile-pr35          [.] cell_unlink.fix_next
+     1.08%  profile-pr35  profile-pr35          [.] motion_batch.control
+     1.08%  profile-pr35  profile-pr35          [.] update.moving
+     1.03%  profile-pr35  profile-pr35          [.] paint_rec.take
+     0.99%  profile-pr35  profile-pr35          [.] motion_move.placed
+     0.96%  profile-pr35  profile-pr35          [.] path_step.walk
+     0.93%  profile-pr35  profile-pr35          [.] motion_batch.finish
+     0.84%  profile-pr35  profile-pr35          [.] ..@382.done
+     0.84%  profile-pr35  profile-pr35          [.] update.tick
+     0.80%  profile-pr35  profile-pr35          [.] path_step.factor
+     0.74%  profile-pr35  profile-pr35          [.] motion_batch.forward
+     0.74%  profile-pr35  profile-pr35          [.] path_step.ratio
+     0.68%  profile-pr35  profile-pr35          [.] mv_retire.ret
+     0.66%  profile-pr35  profile-pr35          [.] row_rebuild.starts
+     0.63%  profile-pr35  profile-pr35          [.] motion_batch.prefetch
+     0.63%  profile-pr35  profile-pr35          [.] path_activate.write_origin
+     0.61%  profile-pr35  profile-pr35          [.] update.moved
+     0.57%  profile-pr35  profile-pr35          [.] motion_apply.coord
+     0.57%  profile-pr35  profile-pr35          [.] path_activate
+     0.55%  profile-pr35  profile-pr35          [.] cell_rewin.scan
+     0.54%  profile-pr35  profile-pr35          [.] path_step.beyond
+     0.52%  profile-pr35  profile-pr35          [.] motion_move.moved
+     0.52%  profile-pr35  profile-pr35          [.] path_step.step
+     0.52%  profile-pr35  profile-pr35          [.] update.epoch_same
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

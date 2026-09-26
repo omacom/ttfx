@@ -1,0 +1,50 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 1K of event 'cycles:u'
+# Event count (approx.): 155304659
+#
+# Overhead  Command       Shared Object         Symbol
+# ........  ............  ....................  ....................................................................................................................................................
+#
+    16.74%  profile-pr35  profile-pr35          [.] rng_refill.vgenerate
+     9.21%  profile-pr35  profile-pr35          [.] row_rebuild.bytes
+     7.47%  profile-pr35  profile-pr35          [.] column_tick.skip_vec
+     4.70%  profile-pr35  profile-pr35          [.] column_tick
+     4.44%  profile-pr35  profile-pr35          [.] emit_blocks.quad
+     2.64%  profile-pr35  profile-pr35          [.] column_tick.skip
+     2.45%  profile-pr35  profile-pr35          [.] row_rebuild.starts
+     2.45%  profile-pr35  profile-pr35          [.] visual_make.next
+     2.32%  profile-pr35  profile-pr35          [.] column_tick.compare
+     2.32%  profile-pr35  profile-pr35          [.] visual_memo
+     2.25%  profile-pr35  profile-pr35          [.] matrix_next_frame.active
+     2.12%  profile-pr35  profile-pr35          [.] column_tick.each
+     2.00%  profile-pr35  profile-pr35          [.] scene_load_head.last
+     1.55%  profile-pr35  profile-pr35          [.] rng_below.again
+     1.48%  profile-pr35  profile-pr35          [.] row_dirty.any
+     1.35%  profile-pr35  profile-pr35          [.] column_tick.skipped
+     1.35%  profile-pr35  profile-pr35          [.] render_apply.handle
+     1.29%  profile-pr35  profile-pr35          [.] column_tick.color
+     1.29%  profile-pr35  profile-pr35          [.] column_tick.no_pending
+     1.29%  profile-pr35  profile-pr35          [.] row_dirty.chunk
+     1.09%  profile-pr35  profile-pr35          [.] rng_refill.bit3
+     0.97%  profile-pr35  profile-pr35          [.] column_tick.done
+     0.97%  profile-pr35  profile-pr35          [.] rng_refill.bit0
+     0.97%  profile-pr35  profile-pr35          [.] rng_refill.bit1
+     0.77%  profile-pr35  profile-pr35          [.] cell_link
+     0.71%  profile-pr35  profile-pr35          [.] row_end.emitted
+     0.71%  profile-pr35  profile-pr35          [.] set_appearance.make
+     0.64%  profile-pr35  profile-pr35          [.] doze_retire
+     0.64%  profile-pr35  profile-pr35          [.] sort_pairs.put
+     0.64%  profile-pr35  profile-pr35          [.] visual_make
+     0.58%  profile-pr35  profile-pr35          [.] matrix_next_frame.resolve_each
+     0.58%  profile-pr35  profile-pr35          [.] next_set
+     0.58%  profile-pr35  profile-pr35          [.] retain_visible.each
+     0.52%  profile-pr35  profile-pr35          [.] rng_refill.bit2
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

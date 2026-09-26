@@ -1,0 +1,311 @@
+{
+  "method": "Native fork/exec/wait4 ru_maxrss in KiB; five alternating samples",
+  "cpus": [
+    2,
+    4
+  ],
+  "input_sha256": "5520772cb3e4a78263b258c2020280ce291135615cbc193e89added6c41d732b",
+  "thp_policy": "[always] madvise never",
+  "binaries": {
+    "baseline": {
+      "path": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/pr35-badde3d",
+      "sha256": "0c5c2c30d433acd298281cf4414ffa9b8620f513bca5de5c0adab19c38125bfa"
+    },
+    "candidate": {
+      "path": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/final",
+      "sha256": "ae98f06babbd60ea68158a8436ae0d0674c7098ddc1ee8d5a5377f360acdaba5"
+    }
+  },
+  "results": [
+    {
+      "effect": "waves",
+      "TTFX_ASM_THREADS": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "waves"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          48316,
+          52852,
+          52612,
+          52224,
+          52924
+        ],
+        "median_mib": 51.37890625
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          37132,
+          35068,
+          37064,
+          35244,
+          36420
+        ],
+        "median_mib": 35.56640625
+      }
+    },
+    {
+      "effect": "highlight",
+      "TTFX_ASM_THREADS": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "highlight"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          33848,
+          32388,
+          34412,
+          32464,
+          33940
+        ],
+        "median_mib": 33.0546875
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          20468,
+          19748,
+          19716,
+          24384,
+          20400
+        ],
+        "median_mib": 19.921875
+      }
+    },
+    {
+      "effect": "binarypath",
+      "TTFX_ASM_THREADS": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "binarypath"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          220392,
+          224180,
+          221968,
+          224464,
+          223316
+        ],
+        "median_mib": 218.08203125
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          219216,
+          225032,
+          224900,
+          223408,
+          224480
+        ],
+        "median_mib": 219.21875
+      }
+    },
+    {
+      "effect": "matrix",
+      "TTFX_ASM_THREADS": "1",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "matrix"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          32344,
+          32396,
+          32344,
+          33748,
+          33780
+        ],
+        "median_mib": 31.63671875
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          19696,
+          24416,
+          18308,
+          19608,
+          18372
+        ],
+        "median_mib": 19.1484375
+      }
+    },
+    {
+      "effect": "waves",
+      "TTFX_ASM_THREADS": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "waves"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          49772,
+          53912,
+          51824,
+          58400,
+          53932
+        ],
+        "median_mib": 52.6484375
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          38012,
+          34604,
+          35928,
+          37940,
+          36464
+        ],
+        "median_mib": 35.609375
+      }
+    },
+    {
+      "effect": "highlight",
+      "TTFX_ASM_THREADS": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "highlight"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          34496,
+          32652,
+          32580,
+          35172,
+          31208
+        ],
+        "median_mib": 31.88671875
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          20488,
+          20468,
+          21080,
+          18944,
+          20316
+        ],
+        "median_mib": 19.98828125
+      }
+    },
+    {
+      "effect": "binarypath",
+      "TTFX_ASM_THREADS": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "binarypath"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          227276,
+          228792,
+          225536,
+          221612,
+          227820
+        ],
+        "median_mib": 221.94921875
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          226788,
+          226760,
+          223208,
+          225420,
+          225224
+        ],
+        "median_mib": 220.13671875
+      }
+    },
+    {
+      "effect": "matrix",
+      "TTFX_ASM_THREADS": "auto",
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "matrix"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          39040,
+          32868,
+          34364,
+          38964,
+          34352
+        ],
+        "median_mib": 33.55859375
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          20300,
+          18828,
+          18880,
+          20264,
+          20224
+        ],
+        "median_mib": 19.75
+      }
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "upstream": "badde3de1f22244e721bba06ade77ad13d773548",
+  "source_commit": "74fa0dac6a8d16197a832c6e66ff7c6a9d76b824",
+  "previous_pr_head": "6ca563c16867eda510910f1eda48aec040397f85",
+  "previous_production_sha256": "aab9bbf1e732c2ce84bfd7b88cbc9837792386612ad337b129b6186687c944e9",
+  "binaries": {
+    "pr35-badde3d": {
+      "sha256": "0c5c2c30d433acd298281cf4414ffa9b8620f513bca5de5c0adab19c38125bfa",
+      "bytes": 2842688,
+      "purpose": "upstream baseline"
+    },
+    "bitmap": {
+      "sha256": "a62d1dcdf263393d212e3586052b5b5bdf91c0f1c23799b45961096efae4d1b4",
+      "bytes": 2842688,
+      "purpose": "retained: update arrays use reserve_small"
+    },
+    "sparse": {
+      "sha256": "042748ad2943bf04402f3e6246eac638466976cd72c189d7503aa23ce74e8526",
+      "bytes": 2842688,
+      "purpose": "retained: renderer character arrays use reserve_small"
+    },
+    "curve": {
+      "sha256": "a93e75708d8fa150986181d179d666f83af26047d8e747586d0f7130a6a6f63f",
+      "bytes": 2842704,
+      "purpose": "retained: skip unused AVX-512 curve work"
+    },
+    "lazy": {
+      "sha256": "4be2636857f6f0c2fe2a735ed8f78f3b1d5783f5200450ebd43cce47eec292cc",
+      "bytes": 2842704,
+      "purpose": "discarded: skip ratio division for all-eased groups"
+    },
+    "handle": {
+      "sha256": "a33686a99e68f84f5d90999a2db8b9723d186cf093439e7465774004fd2b08d1",
+      "bytes": 2842976,
+      "purpose": "discarded: suppress unchanged-handle log records"
+    },
+    "vacated": {
+      "sha256": "86051d009686bf41ff86a03af2eb5d6496ace7fd76e7c9f3e7f951d2668c67ac",
+      "bytes": 2842976,
+      "purpose": "discarded: direct zero/one-occupant cell repaint"
+    },
+    "inside": {
+      "sha256": "ae98f06babbd60ea68158a8436ae0d0674c7098ddc1ee8d5a5377f360acdaba5",
+      "bytes": 2842752,
+      "purpose": "final code plus AVX2 curve shortcut and AVX-512 in-segment shortcut"
+    },
+    "final": {
+      "sha256": "ae98f06babbd60ea68158a8436ae0d0674c7098ddc1ee8d5a5377f360acdaba5",
+      "bytes": 2842752,
+      "purpose": "production"
+    },
+    "profile-pr35": {
+      "sha256": "6b2108e38f52430a217a5f38067cda05f010d10e86c93195d84d74cf0fccb484",
+      "bytes": 9466672,
+      "purpose": "unstripped baseline for cycle sampling only"
+    }
+  }
+}

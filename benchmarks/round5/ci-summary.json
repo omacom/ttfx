@@ -1,0 +1,167 @@
+{
+  "source_commit": "74fa0dac6a8d16197a832c6e66ff7c6a9d76b824",
+  "binary_sha256": "ae98f06babbd60ea68158a8436ae0d0674c7098ddc1ee8d5a5377f360acdaba5",
+  "checks": [
+    {
+      "name": "bin-test",
+      "command": [
+        "bin/test"
+      ],
+      "exit_code": 0,
+      "seconds": 116.259,
+      "log_sha256": "a8e0fc3903e3dc90ac5bc434028ed8c7c3e987f8286437223956a826903ea41c"
+    },
+    {
+      "name": "asm-diff-tier1",
+      "command": [
+        "cargo",
+        "test",
+        "--release",
+        "--locked",
+        "--test",
+        "asm_diff"
+      ],
+      "exit_code": 0,
+      "seconds": 1.416,
+      "log_sha256": "b1db1c68bfd2fd34c6f07dcafda98414b23460014ee54c964cbd12baf8852bb5"
+    },
+    {
+      "name": "asm-diff-tier2",
+      "command": [
+        "cargo",
+        "test",
+        "--release",
+        "--locked",
+        "--test",
+        "asm_diff"
+      ],
+      "exit_code": 0,
+      "seconds": 1.366,
+      "log_sha256": "fdcb338b96c9fbbe47d92721f53306edc9f52d3cc18a37b445f392ddc800d762"
+    },
+    {
+      "name": "asm-diff-tier3",
+      "command": [
+        "cargo",
+        "test",
+        "--release",
+        "--locked",
+        "--test",
+        "asm_diff"
+      ],
+      "exit_code": 0,
+      "seconds": 1.416,
+      "log_sha256": "973af2533280227c285f0565f8f2afecfad24d3ac9ea90f5ee402c4c37d7a195"
+    },
+    {
+      "name": "asm-diff-tier4",
+      "command": [
+        "cargo",
+        "test",
+        "--release",
+        "--locked",
+        "--test",
+        "asm_diff"
+      ],
+      "exit_code": 0,
+      "seconds": 2.167,
+      "log_sha256": "e8a1244be98248e4a1ade5e60939d50f7ee0d5ed1fb8188a5bdabbc8cbafda39"
+    },
+    {
+      "name": "isa-tier1",
+      "command": [
+        "bash",
+        "tools/asm/isa-audit.sh",
+        "1",
+        "/home/gardnmi/Projects/ttfx/target/release/build/ttfx-b5db62880f1efacd/out/ttfx_asm_v1.o"
+      ],
+      "exit_code": 0,
+      "seconds": 8.875,
+      "log_sha256": "304752cb7021684de77a1db9e0254ad2d24fde1a779362af107e24cafa6ea3a2"
+    },
+    {
+      "name": "isa-tier2",
+      "command": [
+        "bash",
+        "tools/asm/isa-audit.sh",
+        "2",
+        "/home/gardnmi/Projects/ttfx/target/release/build/ttfx-b5db62880f1efacd/out/ttfx_asm_v2.o"
+      ],
+      "exit_code": 0,
+      "seconds": 8.827,
+      "log_sha256": "304752cb7021684de77a1db9e0254ad2d24fde1a779362af107e24cafa6ea3a2"
+    },
+    {
+      "name": "isa-tier3",
+      "command": [
+        "bash",
+        "tools/asm/isa-audit.sh",
+        "3",
+        "/home/gardnmi/Projects/ttfx/target/release/build/ttfx-b5db62880f1efacd/out/ttfx_asm_v3.o"
+      ],
+      "exit_code": 0,
+      "seconds": 9.279,
+      "log_sha256": "304752cb7021684de77a1db9e0254ad2d24fde1a779362af107e24cafa6ea3a2"
+    },
+    {
+      "name": "isa-tier4",
+      "command": [
+        "bash",
+        "tools/asm/isa-audit.sh",
+        "4",
+        "/home/gardnmi/Projects/ttfx/target/release/build/ttfx-b5db62880f1efacd/out/ttfx_asm_v4.o"
+      ],
+      "exit_code": 0,
+      "seconds": 8.978,
+      "log_sha256": "304752cb7021684de77a1db9e0254ad2d24fde1a779362af107e24cafa6ea3a2"
+    },
+    {
+      "name": "isa-dispatch",
+      "command": [
+        "bash",
+        "tools/asm/isa-audit.sh",
+        "1",
+        "/home/gardnmi/Projects/ttfx/target/release/build/ttfx-b5db62880f1efacd/out/ttfx_asm_tier.o"
+      ],
+      "exit_code": 0,
+      "seconds": 8.977,
+      "log_sha256": "304752cb7021684de77a1db9e0254ad2d24fde1a779362af107e24cafa6ea3a2"
+    }
+  ],
+  "release_binary_unchanged": true,
+  "coverage": {
+    "release_tests_passed": 57,
+    "cli_corpus": {
+      "passed": 19,
+      "failed": 0
+    },
+    "python_frame_parity": {
+      "passed": 354,
+      "failed": 0
+    },
+    "tty_byte_stream_parity": {
+      "passed": 41,
+      "failed": 0
+    },
+    "signal_terminal_close_resize": "all passed",
+    "asm_diff_by_tier": {
+      "1": {
+        "passed": 21,
+        "failed": 0
+      },
+      "2": {
+        "passed": 21,
+        "failed": 0
+      },
+      "3": {
+        "passed": 21,
+        "failed": 0
+      },
+      "4": {
+        "passed": 21,
+        "failed": 0
+      }
+    },
+    "isa": "all four tiers and baseline dispatcher clean; audit commands without -q perform the complete source audit"
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "method": "Linux wait4 / ru_maxrss, KiB; median of five interleaved samples",
+  "input_sha256": "5520772cb3e4a78263b258c2020280ce291135615cbc193e89added6c41d732b",
+  "binaries": {
+    "baseline": {
+      "path": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/bitmap",
+      "sha256": "a62d1dcdf263393d212e3586052b5b5bdf91c0f1c23799b45961096efae4d1b4"
+    },
+    "candidate": {
+      "path": "/home/gardnmi/Projects/ttfx/target/refresh/pass5/sparse",
+      "sha256": "042748ad2943bf04402f3e6246eac638466976cd72c189d7503aa23ce74e8526"
+    }
+  },
+  "effects": {
+    "waves": {
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "waves"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          42208,
+          42256,
+          38796,
+          38500,
+          42120
+        ],
+        "median_mib": 41.1328125
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          32976,
+          32804,
+          36364,
+          36568,
+          32828
+        ],
+        "median_mib": 32.203125
+      }
+    },
+    "highlight": {
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "highlight"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          30428,
+          24408,
+          24408,
+          24408,
+          24408
+        ],
+        "median_mib": 23.8359375
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          24408,
+          24408,
+          24488,
+          24620,
+          24408
+        ],
+        "median_mib": 23.8359375
+      }
+    },
+    "binarypath": {
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "binarypath"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          221816,
+          214876,
+          222236,
+          214780,
+          227148
+        ],
+        "median_mib": 216.6171875
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          215708,
+          219512,
+          220104,
+          214860,
+          214868
+        ],
+        "median_mib": 210.65234375
+      }
+    },
+    "matrix": {
+      "args": [
+        "--seed",
+        "1",
+        "--frame-rate",
+        "0",
+        "--canvas-width",
+        "200",
+        "--canvas-height",
+        "50",
+        "--ignore-terminal-dimensions",
+        "--virtual-clock",
+        "matrix"
+      ],
+      "baseline": {
+        "peak_rss_kib": [
+          24408,
+          24408,
+          24408,
+          24408,
+          24408
+        ],
+        "median_mib": 23.8359375
+      },
+      "candidate": {
+        "peak_rss_kib": [
+          24408,
+          24408,
+          24408,
+          24408,
+          24416
+        ],
+        "median_mib": 23.8359375
+      }
+    }
+  }
+}

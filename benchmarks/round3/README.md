@@ -1,5 +1,7 @@
 # Refresh against updated PR #35 — September 26, 2026
 
+> Historical results before the rebase onto `badde3d`. See [round five](../round5/README.md) for the current PR and measurements.
+
 The updated branch is **about 1.10x faster overall than current PR #35**, and
 **1.31x faster than the previous PR #36**, on this Ryzen 5 7600X with Linux's
 transparent huge-page policy set to `always`. Small ASCII and colored Unicode

@@ -1,0 +1,55 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 4K of event 'cycles:u'
+# Event count (approx.): 406612198
+#
+# Overhead  Command       Shared Object         Symbol
+# ........  ............  ....................  .............................................................................................................................................................................................................................................................
+#
+    18.45%  profile-pr35  profile-pr35          [.] motion_batch.linear
+     6.47%  profile-pr35  profile-pr35          [.] step_animation_awake
+     5.90%  profile-pr35  profile-pr35          [.] motion_batch.group
+     5.02%  profile-pr35  profile-pr35          [.] step_synced_scene.index
+     2.98%  profile-pr35  profile-pr35          [.] emit_blocks.quad
+     2.80%  profile-pr35  profile-pr35          [.] ..@248.done
+     2.34%  profile-pr35  profile-pr35          [.] cell_unlink.owner
+     2.07%  profile-pr35  profile-pr35          [.] path_view
+     1.99%  profile-pr35  profile-pr35          [.] update.tick
+     1.97%  profile-pr35  profile-pr35          [.] cell_unlink
+     1.92%  profile-pr35  profile-pr35          [.] render_apply.next
+     1.87%  profile-pr35  profile-pr35          [.] update.tick_bit
+     1.84%  profile-pr35  profile-pr35          [.] ease.lookup
+     1.80%  profile-pr35  profile-pr35          [.] step_synced_scene.distance
+     1.52%  profile-pr35  profile-pr35          [.] paint_rec
+     1.30%  profile-pr35  profile-pr35          [.] coordinate_changed
+     1.21%  profile-pr35  profile-pr35          [.] update.epoch_same
+     1.18%  profile-pr35  profile-pr35          [.] render_apply.handle
+     0.93%  profile-pr35  profile-pr35          [.] cell_link
+     0.91%  profile-pr35  profile-pr35          [.] cell_unlink.fix_next
+     0.91%  profile-pr35  profile-pr35          [.] update.moved
+     0.89%  profile-pr35  profile-pr35          [.] motion_apply
+     0.89%  profile-pr35  profile-pr35          [.] row_rebuild.bytes
+     0.84%  profile-pr35  profile-pr35          [.] row_rebuild.starts
+     0.84%  profile-pr35  profile-pr35          [.] scene_load_head.last
+     0.84%  profile-pr35  profile-pr35          [.] update.moving
+     0.81%  profile-pr35  profile-pr35          [.] paint_rec.take
+     0.81%  profile-pr35  profile-pr35          [.] update.ticked
+     0.79%  profile-pr35  profile-pr35          [.] entry_matches
+     0.79%  profile-pr35  profile-pr35          [.] scene_find.next
+     0.76%  profile-pr35  profile-pr35          [.] step_synced_scene.load
+     0.71%  profile-pr35  profile-pr35          [.] step_animation_awake.check
+     0.66%  profile-pr35  profile-pr35          [.] path_ease_table.fill
+     0.66%  profile-pr35  profile-pr35          [.] visual_make.next
+     0.59%  profile-pr35  profile-pr35          [.] cell_rewin.scan
+     0.59%  profile-pr35  profile-pr35          [.] path_activate
+     0.57%  profile-pr35  profile-pr35          [.] step_synced_scene.path
+     0.52%  profile-pr35  profile-pr35          [.] handle_event.action
+     0.52%  profile-pr35  profile-pr35          [.] scene_new.count
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

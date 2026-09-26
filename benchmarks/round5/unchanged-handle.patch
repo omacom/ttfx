@@ -1,0 +1,13 @@
+diff --git i/asm/ttfx.inc w/asm/ttfx.inc
+index 7b00a9b..b8903f6 100644
+--- i/asm/ttfx.inc
++++ w/asm/ttfx.inc
+@@ -406,6 +406,8 @@ global %1
+ ; a render cell logs the change. Clobbers rcx.
+ %macro SET_HANDLE 0
+     mov     rcx, [ch_handle]
++    cmp     [rcx + rdi * 4], eax
++    je      %%done
+     mov     [rcx + rdi * 4], eax
+     mov     rcx, [ch_cell]
+     cmp     dword [rcx + rdi * 4], NONE

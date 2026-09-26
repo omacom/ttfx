@@ -1,0 +1,95 @@
+diff --git i/asm/engine/motion.asm w/asm/engine/motion.asm
+index 142ed55..7c65155 100644
+--- i/asm/engine/motion.asm
++++ w/asm/engine/motion.asm
+@@ -1778,11 +1778,16 @@ motion_batch:
+     kortestb k1, k1
+     jz      .group_next
+     vaddpd  zmm1, zmm1, zmm20           ; the new step
+-    vdivpd  zmm3, zmm1, zmm2            ; ratio
+     vmovdqu32 ymm4, [rdx + rsi * 4 + MVO_ETAB]
+     vptestmd k2{k1}, ymm4, ymm4         ; eased lanes
++    ; A table supplies every eased lane's factor. Divide only when some
++    ; active lane actually needs the linear ratio; keep exact division.
++    ktestb  k2, k1
++    jc      .all_eased
++    vdivpd  zmm3, zmm1, zmm2            ; ratio
+     kortestb k2, k2
+     jz      .linear
++.all_eased:
+     vcvttpd2dq ymm5, zmm1
+     vpaddd  ymm4, ymm4, ymm5
+     kmovb   k3, k2
+@@ -1830,12 +1835,6 @@ motion_batch:
+     vpmovqd ymm14, zmm4
+     vcvtdq2pd zmm13, ymm13              ; control column
+     vcvtdq2pd zmm14, ymm14              ; control row
+-    vmovdqu64 zmm4, [rbx + rsi * 8 + MVO_E]
+-    vpmovqd ymm15, zmm4
+-    vpsrlq  zmm4, zmm4, 32
+-    vpmovqd ymm16, zmm4
+-    vcvtdq2pd zmm15, ymm15              ; end column
+-    vcvtdq2pd zmm16, ymm16              ; end row
+     ; a = start.interpolate(control, t), the line itself (control = end)
+     vmulpd  zmm17, zmm11, zmm10
+     vmulpd  zmm4, zmm13, zmm9
+@@ -1843,6 +1842,16 @@ motion_batch:
+     vmulpd  zmm18, zmm12, zmm10
+     vmulpd  zmm4, zmm14, zmm9
+     vaddpd  zmm18, zmm18, zmm4
++    ; Straight lanes already have their result. Only a curved active lane
++    ; needs the second and third interpolations (same arithmetic as below).
++    ktestb  k6, k1
++    jz      .mirror_rounded
++    vmovdqu64 zmm4, [rbx + rsi * 8 + MVO_E]
++    vpmovqd ymm15, zmm4
++    vpsrlq  zmm4, zmm4, 32
++    vpmovqd ymm16, zmm4
++    vcvtdq2pd zmm15, ymm15              ; end column
++    vcvtdq2pd zmm16, ymm16              ; end row
+     ; b = control.interpolate(end, t), then a.interpolate(b, t)
+     vmulpd  zmm13, zmm13, zmm10
+     vmulpd  zmm4, zmm15, zmm9
+@@ -1856,6 +1865,7 @@ motion_batch:
+     vmulpd  zmm12, zmm18, zmm10
+     vmulpd  zmm4, zmm14, zmm9
+     vaddpd  zmm18{k6}, zmm12, zmm4
++.mirror_rounded:
+     vcvtpd2dq ymm17, zmm17
+     vcvtpd2dq ymm18, zmm18
+     ; a lane outside i32 (cvtpd2dq's 0x80000000) takes motion_move
+@@ -2380,18 +2390,20 @@ motion_batch:
+     vpmovqd ymm8, zmm4
+     vcvtdq2pd zmm7, ymm7                ; control column
+     vcvtdq2pd zmm8, ymm8                ; control row
+-    vmovdqu64 zmm4, [rdi + MB_E + rax * 8]
+-    vpmovqd ymm9, zmm4
+-    vpsrlq  zmm4, zmm4, 32
+-    vpmovqd ymm10, zmm4
+-    vcvtdq2pd zmm9, ymm9                ; end column
+-    vcvtdq2pd zmm10, ymm10              ; end row
+     vmulpd  zmm11, zmm5, zmm3
+     vmulpd  zmm12, zmm7, zmm2
+     vaddpd  zmm11, zmm11, zmm12
+     vmulpd  zmm13, zmm6, zmm3
+     vmulpd  zmm12, zmm8, zmm2
+     vaddpd  zmm13, zmm13, zmm12
++    kortestb k3, k3
++    jz      .lanes8_rounded
++    vmovdqu64 zmm4, [rdi + MB_E + rax * 8]
++    vpmovqd ymm9, zmm4
++    vpsrlq  zmm4, zmm4, 32
++    vpmovqd ymm10, zmm4
++    vcvtdq2pd zmm9, ymm9                ; end column
++    vcvtdq2pd zmm10, ymm10              ; end row
+     vmulpd  zmm14, zmm7, zmm3
+     vmulpd  zmm12, zmm9, zmm2
+     vaddpd  zmm14, zmm14, zmm12
+@@ -2404,6 +2416,7 @@ motion_batch:
+     vmulpd  zmm17, zmm13, zmm3
+     vmulpd  zmm12, zmm15, zmm2
+     vaddpd  zmm13{k3}, zmm17, zmm12
++.lanes8_rounded:
+     vcvtpd2dq ymm11, zmm11
+     vcvtpd2dq ymm13, zmm13
+     vmovdqu32 [rdi + MB_COL + rax * 4], ymm11

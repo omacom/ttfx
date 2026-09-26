@@ -1,5 +1,7 @@
 # Further optimization exploration — September 26, 2026
 
+> Historical results before the rebase onto `badde3d`. See [round five](../round5/README.md) for the current PR and measurements.
+
 This pass was performed **after** publishing the refresh of PR #36 at `6e9e162`.
 The performance baseline for every experiment here is the refreshed binary
 from source `cfa5554`, SHA-256

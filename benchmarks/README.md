@@ -1,11 +1,10 @@
 # Assembly performance follow-up to PR #35
 
-> Historical measurements against PR #35 at `ac940f2`. See the [September 26 refresh](round3/README.md) for the current comparison against `189840b`.
-
-**Latest:** [The September 26 refresh](round3/README.md) compares with the
-updated PR #35. [Round four](round4/README.md) records the additional
-profiling and optimization experiments after that refresh. This page and [round two](round2/README.md) retain historical
-measurements against the original assembly revision.
+**Latest:** [Round five](round5/README.md) rebases onto PR #35 at `badde3d`
+(threaded rendering and batched motion) and records fresh measurements.
+[Round three](round3/README.md) and [round four](round4/README.md) are historical
+results against `189840b`; this page and [round two](round2/README.md) compare
+against `ac940f2`.
 
 Baseline: [`omacom/ttfx#35`](https://github.com/omacom/ttfx/pull/35), commit
 `ac940f2e11c95ef7e6d9e6d0c8b37d389a4e5e75`. Both binaries are built from that

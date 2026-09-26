@@ -1,0 +1,51 @@
+diff --git i/asm/engine/render.asm w/asm/engine/render.asm
+index 73fbb90..7ae0540 100644
+--- i/asm/engine/render.asm
++++ w/asm/engine/render.asm
+@@ -193,13 +193,13 @@ render_init:
+     call    alloc
+     mov     [handle_grid], rax
+     mov     rdi, CHAR_LIMIT * 8
+-    call    reserve
++    call    reserve_small
+     mov     [rs_link], rax
+     mov     rdi, CHAR_LIMIT * 8
+-    call    reserve
++    call    reserve_small
+     mov     [rs_cell], rax
+     mov     rdi, CHAR_LIMIT * 4
+-    call    reserve
++    call    reserve_small
+     mov     [rs_handle], rax
+     mov     rdi, [grid_cells]
+     lea     rdi, [rdi * 8 + 64]
+@@ -583,9 +583,26 @@ cell_unlink:
+     mov     eax, r9d
+     mov     ecx, [r8 + CR_HEAD]
+     cmp     ecx, NONE
+-    je      cell_rewin                  ; empty now
++    je      .empty
+     cmp     dword [rbx + rcx * 8 + RL_NEXT], NONE
+-    je      cell_rewin                  ; one left
+-    jmp     cell_pending
++    jne     cell_pending
++    ; One occupant remains: it wins without a scan. The cell record is
++    ; already in r8, and ecx is its sole remaining slot.
++    mov     rdx, [owner_grid]
++    mov     [rdx + rax * 4], ecx
++    mov     esi, [rbx + rcx * 8 + RL_LAYER]
++    mov     [r8 + CR_LAYER], esi
++    mov     rdx, [rs_handle]
++    mov     ecx, [rdx + rcx * 4]
++    jmp     .paint
++.empty:
++    mov     rdx, [owner_grid]
++    mov     dword [rdx + rax * 4], NONE
++    mov     ecx, [space_handle]
++.paint:
++    mov     rdx, [handle_grid]
++    mov     [rdx + rax * 4], ecx
++    mov     rsi, [dirty_cells]
++    mov     byte [rsi + rax], 1
+ .done:
+     ret
