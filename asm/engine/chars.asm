@@ -77,14 +77,31 @@ section .text
 chars_init:
 %macro RESERVE_FIELD 3
     mov     rdi, CHAR_LIMIT * %2
-    call    reserve
+    call    reserve_small
     mov     [%1], rax
 %endmacro
     CHAR_FIELDS RESERVE_FIELD
     mov     rdi, CHAR_LIMIT * 4
-    call    reserve
+    call    reserve_small
     mov     [added_chars], rax
     jmp     update_init
+
+; reserve_small(rdi=bytes) -> rax: reserve for a region that usually stays
+; small. Transparent huge pages would commit (and zero) 2 MB at its first
+; touch, a few kilobytes used; for the dozens of such regions a run
+; touches that is milliseconds of kernel time, more than all the work of
+; the short effects. So these regions keep 4 KB pages.
+%define MADV_NOHUGEPAGE 15
+reserve_small:
+    push    rdi
+    call    reserve
+    pop     rsi
+    push    rax
+    mov     rdi, rax
+    mov     edx, MADV_NOHUGEPAGE
+    SYSCALL SYS_madvise
+    pop     rax
+    ret
 
 ; new_char(rdi=packed symbol, esi=column, edx=row) -> eax = slot.
 ; EffectCharacter::new: the next character_id, the coordinate as both input
