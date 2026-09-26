@@ -488,7 +488,7 @@ decrypt_next_frame:
     dec     r12
     mov     rbx, [typing_pos]
     cmp     rbx, [input_count]
-    jae     .type
+    jae     .tick                       ; typed out: the rest draw nothing
     inc     qword [typing_pos]
     mov     rax, [input_chars]
     mov     edi, [rax + rbx * 4]
