@@ -351,6 +351,22 @@ A `POOL` struc lives in your memory.
 - **RNG** (utils/rng.asm): `rng_below(rdi=n)` (randbelow and choice),
   `rng_randint(rdi, rsi)`, `rng_randrange(rdi, rsi)`, `rng_random -> xmm0`,
   `rng_uniform(xmm0, xmm1)`, `rng_shuffle32/64(rdi=array, rsi=count)`.
+  - **Draws in a hot loop:** keep the batch position and base in registers
+    instead of reloading `rng_pos` on every draw (a store-to-load round trip
+    that serialises the loop). All operands are 64-bit registers, `dest`
+    distinct from `pos` and `base`:
+    - `RNG_OPEN pos, base` before the loop;
+    - `RNG_TAKE dest, pos, base`: the next raw u64 draw;
+    - `RNG_TAKE53 dest, pos, base`: the next draw `>> 11`, the integer behind
+      `rng_random` (`random() < c` is exactly `dest < rng_threshold(c)`);
+    - `RNG_CLOSE pos` after the loop, **and before calling anything that
+      draws** (`rng_below`, `rng_random`, a helper that uses them); `RNG_OPEN`
+      again after the call.
+  - A draw is `cmp`/`jb`/`mov`/`inc`. When the batch runs out, `rng_refill`
+    runs in place and preserves every register (at TIER 4 it uses and
+    restores zmm16-31 and k1), so the macros can sit anywhere.
+  - The draw sequence is the functions' exactly: one `RNG_TAKE` is one
+    `rng_next`. `RNG_BITS53` (one draw, `rng_pos` in memory) still works.
 - **Gradients** (utils/graphics.asm):
   - `gradient_capacity(rdi=steps, rcx=step count, rsi=stop count) -> rax` sizes the
     spectrum.
