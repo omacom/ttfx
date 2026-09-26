@@ -232,7 +232,7 @@ scene_add_frame:
     mov     rdi, rcx
     mov     rsi, r8
     mov     ecx, r9d
-    call    visual_make
+    call    visual_memo
     mov     edx, r12d
     mov     r8, r13
     call    scene_append_frame
@@ -1396,6 +1396,59 @@ step_eased_scene:
     add     [r8 + SC_EASE_STEP], esi
     ret
 
+; ------------------------------------------------------------ visual memo
+
+; visual_memo(rdi=fg, rsi=bg, rdx=packed symbol, ecx=ATTR_* bits) -> eax:
+; visual_make behind a small direct-mapped cache of recent visuals.
+; visual_make's pool lookup compares the header stored with the visual,
+; a cache miss in a pool of thousands; scene frames and appearances mostly
+; repeat a few recent visuals, which this finds in one line. Handles never
+; change within a run, so a cached one stays right. Same clobbers as
+; visual_make (rax, rcx, rdx, rsi, rdi, r8-r11 and more when it formats).
+%define VMEMO_BITS  8
+visual_memo:
+    mov     rax, rdi
+    mov     r8, 0x9E3779B97F4A7C15
+    imul    rax, r8
+    xor     rax, rdx
+    mov     r9, rsi
+    rol     r9, 17
+    xor     rax, r9
+    xor     rax, rcx
+    imul    rax, r8
+    shr     rax, 64 - VMEMO_BITS
+    shl     eax, 5
+    lea     r8, [vmemo]
+    add     r8, rax                     ; the entry: symbol, fg, bg, handle | attrs << 32
+    cmp     [r8], rdx
+    jne     .miss
+    cmp     [r8 + 8], rdi
+    jne     .miss
+    cmp     [r8 + 16], rsi
+    jne     .miss
+    cmp     [r8 + 28], ecx
+    jne     .miss
+    mov     eax, [r8 + 24]
+    ret
+.miss:
+    push    r8
+    push    rdx
+    push    rdi
+    push    rsi
+    push    rcx
+    call    visual_make
+    pop     rcx
+    pop     rsi
+    pop     rdi
+    pop     rdx
+    pop     r8
+    mov     [r8], rdx
+    mov     [r8 + 8], rdi
+    mov     [r8 + 16], rsi
+    mov     [r8 + 24], eax
+    mov     [r8 + 28], ecx
+    ret
+
 ; ------------------------------------------------------------ appearance
 
 ; set_appearance(edi=slot, rsi=packed symbol or 0 for the input symbol,
@@ -1430,7 +1483,7 @@ set_appearance:
     mov     rdx, rsi
     mov     rsi, rcx
     mov     ecx, r9d
-    call    visual_make
+    call    visual_memo
     mov     edi, ebx
     SET_HANDLE
     pop     rbx
@@ -1471,3 +1524,4 @@ alignb 8
 share_table:    resq 1
 alignb 64
 shapes:         resb SHAPE_LIMIT << SHAPE_SHIFT
+vmemo:          resb 32 << VMEMO_BITS   ; visual_memo's cache
