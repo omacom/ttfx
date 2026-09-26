@@ -36,7 +36,9 @@
 ; motion_batch (motion.asm), which works out the pure path steps of the
 ; word's movers ahead of time; their motion_move becomes motion_apply, or
 ; nothing when the step neither moves the character nor ends the path.
-; Ticks that do nothing at all (mb_idle_bits) are left out of the word.
+; Ticks that do nothing at all (mb_idle_bits) are left out of the word,
+; and those that only move a character without a scene (mb_bare_bits) are
+; a set_coordinate.
 ; A callback or an action on another character bumps motion_epoch (and
 ; motion_void takes the word's unticked steps back), and the rest of the
 ; word ticks through motion_move, the idle ticks not reached yet included.
@@ -484,6 +486,11 @@ update:
 .tick_bit:
     BIT_POP rdi, r15
     mov     [r13 + rbx * 8], r15
+%if TIER >= 3
+    mov     rdx, [rsp + 8]
+    bt      rdx, rdi
+    jc      .batched
+%endif
     add     rdi, rbp
     mov     [upd_cursor], edi
     mov     rdx, [doze_bits]
@@ -501,19 +508,6 @@ update:
     jmp     .ticked
 .moving:
     ; tick_awake, inline
-%if TIER >= 3
-    mov     eax, edi
-    and     eax, 63
-    mov     rdx, [rsp + 8]
-    bt      rdx, rax
-    jnc     .unbatched
-    mov     rdx, [mb_act_bits]
-    bt      rdx, rax
-    jnc     .moved                      ; worked out, and nothing to do
-    call    motion_apply
-    jmp     .moved
-.unbatched:
-%endif
     call    motion_move
 .moved:
     mov     edi, [upd_cursor]
@@ -554,6 +548,27 @@ update:
 .tick_next:
     inc     rbx
     jmp     .tick_word
+%if TIER >= 3
+.batched:
+    ; a path step motion_batch worked out (so a path, and no doze)
+    mov     eax, edi
+    add     rdi, rbp
+    mov     [upd_cursor], edi
+    mov     rdx, [mb_act_bits]
+    bt      rdx, rax
+    jnc     .moved                      ; worked out, and nothing to do
+    mov     rdx, [mb_bare_bits]
+    bt      rdx, rax
+    jc      .bare
+    call    motion_apply
+    jmp     .moved
+.bare:
+    ; a move and nothing else: no path event, no scene
+    lea     rdx, [mb]
+    mov     rsi, [rdx + MB_COORD + rax * 8]
+    call    set_coordinate
+    jmp     .ticked
+%endif
 .prune:
     mov     dword [upd_cursor], -1
 %if TIER >= 3

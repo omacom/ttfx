@@ -1782,7 +1782,8 @@ motion_batch:
     ; [rsp] resolved steps (motion_apply writes them), [rsp + 8] tails,
     ; [rsp + 16] the prefix-search flag, [rsp + 24] moves, [rsp + 32]
     ; mirrored steps, [rsp + 40] ready bits while assembling, [rsp + 48]
-    ; idle ticks, [rsp + 56] quiet steps of characters with a scene
+    ; idle ticks, [rsp + 56] quiet steps of characters with a scene,
+    ; [rsp + 64] bare moves
     mov     r12, rdi                    ; candidates
     mov     r13d, esi                   ; first slot
     xor     r14d, r14d                  ; ready bits
@@ -1794,6 +1795,7 @@ motion_batch:
     mov     [rsp + 32], rax
     mov     [rsp + 48], rax
     mov     [rsp + 56], rax
+    mov     [rsp + 64], rax
     mov     [mb_first], r13d
     mov     rbp, [ch_path]
     mov     rbx, [mv_base]
@@ -1944,14 +1946,22 @@ motion_batch:
     kmovb   eax, k7
     shl     rax, cl
     or      [rsp + 8], rax
-    ; quiet: a step that neither moves nor ends; idle with no scene to step
+    ; no scene to step: a step that does not end the path is idle, or
+    ; a bare move when it moves
+    vpcmpeqd k4{k1}, ymm23, [r11 + rsi * 4]
+    kandnb  k4, k7, k4
+    kandb   k5, k4, k3
+    kandnb  k2, k3, k4
+    ; quiet: a step that neither moves nor ends
     korb    k3, k3, k7
     kandnb  k3, k3, k1
-    vpcmpeqd k2{k3}, ymm23, [r11 + rsi * 4]
-    kandnb  k3, k2, k3
+    kandnb  k3, k4, k3                  ; with a scene
     kmovb   eax, k2
     shl     rax, cl
     or      [rsp + 48], rax
+    kmovb   eax, k5
+    shl     rax, cl
+    or      [rsp + 64], rax
     cmp     byte [mv_synced], 0
     je      .group_next
     vmovdqu32 ymm4, [rdx + rsi * 4 + MVO_SYNC]
@@ -2129,12 +2139,19 @@ motion_batch:
     or      [rsp + 24], rax
     shl     r11, cl
     or      [rsp + 8], r11
-    ; quiet: a step that neither moves nor ends; idle with no scene to step
+    ; quiet: a step that neither moves nor ends; idle with no scene to
+    ; step, a bare move when it moves
     mov     rax, [ch_scene]
     vmovdqu xmm1, [rax + rsi * 4]
     vpcmpeqd xmm2, xmm2, xmm2           ; NONE
     vpcmpeqd xmm1, xmm1, xmm2
     vpmovsxdq ymm1, xmm1
+    vpand   ymm2, ymm1, ymm9
+    vpand   ymm2, ymm2, ymm0
+    vmovmskpd eax, ymm2
+    shl     rax, cl
+    andn    rax, r11, rax
+    or      [rsp + 64], rax
     vpandn  ymm2, ymm9, ymm0            ; quiet, but for the tails
     vpand   ymm1, ymm1, ymm2
     vmovmskpd eax, ymm1
@@ -2709,6 +2726,8 @@ motion_batch:
     mov     [mb_mirror_bits], rax
     mov     rax, [rsp + 48]
     mov     [mb_idle_bits], rax
+    mov     rax, [rsp + 64]
+    mov     [mb_bare_bits], rax
     mov     rax, r14
     add     rsp, 72
     pop     r15
@@ -2885,6 +2904,7 @@ mb_moved_bits:  resq 1              ; steps that move the character
 mb_act_bits:    resq 1              ; any of those
 mb_mirror_bits: resq 1              ; mirrored steps (motion_void)
 mb_idle_bits:   resq 1              ; ticks with nothing to do (update skips them)
+mb_bare_bits:   resq 1              ; ticks that only move (set_coordinate)
 mb_first:       resd 1              ; the word's first slot
 mv_synced:      resb 1              ; a mirror has an MVO_SYNC key
 alignb 8
