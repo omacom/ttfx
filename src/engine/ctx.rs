@@ -579,8 +579,7 @@ impl EngineCtx {
             self.step_eased_scene(id, scene_slot, ease.unwrap());
         } else {
             let ch = &mut self.terminal.arena[id.0 as usize];
-            let visual = ch.animation.scenes.at_mut(scene_slot).get_next_visual();
-            ch.animation.current_character_visual = visual;
+            ch.animation.scenes.at_mut(scene_slot).get_next_visual_into(&mut ch.animation.current_character_visual);
         }
 
         self.complete_scene_if_finished(hooks, id, scene_slot);

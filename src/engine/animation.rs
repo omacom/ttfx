@@ -458,8 +458,22 @@ impl Scene {
     /// Scene.get_next_visual: tick the head frame, retiring it (and looping)
     /// exactly as upstream.
     pub fn get_next_visual(&mut self) -> Rc<CharacterVisual> {
+        let head = self.advance_frame();
+        self.all_frames[head].character_visual.clone()
+    }
+
+    /// Tick into an existing visual, avoiding a refcount update on held frames.
+    pub(crate) fn get_next_visual_into(&mut self, current: &mut Rc<CharacterVisual>) {
+        let head = self.advance_frame();
+        let visual = &self.all_frames[head].character_visual;
+        if !Rc::ptr_eq(current, visual) {
+            current.clone_from(visual);
+        }
+    }
+
+    #[inline]
+    fn advance_frame(&mut self) -> usize {
         let head = self.frames[0];
-        let next_visual = self.all_frames[head].character_visual.clone();
         self.all_frames[head].ticks_elapsed += 1;
         if self.all_frames[head].ticks_elapsed == self.all_frames[head].duration {
             self.all_frames[head].ticks_elapsed = 0;
@@ -468,7 +482,7 @@ impl Scene {
                 self.frames.append(&mut self.played_frames);
             }
         }
-        next_visual
+        head
     }
 
     /// Scene.apply_gradient_to_symbols with the exact cyclic_distribution
@@ -840,5 +854,33 @@ mod shared_visual_tests {
         a.add_frame("x", 1, params("123456")).unwrap();
         b.add_frame("x", 1, params("123456")).unwrap();
         assert!(Rc::ptr_eq(&a.all_frames[0].character_visual, &b.all_frames[0].character_visual));
+    }
+
+    #[test]
+    fn held_visual_still_advances_frame_state_and_loops() {
+        for looping in [false, true] {
+            let mut scene = Scene::new("held", looping, None, None, false, false);
+            scene.add_frame("a", 3, VisualParams::default()).unwrap();
+            scene.add_frame("b", 1, VisualParams::default()).unwrap();
+            let mut current = scene.activate().unwrap();
+            let held = Rc::clone(&current);
+            let references = Rc::strong_count(&current);
+            for elapsed in 1..=3 {
+                scene.get_next_visual_into(&mut current);
+                assert!(Rc::ptr_eq(&current, &held));
+                assert_eq!(Rc::strong_count(&current), references);
+                assert_eq!(scene.all_frames[0].ticks_elapsed, if elapsed == 3 { 0 } else { elapsed });
+            }
+            assert_eq!(scene.frames.len(), 1);
+            scene.get_next_visual_into(&mut current);
+            assert_eq!(current.symbol, "b");
+            if looping {
+                assert_eq!(scene.frames.len(), 2);
+                scene.get_next_visual_into(&mut current);
+                assert!(Rc::ptr_eq(&current, &held));
+            } else {
+                assert!(scene.frames.is_empty());
+            }
+        }
     }
 }
