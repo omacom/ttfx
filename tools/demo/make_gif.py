@@ -100,6 +100,15 @@ BLOCKS = {
 # half-width blocks need an x offset too: (x_frac, w_frac)
 HALF_BLOCKS = {"▌": (0.0, 0.5), "▐": (0.5, 0.5)}  # ▌ ▐
 
+# Box-drawing font glyphs do not reliably meet at small demo cell sizes. Draw
+# their strokes to the exact cell edges so terminal-perfect diagrams remain
+# mechanically aligned in the GIF. Values are directions from cell center.
+BOX_SEGMENTS = {
+    "─": "lr", "—": "lr", "│": "ud",
+    "╭": "rd", "╮": "ld", "╰": "ru", "╯": "lu",
+    "├": "urd", "┤": "uld", "┬": "lrd", "┴": "lru", "┼": "lrud",
+}
+
 
 def svg_for(frame: str) -> str:
     rows = parse_frame(frame)
@@ -131,6 +140,32 @@ def svg_for(frame: str) -> str:
                     f'<rect x="{c*CELL_W + xf*CELL_W:g}" y="{r*CELL_H:g}" '
                     f'width="{wf*CELL_W:g}" height="{CELL_H:g}" fill="{fg}"/>'
                 )
+            elif ch == "═":
+                x0, x1 = c * CELL_W, (c + 1) * CELL_W
+                cy = (r + 0.5) * CELL_H
+                out.append(
+                    f'<path d="M{x0:g},{cy-1.35:g}H{x1:g} M{x0:g},{cy+1.35:g}H{x1:g}" '
+                    f'fill="none" stroke="{fg}" stroke-width="1" shape-rendering="crispEdges"/>'
+                )
+            elif ch in BOX_SEGMENTS:
+                x0, x1 = c * CELL_W, (c + 1) * CELL_W
+                y0, y1 = r * CELL_H, (r + 1) * CELL_H
+                cx, cy = (c + 0.5) * CELL_W, (r + 0.5) * CELL_H
+                directions = BOX_SEGMENTS[ch]
+                strokes = []
+                if "l" in directions:
+                    strokes.append(f"M{cx:g},{cy:g}H{x0:g}")
+                if "r" in directions:
+                    strokes.append(f"M{cx:g},{cy:g}H{x1:g}")
+                if "u" in directions:
+                    strokes.append(f"M{cx:g},{cy:g}V{y0:g}")
+                if "d" in directions:
+                    strokes.append(f"M{cx:g},{cy:g}V{y1:g}")
+                path_data = " ".join(strokes)
+                out.append(
+                    f'<path d="{path_data}" fill="none" stroke="{fg}" stroke-width="1.15" '
+                    f'stroke-linecap="square" shape-rendering="crispEdges"/>'
+                )
     # then glyphs, grouped into runs of identical style. textLength pins each
     # run to an exact multiple of the cell width so long rows can't drift out
     # of their columns when font metrics don't match the cell size.
@@ -150,12 +185,12 @@ def svg_for(frame: str) -> str:
                 )
 
         for c, (ch, fg, _, bold) in enumerate(cells[:COLS]):
-            is_block = ch in BLOCKS or ch in HALF_BLOCKS
-            if is_block or fg != run_fg or bold != run_bold:
+            is_graphic = ch in BLOCKS or ch in HALF_BLOCKS or ch in BOX_SEGMENTS or ch == "═"
+            if is_graphic or fg != run_fg or bold != run_bold:
                 flush()
                 run, run_fg, run_bold, run_start = [], fg, bold, c
-            # blocks were already drawn as rects; keep them out of the text run
-            if not is_block:
+            # native graphics were already drawn; keep them out of the text run
+            if not is_graphic:
                 run.append(ch)
             else:
                 run_start = c + 1
