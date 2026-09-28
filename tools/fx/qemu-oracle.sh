@@ -10,7 +10,7 @@
 # a reduced case set (both engines under the same emulated CPU, so glibc's
 # libm picks the same variants for both); the full oracle runs natively
 # (oracle.sh, oracle-simd.sh). JOBS sets the parallelism (default 6).
-set -u
+set -uo pipefail
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
 BIN="${BIN:-$ROOT/target/release/ttfx}"
@@ -18,10 +18,13 @@ JOBS="${JOBS:-6}"
 CPUS=("$@")
 [ ${#CPUS[@]} -eq 0 ] && CPUS=(qemu64 Nehalem Haswell)
 command -v qemu-x86_64 >/dev/null || { echo "qemu-x86_64 not found (pacman -S qemu-user)" >&2; exit 2; }
+[ -x "$BIN" ] || { echo "Build ttfx first: cargo build --release" >&2; exit 2; }
+# The emulated CPU must choose its own kernels regardless of the host's shell.
+unset TTFX_NO_AVX512 TTFX_NO_AVX2
 
 TMPROOT="${ORACLE_TMP:-$ROOT/target/oracle-tmp}"
-mkdir -p "$TMPROOT"
-WORK="$(mktemp -d "$TMPROOT/qemu.XXXXXX")"
+mkdir -p "$TMPROOT" || exit 2
+WORK="$(mktemp -d "$TMPROOT/qemu.XXXXXX")" || exit 2
 trap 'rm -rf "$WORK"' EXIT
 
 printf 'Hello, World!\nThis is ttfx.' > "$WORK/basic"
@@ -47,9 +50,12 @@ run_effect() {
     check() {
         local input="$1"; shift
         TTFX_FX=0 "${q[@]}" "$BIN" "${global[@]}" "$@" < "$WORK/$input" > "$w.r" 2> "$w.re"; local rs=$?
-        "${q[@]}" "$BIN" "${global[@]}" "$@" < "$WORK/$input" > "$w.a" 2> "$w.ae"; local as=$?
+        TTFX_FX=force "${q[@]}" "$BIN" "${global[@]}" "$@" < "$WORK/$input" > "$w.a" 2> "$w.ae"; local as=$?
         grep -v '^qemu-x86_64: warning' "$w.re" > "$w.re2"; grep -v '^qemu-x86_64: warning' "$w.ae" > "$w.ae2"
-        if [ $rs -eq $as ] && cmp -s "$w.r" "$w.a" && cmp -s "$w.re2" "$w.ae2"; then
+        # These are successful-animation cases, so matching crashes/errors or
+        # empty output are failures, too. force also rejects a silent fallback.
+        if [ $rs -eq 0 ] && [ $as -eq 0 ] && [ -s "$w.r" ] && [ -s "$w.a" ] &&
+            cmp -s "$w.r" "$w.a" && cmp -s "$w.re2" "$w.ae2"; then
             pass=$((pass + 1))
         else
             fail=$((fail + 1)); echo "FAIL $cpu $effect: $input $* (exit rust=$rs fx=$as)"
@@ -69,14 +75,21 @@ run_effect() {
 export -f run_effect
 export ROOT BIN WORK
 
-effects=$(ls "$ROOT"/src/fx/effects/*.rs | xargs -n1 basename | sed 's/\.rs$//' | grep -vx mod)
+effects=()
+for source in "$ROOT"/src/fx/effects/*.rs; do
+    [ -f "$source" ] || continue
+    effect="${source##*/}"
+    [ "$effect" = mod.rs ] || effects+=("${effect%.rs}")
+done
+[ "${#effects[@]}" -gt 0 ] || { echo "No effects found" >&2; exit 2; }
 status=0
 for cpu in "${CPUS[@]}"; do
-    out=$(for e in $effects; do echo "$cpu $e"; done | xargs -P "$JOBS" -L1 bash -c 'run_effect "$0" "$1"')
-    echo "$out" | grep '^FAIL'
+    out=$(for effect in "${effects[@]}"; do printf '%s %s\n' "$cpu" "$effect"; done |
+        xargs -P "$JOBS" -L1 bash -c 'run_effect "$0" "$1"') || status=1
+    echo "$out"
     bad=$(echo "$out" | grep -c '^qemu .* [1-9][0-9]* failed')
     total=$(echo "$out" | grep -c '^qemu ')
-    echo "$cpu: $((total - bad))/$total effects pass"
-    [ "$bad" -eq 0 ] || status=1
+    echo "$cpu: $((total - bad))/${#effects[@]} effects pass ($total completed)"
+    [ "$bad" -eq 0 ] && [ "$total" -eq "${#effects[@]}" ] || status=1
 done
 exit $status
