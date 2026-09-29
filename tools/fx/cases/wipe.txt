@@ -16,3 +16,4 @@
 !--final-gradient-frames 0
 !--final-gradient-frames=-3
 --wipe-delay 5 --wipe-ease in_out_bounce --final-gradient-steps 1
+--palette daecc6,bbdd97,9ece6a,678549,39482e --bands

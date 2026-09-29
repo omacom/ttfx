@@ -5,3 +5,7 @@
 --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction radial
 --final-gradient-stops 8A008A 00D1FF FFFFFF --final-gradient-direction diagonal
 --ciphertext-colors 9 --final-gradient-stops 45 201
+--palette 7aa2f7,f7768e,9ece6a
+--palette daecc6,bbdd97,9ece6a,678549,39482e --bands
+--palette ff0000 --ciphertext-colors 008000
+!--bands
