@@ -1,9 +1,11 @@
+use std::collections::HashSet;
 use std::io::{IsTerminal, Read};
 use std::process::ExitCode;
 
-use clap::Parser;
+use clap::{CommandFactory, FromArgMatches, Parser};
 
 use ttfx::engine::terminal::Terminal;
+use ttfx::utils::palette::command_line_arg_ids;
 use ttfx::{cli, engine};
 
 fn get_piped_input() -> String {
@@ -40,7 +42,8 @@ fn forget_engine<E, C>(effect: E, ctx: C) {
 fn main() -> ExitCode {
     ttfx::tune_allocator();
     ttfx::restore_sigpipe();
-    let cli = cli::Cli::parse();
+    let matches = cli::Cli::command().get_matches();
+    let cli = cli::Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
 
     // upstream prints the completion script and returns before any input handling
     if let Some(shell) = &cli.print_completion {
@@ -88,8 +91,8 @@ fn main() -> ExitCode {
 
     // --random-effect: pick from the registry (filtered), run with pure
     // default effect config — upstream ignores effect CLI args here too.
-    let chosen_effect;
-    let effect_command = if cli.random_effect {
+    // --palette still applies; there are no effect color flags to keep.
+    let mut effect_command = if cli.random_effect {
         use clap::CommandFactory;
         let mut names: Vec<String> = cli::Cli::command()
             .get_subcommands()
@@ -104,7 +107,7 @@ fn main() -> ExitCode {
             return ExitCode::from(1);
         }
         let name = names[rng.choice_index(names.len())].clone();
-        chosen_effect = match clap::Parser::try_parse_from::<_, &str>(["ttfx", &name]) {
+        match cli::Cli::try_parse_from(["ttfx", name.as_str()]) {
             Ok(cli::Cli {
                 effect: Some(effect),
                 ..
@@ -113,10 +116,9 @@ fn main() -> ExitCode {
                 ttfx::errln!("Error: failed to build effect '{name}'.");
                 return ExitCode::from(1);
             }
-        };
-        &chosen_effect
+        }
     } else {
-        match &cli.effect {
+        match cli.effect.clone() {
             Some(effect) => effect,
             None => {
                 ttfx::errln!("Error: No effect specified.");
@@ -125,7 +127,27 @@ fn main() -> ExitCode {
         }
     };
 
+    let palette = cli.palette();
+    if let Some(palette) = palette.as_ref() {
+        let skip = if cli.random_effect {
+            HashSet::new()
+        } else {
+            matches
+                .subcommand()
+                .map(|(_, sub)| command_line_arg_ids(sub))
+                .unwrap_or_default()
+        };
+        effect_command.apply_palette(palette, &skip);
+    }
+
     let mut config = cli.terminal_config();
+    if cli.bands {
+        if palette.is_none() {
+            ttfx::errln!("Error: --bands requires --palette.");
+            return ExitCode::from(1);
+        }
+        config.existing_color_handling = ttfx::engine::animation::ExistingColorHandling::Always;
+    }
     // SIGWINCH is delivered to every process in the terminal's foreground group,
     // whatever its stdout points at. Reacting to it when the animation is being
     // redirected would leave a truncated first run followed by a complete second
@@ -151,7 +173,7 @@ fn main() -> ExitCode {
         } else {
             ttfx::engine::ctx::Clock::real()
         };
-        if let Some(mut effect) = ttfx::fx::effects::build(effect_command) {
+        if let Some(mut effect) = ttfx::fx::effects::build(&effect_command) {
             let mut engine = match ttfx::fx::Engine::new(&input_data, config.clone(), rng, clock) {
                 Ok(engine) => engine,
                 Err(engine::error::EngineError::UnsupportedAnsiSequence(seq)) => {
@@ -163,6 +185,11 @@ fn main() -> ExitCode {
                     return ExitCode::from(1);
                 }
             };
+            if cli.bands {
+                if let Some(palette) = palette.as_ref() {
+                    ttfx::utils::bands::apply_field_bands_fx(&mut engine, palette);
+                }
+            }
             let outcome = if cli.parity_dump {
                 ttfx::fx::run::dump_effect(effect.as_mut(), &mut engine, cli.max_frames)
                     .map(|_| ttfx::engine::effect::RunOutcome::Complete)
@@ -199,6 +226,12 @@ fn main() -> ExitCode {
                     return ExitCode::from(1);
                 }
             };
+        if cli.bands {
+            if let Some(palette) = palette.as_ref() {
+                ttfx::utils::bands::apply_field_bands(&mut ctx.terminal, palette);
+                ctx.preexisting_colors_present = true;
+            }
+        }
         let mut effect = effect_command.build_effect();
 
         let outcome = if cli.parity_dump {

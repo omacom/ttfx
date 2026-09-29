@@ -59,6 +59,9 @@ impl Engine {
 /// Render on a second thread, unless the run is paced, TTFX_THREADS is 0 or 1,
 /// or there is only one CPU.
 fn threaded(e: &Engine) -> bool {
+    if cfg!(target_arch = "wasm32") {
+        return false;
+    }
     !e.paced()
         && std::env::var_os("TTFX_THREADS").is_none_or(|v| v != "1" && v != "0")
         && cpus() >= 2

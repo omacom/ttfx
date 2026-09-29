@@ -41,6 +41,9 @@ pub struct TerminalConfig {
     pub reuse_canvas: bool,
     pub no_eol: bool,
     pub no_restore_cursor: bool,
+    /// When set, layout uses this size instead of querying the tty. Wasm
+    /// Session and tests that want a window without a real terminal set it.
+    pub terminal_size: Option<(i64, i64)>,
 }
 
 impl Default for TerminalConfig {
@@ -61,6 +64,7 @@ impl Default for TerminalConfig {
             reuse_canvas: false,
             no_eol: false,
             no_restore_cursor: false,
+            terminal_size: None,
         }
     }
 }
@@ -276,7 +280,7 @@ impl Terminal {
 
         let input_line_lengths: Vec<i64> =
             preprocessed_lines.iter().map(|l| l.len() as i64).collect();
-        let terminal_dimensions = get_terminal_dimensions();
+        let terminal_dimensions = config.terminal_size.unwrap_or_else(get_terminal_dimensions);
         let layout = compute_layout(
             &config,
             &input_line_lengths,
@@ -912,11 +916,16 @@ pub fn get_terminal_dimensions() -> (i64, i64) {
     if let (Some(c), Some(l)) = (columns, lines) {
         return (c, l);
     }
+    #[cfg(not(target_arch = "wasm32"))]
     match terminal_size::terminal_size() {
         Some((terminal_size::Width(w), terminal_size::Height(h))) => {
             (columns.unwrap_or(w as i64), lines.unwrap_or(h as i64))
         }
         None => (columns.unwrap_or(80), lines.unwrap_or(24)),
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        (columns.unwrap_or(80), lines.unwrap_or(24))
     }
 }
 
