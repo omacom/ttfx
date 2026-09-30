@@ -23,7 +23,8 @@ const _: () = assert!(JUMP_STEPS == (LANES - 1) * LANE);
 /// side by side. The state transition is linear over GF(2), so lane i's next
 /// start - LANES - 1 lanes past its end - is a fixed 256x256 bit matrix
 /// (JUMP) times its end state. The first batch runs scalar and records the
-/// lanes' end states.
+/// lanes' end states. With AVX2 only, the same shape runs on two vectors
+/// four lanes wide.
 pub struct Rng {
     s: [u64; 4],
     /// The stream's state before `batch[0]`.
@@ -35,6 +36,7 @@ pub struct Rng {
     /// is word w of lane i), once a batch has recorded them.
     lanes: Option<[[u64; LANES]; 4]>,
     avx512: bool,
+    avx2: bool,
 }
 
 impl Rng {
@@ -84,6 +86,7 @@ impl Rng {
             pos: BATCH,
             lanes: None,
             avx512: avx512_available(),
+            avx2: avx2_available(),
         }
     }
 
@@ -104,7 +107,10 @@ impl Rng {
         match self.lanes {
             #[cfg(target_arch = "x86_64")]
             // SAFETY: `lanes` is only recorded when AVX-512F is available.
-            Some(lanes) => unsafe { self.refill_lanes(lanes) },
+            Some(lanes) if self.avx512 => unsafe { self.refill_lanes(lanes) },
+            #[cfg(target_arch = "x86_64")]
+            // SAFETY: `lanes` is only recorded when AVX2 is available.
+            Some(lanes) if self.avx2 => unsafe { self.refill_lanes_avx2(lanes) },
             _ => self.refill_scalar(),
         }
         self.pos = 0;
@@ -129,7 +135,7 @@ impl Rng {
             }
         }
         self.s = [s0, s1, s2, s3];
-        if self.avx512 {
+        if self.avx512 || self.avx2 {
             self.lanes = Some(ends);
         }
     }
@@ -196,6 +202,87 @@ impl Rng {
         let mut lanes = [[0u64; LANES]; 4];
         for (w, v) in [s0, s1, s2, s3].into_iter().enumerate() {
             store_si512(&mut lanes[w], 0, v);
+        }
+        // lane 7's end is where the whole batch leaves the stream
+        self.s = [lanes[0][7], lanes[1][7], lanes[2][7], lanes[3][7]];
+        self.lanes = Some(lanes);
+    }
+
+    /// refill_lanes with AVX2: the same jump and transpose, four lanes per
+    /// vector two at a time (the halves), rotates as shift/or pairs, and the
+    /// jump's per-lane masks from a compare instead of a test into a mask
+    /// register. The draws are the same.
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx2")]
+    fn refill_lanes_avx2(&mut self, ends: [[u64; LANES]; 4]) {
+        use super::simd::{load_si256, store_si256};
+        use std::arch::x86_64::*;
+        // the jump: each lane's start is the XOR of the rows of its end
+        // state's set bits (lanes 0-3 in the low vectors, 4-7 in the high)
+        let zero = _mm256_setzero_si256();
+        let mut s = [[zero; 4]; 2];
+        for w in 0..4 {
+            let end = [load_si256(&ends[w], 0), load_si256(&ends[w], 4)];
+            for b in 0..64 {
+                let bit = _mm256_set1_epi64x((1u64 << b) as i64);
+                // all-ones where the end state's bit b is set
+                let k = [
+                    _mm256_cmpeq_epi64(_mm256_and_si256(end[0], bit), bit),
+                    _mm256_cmpeq_epi64(_mm256_and_si256(end[1], bit), bit),
+                ];
+                let row = &JUMP[w * 64 + b];
+                for (h, sw) in s.iter_mut().enumerate() {
+                    for (j, sj) in sw.iter_mut().enumerate() {
+                        *sj = _mm256_xor_si256(
+                            *sj,
+                            _mm256_and_si256(k[h], _mm256_set1_epi64x(row[j] as i64)),
+                        );
+                    }
+                }
+            }
+        }
+        let mut lanes = [[0u64; LANES]; 4];
+        for (h, sh) in s.iter_mut().enumerate() {
+            let [mut s0, mut s1, mut s2, mut s3] = *sh;
+            // LANE steps of the half's four lanes, four at a time; a
+            // transpose turns the four outputs (lane i in qword i) into four
+            // consecutive draws a lane
+            for j in (0..LANE).step_by(4) {
+                let mut out = [zero; 4];
+                for o in &mut out {
+                    let sum = _mm256_add_epi64(s0, s3);
+                    *o = _mm256_add_epi64(
+                        _mm256_or_si256(_mm256_slli_epi64::<23>(sum), _mm256_srli_epi64::<41>(sum)),
+                        s0,
+                    );
+                    let t = _mm256_slli_epi64::<17>(s1);
+                    let s3s1 = _mm256_xor_si256(s3, s1);
+                    let s2x = _mm256_xor_si256(s2, s0);
+                    s1 = _mm256_xor_si256(s1, s2x); // s1 ^= s2 ^ s0
+                    s2 = _mm256_xor_si256(s2x, t); // s2 ^= s0 ^ t
+                    s0 = _mm256_xor_si256(s0, s3s1); // s0 ^= s3 ^ s1
+                    s3 = _mm256_or_si256(
+                        _mm256_slli_epi64::<45>(s3s1),
+                        _mm256_srli_epi64::<19>(s3s1),
+                    );
+                }
+                let u0 = _mm256_unpacklo_epi64(out[0], out[1]); // lanes 0, 2: draws j, j+1
+                let u1 = _mm256_unpackhi_epi64(out[0], out[1]); // lanes 1, 3
+                let u2 = _mm256_unpacklo_epi64(out[2], out[3]); // lanes 0, 2: draws j+2, j+3
+                let u3 = _mm256_unpackhi_epi64(out[2], out[3]);
+                for (q, v) in [
+                    (0, _mm256_permute2f128_si256::<0x20>(u0, u2)),
+                    (1, _mm256_permute2f128_si256::<0x20>(u1, u3)),
+                    (2, _mm256_permute2f128_si256::<0x31>(u0, u2)),
+                    (3, _mm256_permute2f128_si256::<0x31>(u1, u3)),
+                ] {
+                    // lane blocks are LANE draws and j + 4 <= LANE
+                    store_si256(&mut self.batch[..], (4 * h + q) * LANE + j, v);
+                }
+            }
+            for (w, v) in [s0, s1, s2, s3].into_iter().enumerate() {
+                store_si256(&mut lanes[w], 4 * h, v);
+            }
         }
         // lane 7's end is where the whole batch leaves the stream
         self.s = [lanes[0][7], lanes[1][7], lanes[2][7], lanes[3][7]];
@@ -357,6 +444,15 @@ fn avx512_available() -> bool {
     {
         std::env::var_os("TTFX_NO_AVX512").is_none()
             && std::arch::is_x86_feature_detected!("avx512f")
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    false
+}
+
+fn avx2_available() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    {
+        std::env::var_os("TTFX_NO_AVX2").is_none() && std::arch::is_x86_feature_detected!("avx2")
     }
     #[cfg(not(target_arch = "x86_64"))]
     false
