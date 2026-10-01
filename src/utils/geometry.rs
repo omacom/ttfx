@@ -54,12 +54,12 @@ pub fn find_coords_on_circle(
     if radius == 0 {
         return points;
     }
-    let mut seen: HashSet<Coord> = HashSet::new();
     let coords_limit = if coords_limit == 0 {
         round_half_even(2.0 * std::f64::consts::PI * radius as f64)
     } else {
         coords_limit
     };
+    let mut seen = (unique && coords_limit > 1).then(HashSet::new);
     let angle_step = 2.0 * std::f64::consts::PI / coords_limit as f64;
     for i in 0..coords_limit {
         let angle = angle_step * i as f64;
@@ -68,14 +68,9 @@ pub fn find_coords_on_circle(
         x += x_diff;
         let y = origin.row as f64 + radius as f64 * angle.sin();
         let point = Coord::new(round_half_even(x), round_half_even(y));
-        if unique {
-            if !seen.contains(&point) {
-                points.push(point);
-            }
-        } else {
+        if seen.as_mut().map_or(true, |seen| seen.insert(point)) {
             points.push(point);
         }
-        seen.insert(point);
     }
     points
 }
