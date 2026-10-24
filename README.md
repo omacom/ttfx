@@ -119,6 +119,16 @@ timed phase so the loop stays watchable (`matrix --rain-time 3`, `thunderstorm -
 `vhstape --total-glitch-time 250`, `spotlights --search-duration 80`, `errorcorrect
 --error-pairs 0.5`); everything else is stock.
 
+For VT-compatible terminals, `--differential-output` sends only changed cells.
+It keeps the same effects and frame pacing, while avoiding repeated terminal
+painting and compositor texture uploads for unchanged parts of the canvas.
+Redirected output and parity dumps retain their full frames. Runs containing
+wide or zero-width cells fall back to full output.
+
+The optional screen comparison test requires `pyte`:
+`python3 tools/tests/differential_output.py target/release/ttfx`.
+It compares rendered frames, styles and cursor positions for both engines.
+
 ## Fidelity
 
 This is a *parity port*, not a reimplementation-in-spirit. Given the same input, config, and

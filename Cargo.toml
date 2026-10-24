@@ -9,6 +9,7 @@ license = "MIT"
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4.6.9"
 terminal_size = "0.4"
+unicode-width = "0.2"
 
 [profile.release]
 lto = true

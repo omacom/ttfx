@@ -854,6 +854,17 @@ impl Render {
         self.rows.iter().map(|r| r.len).sum()
     }
 
+    pub(super) fn differential_frame<'a>(
+        &self,
+        output: &'a mut crate::utils::differential::DifferentialOutput,
+        prefix: &[u8],
+    ) -> Option<&'a [u8]> {
+        output.frame(self.width, self.height, prefix, |row, col| {
+            let span = self.cell_span[(self.height - 1 - row) * self.stride + col];
+            &self.bytes[span.offset as usize..(span.offset + span.len) as usize]
+        })
+    }
+
     /// The frame, top row first, between `prefix` and `suffix`, as iovec parts.
     pub fn frame_parts<'a>(
         &'a self,

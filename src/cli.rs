@@ -120,6 +120,10 @@ pub struct Cli {
     #[arg(long = "no-restore-cursor", default_value_t = false)]
     pub no_restore_cursor: bool,
 
+    /// On a terminal, redraw only changed cells (VT-compatible terminals)
+    #[arg(long = "differential-output", default_value_t = false)]
+    pub differential_output: bool,
+
     /// Seed for the random number generator (deterministic within ttfx)
     #[arg(long = "seed")]
     pub seed: Option<u64>,
@@ -181,6 +185,7 @@ impl Cli {
             reuse_canvas: self.reuse_canvas,
             no_eol: self.no_eol,
             no_restore_cursor: self.no_restore_cursor,
+            differential_output: self.differential_output,
         }
     }
 }

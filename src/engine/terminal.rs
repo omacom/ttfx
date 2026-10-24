@@ -41,6 +41,7 @@ pub struct TerminalConfig {
     pub reuse_canvas: bool,
     pub no_eol: bool,
     pub no_restore_cursor: bool,
+    pub differential_output: bool,
 }
 
 impl Default for TerminalConfig {
@@ -61,6 +62,7 @@ impl Default for TerminalConfig {
             reuse_canvas: false,
             no_eol: false,
             no_restore_cursor: false,
+            differential_output: false,
         }
     }
 }
@@ -160,6 +162,7 @@ pub struct Terminal {
     row_bytes: Vec<Vec<u8>>,
     pub terminal_state: Vec<String>,
     output_buffer: String,
+    differential: crate::utils::differential::DifferentialOutput,
     move_cursor_to_top: String,
     frame_rate: i64,
     last_time_printed: Instant,
@@ -379,6 +382,7 @@ impl Terminal {
             row_bytes: Vec::new(),
             terminal_state: Vec::new(),
             output_buffer: String::new(),
+            differential: Default::default(),
             move_cursor_to_top,
             frame_rate,
             last_time_printed: Instant::now(),
@@ -848,6 +852,32 @@ impl Terminal {
     ) -> std::io::Result<()> {
         self.write_move_cursor_to_top(out)?;
         out.write_all(output_string.as_bytes())?;
+        out.flush()
+    }
+
+    pub(crate) fn print_differential_frame(
+        &mut self,
+        out: &mut impl Write,
+        output_string: &str,
+    ) -> std::io::Result<()> {
+        let width = self.visible_right.max(0) as usize;
+        let height = self.visible_top.max(0) as usize;
+        let cells = &self.render_visuals;
+        let frame = self.differential.frame(
+            width,
+            height,
+            self.move_cursor_to_top.as_bytes(),
+            |row, col| {
+                let visual = cells[(height - 1 - row) * width + col];
+                // SAFETY: visuals are pooled for the lifetime of the terminal.
+                unsafe { visual.as_ref() }
+                    .map_or(b" " as &[u8], |v| v.formatted_symbol.as_str().as_bytes())
+            },
+        );
+        match frame {
+            Some(bytes) => out.write_all(bytes)?,
+            None => return self.print_frame(out, output_string),
+        }
         out.flush()
     }
 

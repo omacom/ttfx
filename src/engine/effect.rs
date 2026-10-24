@@ -55,7 +55,14 @@ pub fn run_effect(
                 ctx.terminal.recycle_output_string(frame);
                 break;
             }
-            ctx.terminal.print_frame(&mut out, &frame)?;
+            if tty_output
+                && ctx.terminal.config.differential_output
+                && !ctx.terminal.config.ignore_terminal_dimensions
+            {
+                ctx.terminal.print_differential_frame(&mut out, &frame)?;
+            } else {
+                ctx.terminal.print_frame(&mut out, &frame)?;
+            }
             ctx.terminal.recycle_output_string(frame);
         }
         Ok(())

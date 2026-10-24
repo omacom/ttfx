@@ -1,4 +1,5 @@
 pub mod ansi;
+pub(crate) mod differential;
 pub mod easing;
 pub mod geometry;
 pub mod graphics;
