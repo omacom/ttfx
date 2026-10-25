@@ -1,6 +1,6 @@
 [package]
 name = "ttfx"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 description = "Terminal text effects — a Rust port of terminaltexteffects (TTE)"
 license = "MIT"
