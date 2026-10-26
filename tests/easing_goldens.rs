@@ -41,6 +41,27 @@ const EASING_GOLDEN_ORDER: &[Easing] = &[
     Easing::CubicBezier(0.68, -0.55, 0.265, 1.55),
 ];
 
+/// Easings whose samples go through libm (sin, cos, sqrt, or a non-integer
+/// power). glibc's ifunc variants do not agree on these bit for bit.
+fn libm_rounded(easing: &Easing) -> bool {
+    matches!(
+        easing,
+        Easing::InSine
+            | Easing::OutSine
+            | Easing::InOutSine
+            | Easing::InExpo
+            | Easing::OutExpo
+            | Easing::InOutExpo
+            | Easing::InCirc
+            | Easing::OutCirc
+            | Easing::InOutCirc
+            | Easing::InElastic
+            | Easing::OutElastic
+            | Easing::InOutElastic
+            | Easing::CubicBezier(..)
+    )
+}
+
 #[test]
 fn easing_matches_python_bit_exactly() {
     let data = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/easing_goldens.bin"))
@@ -54,18 +75,17 @@ fn easing_matches_python_bit_exactly() {
             offset += 8;
             let p = i as f64 / 1000.0;
             let actual = easing.ease(p);
-            // Bit-exactness is only promised on the pinned parity platform
-            // (Linux/glibc — plan.md §9 "pin the parity platform"). Elsewhere
-            // the system libm rounds sin/cos/pow a last-ulp differently
-            // (measured max 2.3e-16 absolute on macOS), so other platforms get
-            // the boundary-tolerant assertion instead. Quantized effect output
-            // absorbs this either way.
-            let within_tolerance = if cfg!(all(target_os = "linux", target_env = "gnu")) {
-                // CubicBezier tolerates 1 ulp even here: in optimized builds
-                // LLVM const-folds some powf calls, which can differ from
-                // runtime libm by an ulp.
-                let tolerance = if matches!(easing, Easing::CubicBezier(..)) { 1 } else { 0 };
-                actual.to_bits().abs_diff(expected.to_bits()) <= tolerance
+            // Polynomials are bit-exact on the pinned platform (Linux/glibc).
+            // sin/cos/sqrt and non-integer pow are not: glibc picks an FMA or
+            // SSE2 libm at runtime, and those differ by a few ulps (OutSine and
+            // InOutElastic by 1, a cubic bezier by 17, about 2.4e-16). The
+            // goldens were recorded on an FMA machine, so a CPU without FMA
+            // fails a bit-exact compare even though CPython on that same CPU
+            // matches Rust. Quantized effect output absorbs either rounding.
+            let within_tolerance = if cfg!(all(target_os = "linux", target_env = "gnu"))
+                && !libm_rounded(easing)
+            {
+                actual.to_bits() == expected.to_bits()
             } else {
                 (actual - expected).abs() <= 1e-15
             };
