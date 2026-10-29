@@ -32,7 +32,7 @@
 use std::collections::HashMap;
 
 use crate::utils::easing::Easing;
-use crate::utils::geometry::{self, Coord};
+use crate::utils::geometry::{self, Coord, FloatPoint};
 use crate::utils::pycompat::round_half_even;
 
 use super::events::{Caller, Event, WaypointKey};
@@ -173,6 +173,10 @@ pub struct Mirrors {
     pub sync: Vec<u32>,
     /// Some slot has a sync key.
     pub synced: bool,
+    /// The point the slot's last path step produced, before rounding (NaN
+    /// before any, and after set_coordinate). Kept across mirrors and paths.
+    pub px: Vec<f64>,
+    pub py: Vec<f64>,
 }
 
 /// A mirrored step: the step, the distance reached, the unrounded coordinate.
@@ -206,6 +210,8 @@ impl Mirrors {
             ] {
                 v.resize(slots, 0.0);
             }
+            self.px.resize(slots, f64::NAN);
+            self.py.resize(slots, f64::NAN);
             self.etab.resize(slots, 0);
             self.sync.resize(slots, 0);
             self.flags.resize(slots, 0);
@@ -265,6 +271,13 @@ impl Mirrors {
         Some(MirrorStep { step, d, x, y })
     }
 
+    /// The slot's last path step produced (x, y).
+    #[inline(always)]
+    pub(super) fn record(&mut self, slot: u32, x: f64, y: f64) {
+        *self.px.at_mut(slot) = x;
+        *self.py.at_mut(slot) = y;
+    }
+
     #[inline(always)]
     fn drop_slot(&mut self, slot: u32) {
         *self.path.at_mut(slot) = NONE;
@@ -290,9 +303,9 @@ impl Default for Paths {
 }
 
 impl Paths {
-    /// The coordinate `distance` into region segment `seg` (eased: unclamped).
+    /// The point `distance` into region segment `seg`, before rounding (eased: unclamped).
     #[inline(always)]
-    fn coord_in(&self, path: u32, seg: u32, distance: f64) -> Coord {
+    fn point_in(&self, path: u32, seg: u32, distance: f64) -> FloatPoint {
         let seg = self.segs.at(seg as usize);
         let t = if seg.distance == 0.0 {
             0.0
@@ -302,15 +315,24 @@ impl Paths {
             (distance / seg.distance).min(1.0)
         };
         if seg.end.bezier == NONE {
-            geometry::find_coord_on_line(seg.start.coord, seg.end.coord, t)
+            geometry::point_on_line(seg.start.coord, seg.end.coord, t)
         } else {
-            geometry::find_coord_on_bezier_curve(
+            geometry::point_on_bezier_curve(
                 seg.start.coord,
                 self.bezier(seg.end.bezier),
                 seg.end.coord,
                 t,
             )
         }
+    }
+
+    /// A step of `slot` landed `distance` into region segment `seg`: the
+    /// coordinate, its point recorded.
+    #[inline(always)]
+    fn land(&mut self, slot: u32, path: u32, seg: u32, distance: f64) -> Coord {
+        let p = self.point_in(path, seg, distance);
+        self.m.record(slot, p.column, p.row);
+        p.round()
     }
 
     fn intern_bezier(&mut self, control: &[Coord]) -> u32 {
@@ -520,6 +542,7 @@ impl Paths {
         if let Some(s) = self.m.next_step(&self.etab, slot) {
             *self.m.step.at_mut(slot) = s.step;
             *self.m.last.at_mut(slot) = s.d;
+            self.m.record(slot, s.x, s.y);
             if s.step == *self.m.max.at(slot) {
                 // Motion.move's tail reads the record
                 self.release(slot);
@@ -857,7 +880,9 @@ impl Engine {
         let p = self.paths.recs.at_mut(path);
         if p.max_steps == 0 || p.current_step >= p.max_steps || p.total_distance == 0.0 {
             let (first, count) = p.segs();
-            return self.paths.segs[(first + count - 1) as usize].end.coord;
+            let end = self.paths.segs[(first + count - 1) as usize].end.coord;
+            self.paths.m.record(slot, end.column as f64, end.row as f64);
+            return end;
         }
         p.current_step += 1;
         let step = p.current_step;
@@ -874,7 +899,7 @@ impl Engine {
         let seg = self.paths.segs.at(first as usize);
         if distance_to_travel <= seg.distance && seg.entered {
             self.paths.mirror(slot, path, 0, false);
-            return self.paths.coord_in(path, first, distance_to_travel);
+            return self.paths.land(slot, path, first, distance_to_travel);
         }
         self.path_walk(hooks, slot, path, distance_to_travel)
     }
@@ -959,7 +984,23 @@ impl Engine {
                 index
             }
         };
-        self.paths.coord_in(path, first + index, distance_to_travel)
+        let seg = first + index;
+        self.paths.land(slot, path, seg, distance_to_travel)
+    }
+
+    /// The character's position before rounding: the point of the path
+    /// step that put it at `coord(slot)`, which rounds (half to even) to it.
+    /// The point stays while the character does, on a path or not; None
+    /// before any step, and once something other than a step moves it
+    /// (`set_coordinate`) until the next. Not in the reference.
+    pub fn path_position(&self, slot: u32) -> Option<FloatPoint> {
+        let m = &self.paths.m;
+        let p = FloatPoint {
+            column: m.px[slot as usize],
+            row: m.py[slot as usize],
+        };
+        // a coordinate written directly (overflow) leaves an old point
+        (!p.column.is_nan() && p.round() == self.ch.coord[slot as usize]).then_some(p)
     }
 
     /// Motion.move: step the active path, then holds, loops, completion and
@@ -973,7 +1014,7 @@ impl Engine {
         let coord = self.path_step(hooks, slot, path);
         // unchanged: the render cell already matches
         if *self.ch.coord.at(slot) != coord {
-            self.set_coordinate(slot, coord);
+            self.place(slot, coord);
         }
         self.motion_tail(hooks, slot);
     }

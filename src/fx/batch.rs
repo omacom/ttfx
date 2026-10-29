@@ -6,9 +6,10 @@
 //! with AVX-512 or 4 with AVX2, instead of one path walk per tick. For
 //! parity each lane does `mirror_step`'s divide, multiplies and adds, with
 //! no FMA, and cvtpd2dq's half-to-even rounding (a lane outside i32 converts
-//! to i32::MIN and is left to the scalar step). Steps and distances go to the
-//! mirrors at once (the old distances kept in `Batch`); coordinates wait in
-//! `Batch` until update ticks the character (`motion_apply`).
+//! to i32::MIN and is left to the scalar step). Steps, distances and the
+//! points before rounding (`Mirrors::px`) go to the mirrors at once (the old
+//! ones kept in `Batch`); coordinates wait in `Batch` until update ticks the
+//! character (`motion_apply`).
 //!
 //! A step depends only on the character's own mirror, which only its own
 //! tick changes - or an effect callback, or a change to a path another
@@ -51,8 +52,11 @@ pub(super) const SYNC_KEY_STEP: u32 = 1 << 31;
 pub struct Batch {
     step: [f64; 64],
     d: [f64; 64],
-    /// The mirrors' distances before the batch (`restore`).
+    /// The mirrors' distances and recorded points before the batch
+    /// (`restore`).
     old: [f64; 64],
+    ox: [f64; 64],
+    oy: [f64; 64],
     x: [i32; 64],
     y: [i32; 64],
     /// The synced scene's frame index at the step, for the slot's sync key
@@ -126,11 +130,18 @@ impl Adapt {
 
 impl Default for Batch {
     fn default() -> Self {
-        let tier = tier();
+        Batch::new(tier())
+    }
+}
+
+impl Batch {
+    fn new(tier: u8) -> Self {
         Batch {
             step: [0.0; 64],
             d: [0.0; 64],
             old: [0.0; 64],
+            ox: [0.0; 64],
+            oy: [0.0; 64],
             x: [0; 64],
             y: [0; 64],
             sidx: [NO_INDEX; 64],
@@ -164,28 +175,37 @@ fn sync_index(key: u32, step: f64, max: f64, total: f64, d: f64) -> u32 {
     index.min(last).max(0) as u32
 }
 
-/// The widest kernel the CPU runs. TTFX_NO_AVX512 and TTFX_NO_AVX2 (for
-/// testing) leave out the kernels that need them.
-fn tier() -> u8 {
+/// The kernels the CPU runs, widest first: 4 AVX-512, 3 AVX2, 2 NEON, then
+/// 0 (none).
+pub fn kernels() -> Vec<u8> {
+    let mut tiers = Vec::new();
     #[cfg(target_arch = "x86_64")]
     {
         use std::arch::is_x86_feature_detected as has;
-        let off = |name: &str| std::env::var_os(name).is_some();
-        if off("TTFX_NO_AVX2") {
-            return 0;
-        }
-        if !off("TTFX_NO_AVX512") && has!("avx512f") && has!("avx512vl") && has!("avx2") {
-            return 4;
+        if has!("avx512f") && has!("avx512vl") && has!("avx2") {
+            tiers.push(4);
         }
         if has!("avx2") {
-            return 3;
+            tiers.push(3);
         }
     }
     #[cfg(target_arch = "aarch64")]
-    if std::env::var_os("TTFX_NO_NEON").is_none() {
-        return 2;
-    }
-    0
+    tiers.push(2);
+    tiers.push(0);
+    tiers
+}
+
+/// The widest kernel the CPU runs. TTFX_NO_AVX512, TTFX_NO_AVX2 and
+/// TTFX_NO_NEON (for testing) leave out the kernels that need them.
+fn tier() -> u8 {
+    let off = |name: &str| std::env::var_os(name).is_some();
+    let skip = |tier: u8| match tier {
+        4 => off("TTFX_NO_AVX512") || off("TTFX_NO_AVX2"),
+        3 => off("TTFX_NO_AVX2"),
+        2 => off("TTFX_NO_NEON"),
+        _ => false,
+    };
+    kernels().into_iter().find(|&t| !skip(t)).unwrap_or(0)
 }
 
 /// Lanes of `v` with every bit of `bits` set: all ones, else zero.
@@ -232,8 +252,11 @@ impl Batch {
                 self.step[k] = r.step;
                 self.d[k] = r.d;
                 self.old[k] = *m.last.at(slot);
+                self.ox[k] = *m.px.at(slot);
+                self.oy[k] = *m.py.at(slot);
                 *m.step.at_mut(slot) = r.step;
                 *m.last.at_mut(slot) = r.d;
+                m.record(slot, r.x, r.y);
                 self.x[k] = x as i32;
                 self.y[k] = y as i32;
                 return 1 << k;
@@ -271,6 +294,7 @@ impl Batch {
             // whole numbers below 2^53: exact
             *m.step.at_mut(slot) = self.step[k] - 1.0;
             *m.last.at_mut(slot) = self.old[k];
+            m.record(slot, self.ox[k], self.oy[k]);
         }
     }
 
@@ -325,6 +349,17 @@ impl Batch {
 }
 
 impl Engine {
+    /// Run `tier`'s kernel (one of `kernels()`) on every update from now on,
+    /// NEON included (for testing).
+    pub fn use_kernel(&mut self, tier: u8) {
+        assert!(kernels().contains(&tier), "kernel {tier} does not run here");
+        self.batch = Batch::new(tier);
+        if tier != 0 {
+            self.batch.adapt.policy = POLICY_ON;
+            self.batch.adapt.on = true;
+        }
+    }
+
     /// Work out the steps of the word `w`'s characters in `snapshot` whose
     /// mirror describes their active path; returns the bits of the ones
     /// done (0 without AVX2).
@@ -487,6 +522,11 @@ impl Engine {
             let kept = load_f64x2(&m.step, s);
             store_f64x2(&mut m.step, s, vbslq_f64(taken, step, kept));
             store_f64x2(&mut m.last, s, vbslq_f64(taken, d, last));
+            let (px, py) = (load_f64x2(&m.px, s), load_f64x2(&m.py, s));
+            store_f64x2(&mut b.ox, k, px);
+            store_f64x2(&mut b.oy, k, py);
+            store_f64x2(&mut m.px, s, vbslq_f64(taken, x, px));
+            store_f64x2(&mut m.py, s, vbslq_f64(taken, y, py));
             store_u32x2(&mut b.x, k, vreinterpret_u32_s32(vmovn_s64(xi)));
             store_u32x2(&mut b.y, k, vreinterpret_u32_s32(vmovn_s64(yi)));
             done |= (lanes as u64) << k;
@@ -630,14 +670,13 @@ impl Engine {
                 let (a, e) = (load_pd(start, s), load_pd(end, s));
                 let line = lerp(a, e);
                 if !curves {
-                    return _mm256_cvtpd_epi32(line);
+                    return line;
                 }
                 let c = load_pd(control, s);
-                let bent = lerp(lerp(a, c), lerp(c, e));
-                _mm256_cvtpd_epi32(_mm256_blendv_pd(line, bent, curve))
+                _mm256_blendv_pd(line, lerp(lerp(a, c), lerp(c, e)), curve)
             };
-            let x = point(&m.sx, &m.cx, &m.ex);
-            let y = point(&m.sy, &m.cy, &m.ey);
+            let (px, py) = (point(&m.sx, &m.cx, &m.ex), point(&m.sy, &m.cy, &m.ey));
+            let (x, y) = (_mm256_cvtpd_epi32(px), _mm256_cvtpd_epi32(py));
             let wide = _mm_or_si128(_mm_cmpeq_epi32(x, int_min), _mm_cmpeq_epi32(y, int_min));
             let lanes = lanes & _mm256_movemask_pd(ok) as u32 & !signs4(wide);
             let k = g * 4;
@@ -647,6 +686,10 @@ impl Engine {
             store_pd(&mut b.old, k, load_pd(&m.last, s));
             maskstore_pd(&mut m.step, s, taken, step);
             maskstore_pd(&mut m.last, s, taken, d);
+            store_pd(&mut b.ox, k, load_pd(&m.px, s));
+            store_pd(&mut b.oy, k, load_pd(&m.py, s));
+            maskstore_pd(&mut m.px, s, taken, px);
+            maskstore_pd(&mut m.py, s, taken, py);
             store_si128(&mut b.x, k, x);
             store_si128(&mut b.y, k, y);
             done |= (lanes as u64) << k;
@@ -797,14 +840,13 @@ impl Engine {
                 let (a, e) = (load_pd8(start, s), load_pd8(end, s));
                 let line = lerp(a, e);
                 if !curves {
-                    return _mm512_cvtpd_epi32(line);
+                    return line;
                 }
                 let c = load_pd8(control, s);
-                let bent = lerp(lerp(a, c), lerp(c, e));
-                _mm512_cvtpd_epi32(_mm512_mask_blend_pd(curve, line, bent))
+                _mm512_mask_blend_pd(curve, line, lerp(lerp(a, c), lerp(c, e)))
             };
-            let x = point(&m.sx, &m.cx, &m.ex);
-            let y = point(&m.sy, &m.cy, &m.ey);
+            let (px, py) = (point(&m.sx, &m.cx, &m.ex), point(&m.sy, &m.cy, &m.ey));
+            let (x, y) = (_mm512_cvtpd_epi32(px), _mm512_cvtpd_epi32(py));
             let wide = _mm256_cmpeq_epi32_mask(x, int_min) | _mm256_cmpeq_epi32_mask(y, int_min);
             let lanes = lanes & ok & !wide;
             let k = g * 8;
@@ -813,6 +855,10 @@ impl Engine {
             store_pd8(&mut b.old, k, load_pd8(&m.last, s));
             mask_store_pd8(&mut m.step, s, lanes, step);
             mask_store_pd8(&mut m.last, s, lanes, d);
+            store_pd8(&mut b.ox, k, load_pd8(&m.px, s));
+            store_pd8(&mut b.oy, k, load_pd8(&m.py, s));
+            mask_store_pd8(&mut m.px, s, lanes, px);
+            mask_store_pd8(&mut m.py, s, lanes, py);
             store_si256(&mut b.x, k, x);
             store_si256(&mut b.y, k, y);
             done |= (lanes as u64) << k;
@@ -860,7 +906,7 @@ impl Engine {
         let (step, coord) = (b.step[lane], Coord::new(b.x[lane] as i64, b.y[lane] as i64));
         let reached = step == *self.paths.m.max.at(slot);
         if *self.ch.coord.at(slot) != coord {
-            self.set_coordinate(slot, coord);
+            self.place(slot, coord);
         }
         if reached {
             // the tail reads the record
@@ -878,7 +924,7 @@ impl Engine {
     pub(super) fn bare_move(&mut self, slot: u32) {
         let lane = (slot & 63) as usize;
         let b = &self.batch;
-        self.set_coordinate(slot, Coord::new(b.x[lane] as i64, b.y[lane] as i64));
+        self.place(slot, Coord::new(b.x[lane] as i64, b.y[lane] as i64));
     }
 
     /// The batch's result for this slot still stands: its mirror describes

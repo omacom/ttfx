@@ -23,16 +23,32 @@ impl Coord {
     }
 }
 
-/// Float-valued point for bezier intermediates: upstream builds Coord objects
-/// with float fields inside de_casteljau (violating its own annotation) and
-/// only rounds the final result.
-#[derive(Debug, Clone, Copy)]
-struct FloatPoint {
-    column: f64,
-    row: f64,
+/// A point before rounding to a Coord. Upstream builds Coord objects with
+/// float fields inside de_casteljau (violating its own annotation) and only
+/// rounds the final result.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FloatPoint {
+    pub column: f64,
+    pub row: f64,
+}
+
+impl From<Coord> for FloatPoint {
+    #[inline]
+    fn from(c: Coord) -> Self {
+        FloatPoint {
+            column: c.column as f64,
+            row: c.row as f64,
+        }
+    }
 }
 
 impl FloatPoint {
+    /// The Coord it rounds to (half to even).
+    #[inline]
+    pub fn round(self) -> Coord {
+        Coord::new(round_half_even(self.column), round_half_even(self.row))
+    }
+
     #[inline]
     fn interpolate(self, other: Self, t: f64) -> Self {
         FloatPoint {
@@ -169,59 +185,45 @@ pub fn extrapolate_along_ray(origin: Coord, target: Coord, offset_from_target: f
 /// find_coord_on_bezier_curve: recursive De Casteljau of arbitrary degree with
 /// float intermediates, rounded only at the end.
 pub fn find_coord_on_bezier_curve(start: Coord, control: &[Coord], end: Coord, t: f64) -> Coord {
-    if control.is_empty() {
-        return find_coord_on_line(start, end, t);
-    }
-
-    let start = FloatPoint {
-        column: start.column as f64,
-        row: start.row as f64,
-    };
-    let end = FloatPoint {
-        column: end.column as f64,
-        row: end.row as f64,
-    };
-
-    // Every production path is quadratic. Keep that per-frame hot path on the
-    // stack instead of allocating a Vec at each De Casteljau level.
-    if let [control] = control {
-        let control = FloatPoint {
-            column: control.column as f64,
-            row: control.row as f64,
-        };
-        let point = start
-            .interpolate(control, t)
-            .interpolate(control.interpolate(end, t), t);
-        return Coord::new(round_half_even(point.column), round_half_even(point.row));
-    }
-
-    let mut points: Vec<FloatPoint> = Vec::with_capacity(control.len() + 2);
-    points.push(start);
-    for c in control {
-        points.push(FloatPoint {
-            column: c.column as f64,
-            row: c.row as f64,
-        });
-    }
-    points.push(end);
-    let mut remaining = points.len();
-    while remaining > 1 {
-        for i in 0..remaining - 1 {
-            points[i] = points[i].interpolate(points[i + 1], t);
-        }
-        remaining -= 1;
-    }
-    Coord::new(
-        round_half_even(points[0].column),
-        round_half_even(points[0].row),
-    )
+    point_on_bezier_curve(start, control, end, t).round()
 }
 
 /// find_coord_on_line: lerp + round.
 pub fn find_coord_on_line(start: Coord, end: Coord, t: f64) -> Coord {
-    let x = (1.0 - t) * start.column as f64 + t * end.column as f64;
-    let y = (1.0 - t) * start.row as f64 + t * end.row as f64;
-    Coord::new(round_half_even(x), round_half_even(y))
+    point_on_line(start, end, t).round()
+}
+
+/// find_coord_on_line before rounding.
+#[inline]
+pub fn point_on_line(start: Coord, end: Coord, t: f64) -> FloatPoint {
+    FloatPoint::from(start).interpolate(end.into(), t)
+}
+
+/// find_coord_on_bezier_curve before rounding.
+#[inline]
+pub fn point_on_bezier_curve(start: Coord, control: &[Coord], end: Coord, t: f64) -> FloatPoint {
+    let (start, end) = (FloatPoint::from(start), FloatPoint::from(end));
+    match control {
+        [] => start.interpolate(end, t),
+        // Every production path is quadratic. Keep that per-frame hot path on
+        // the stack instead of allocating a Vec at each De Casteljau level.
+        &[c] => {
+            let c = FloatPoint::from(c);
+            start.interpolate(c, t).interpolate(c.interpolate(end, t), t)
+        }
+        _ => {
+            let mut points: Vec<FloatPoint> = Vec::with_capacity(control.len() + 2);
+            points.push(start);
+            points.extend(control.iter().map(|&c| FloatPoint::from(c)));
+            points.push(end);
+            for remaining in (2..=points.len()).rev() {
+                for i in 0..remaining - 1 {
+                    points[i] = points[i].interpolate(points[i + 1], t);
+                }
+            }
+            points[0]
+        }
+    }
 }
 
 /// find_length_of_bezier_curve: 10-sample polyline that stops at t=0.9 — the

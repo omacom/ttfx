@@ -594,8 +594,14 @@ impl Engine {
         self.visuals.info(visual)
     }
 
-    /// Motion.set_coordinate.
+    /// Motion.set_coordinate. Not a path step: path_position has no point.
     pub fn set_coordinate(&mut self, slot: u32, coord: Coord) {
+        self.paths.m.px[slot as usize] = f64::NAN;
+        self.place(slot, coord);
+    }
+
+    /// set_coordinate for a path step (which records its point).
+    pub(super) fn place(&mut self, slot: u32, coord: Coord) {
         self.ch.coord[slot as usize] = coord;
         self.coordinate_changed(slot);
     }
