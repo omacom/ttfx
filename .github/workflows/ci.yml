@@ -4,8 +4,33 @@ on:
   push:
     branches: [main, master]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+  workflow_dispatch:
 
-jobs:      
+# A newer PR revision replaces its previous run. Manual and branch runs have
+# separate groups, so they cannot cancel a PR's checks.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  fx-plan:
+    name: FX CI policy + harness tests
+    runs-on: ubuntu-latest
+    outputs:
+      run-full: ${{ steps.plan.outputs.run-full }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 tools/tests/fx_oracle_harness.py
+      - run: python3 tools/tests/fx_ci_policy.py
+      - id: plan
+        run: python3 tools/ci/fx_required.py
+
   test:
     name: Tests + parity suite
     # Parity CI is pinned to one platform/toolchain pair (plan.md §5.20):
@@ -18,6 +43,79 @@ jobs:
         with:
           python-version: "3.12"
       - run: ./bin/test
+
+  fx-simd:
+    name: FX SIMD oracle (${{ matrix.kernel }}, shard ${{ matrix.shard }}/4)
+    needs: fx-plan
+    if: needs.fx-plan.outputs.run-full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel: [widest, no-avx512, no-avx2]
+        shard: [1, 2, 3, 4]
+    env:
+      JOBS: "2"
+      ORACLE_SHARD: "${{ matrix.shard }}/4"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: cargo build --release --locked
+      # The widest kernel depends on the runner's CPU; AVX-512 is not required.
+      - run: tools/fx/oracle-simd.sh quick "${{ matrix.kernel }}"
+
+  fx-qemu:
+    name: FX oracle (qemu64)
+    needs: fx-plan
+    if: needs.fx-plan.outputs.run-full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      JOBS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y qemu-user
+      - run: cargo build --release --locked
+      - run: tools/fx/qemu-oracle.sh qemu64
+
+  # Require this stable check in branch protection, rather than individual
+  # conditional jobs. An intentional skip passes; failed/missing checks fail.
+  fx-checks:
+    name: FX checks
+    needs: [fx-plan, fx-simd, fx-qemu]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    env:
+      PLAN_RESULT: ${{ needs.fx-plan.result }}
+      RUN_FULL: ${{ needs.fx-plan.outputs.run-full }}
+      SIMD_RESULT: ${{ needs.fx-simd.result }}
+      QEMU_RESULT: ${{ needs.fx-qemu.result }}
+    steps:
+      - name: Require the planned checks to pass
+        run: |
+          if [[ "$PLAN_RESULT" != success ]]; then
+            echo "FX policy or harness tests failed or were cancelled."
+            exit 1
+          fi
+          case "$RUN_FULL" in
+            true)
+              [[ "$SIMD_RESULT" == success && "$QEMU_RESULT" == success ]] || exit 1
+              echo "All required FX comparisons passed."
+              ;;
+            false)
+              [[ "$SIMD_RESULT" == skipped && "$QEMU_RESULT" == skipped ]] || exit 1
+              echo "Full FX comparisons intentionally skipped by the CI policy."
+              ;;
+            *) exit 1 ;;
+          esac
 
   test-macos:
     name: Tests (macOS)

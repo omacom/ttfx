@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
-# Everything CI runs, in one command. Nothing here is optional: if it passes
-# locally it passes on the runner, and the workflow is just a call to this.
+# The core test and reference-parity suites. CI also runs the native SIMD and
+# qemu64 oracles separately (see README.md). Nothing in this command is optional.
 set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
