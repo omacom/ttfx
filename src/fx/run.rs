@@ -31,8 +31,10 @@ pub trait Effect: Hooks {
 
 impl Engine {
     /// BaseEffectIterator.frame: enforce the frame rate (real clock only) and
-    /// advance the virtual clock.
-    fn frame(&mut self) {
+    /// advance the virtual clock. Embedders driving `next_frame` and
+    /// `render_here` themselves call this once per frame, as the run loop
+    /// does.
+    pub fn frame(&mut self) {
         if self.paced() {
             self.terminal.enforce_framerate();
         }
@@ -60,6 +62,9 @@ impl Engine {
 /// or there is only one CPU.
 fn threaded(e: &Engine) -> bool {
     !e.paced()
+        // a live transform renders in place, where the span table can be
+        // retargeted
+        && !e.audio_color_active()
         && std::env::var_os("TTFX_THREADS").is_none_or(|v| v != "1" && v != "0")
         && cpus() >= 2
 }
@@ -96,23 +101,31 @@ pub fn run_effect(
         let mut prep = Vec::new();
         e.terminal.prep_canvas(&mut prep)?;
         out.write_all(&prep)?;
+        // a threaded run hands the renderer back, with its frame still to
+        // render, when a color transform is installed mid-run
+        let mut handed_back = false;
         if threaded(e) {
-            return run_threaded(effect, e, tty_output, &move_to_top, &mut outcome);
+            handed_back = run_threaded(effect, e, tty_output, &move_to_top, &mut outcome)?;
+            if !handed_back {
+                return Ok(());
+            }
         }
         let mut parts: Vec<IoSlice<'static>> = Vec::new();
         let mut output = crate::utils::differential::DifferentialOutput::default();
         loop {
-            if let Some(stop) = e.requested_stop(tty_output) {
-                outcome = stop;
-                break;
-            }
-            if !effect.next_frame(e) {
-                break;
-            }
-            e.frame();
-            if let Some(stop) = e.requested_stop(tty_output) {
-                outcome = stop;
-                break;
+            if !std::mem::take(&mut handed_back) {
+                if let Some(stop) = e.requested_stop(tty_output) {
+                    outcome = stop;
+                    break;
+                }
+                if !effect.next_frame(e) {
+                    break;
+                }
+                e.frame();
+                if let Some(stop) = e.requested_stop(tty_output) {
+                    outcome = stop;
+                    break;
+                }
             }
             e.render_here();
             if differential {
@@ -401,13 +414,15 @@ fn render_loop(
     }
 }
 
+/// True when a color transform was installed: the renderer is back on this
+/// thread and the frame that installed it is still to be rendered.
 fn run_threaded(
     effect: &mut dyn Effect,
     e: &mut Engine,
     tty_output: bool,
     prefix: &[u8],
     outcome: &mut RunOutcome,
-) -> std::io::Result<()> {
+) -> std::io::Result<bool> {
     let differential = tty_output && !e.config.ignore_terminal_dimensions;
     let mut r = e
         .render
@@ -416,9 +431,12 @@ fn run_threaded(
         .expect("the renderer runs on another thread");
     r.sync_pool(&e.visuals);
     r.settle_late();
+    // a transform removed since the last frame rendered here is undone first
+    r.apply_audio_color(&mut e.visuals, &e.symbols, None);
     let (spans, bytes) = (e.visuals.spans.len(), e.visuals.bytes.len() - COPY_BLOCK);
     let ring = Ring::new();
     let main = thread::current();
+    let mut handed_back = false;
     let result = thread::scope(|s| {
         let render = s.spawn(|| render_loop(&ring, &mut r, prefix, differential, main));
         let mut submitter = Submitter {
@@ -441,6 +459,10 @@ fn run_threaded(
                 *outcome = stop;
                 break;
             }
+            if e.audio_color_active() {
+                handed_back = true;
+                break;
+            }
             if !submitter.submit(e) {
                 break;
             }
@@ -451,10 +473,12 @@ fn run_threaded(
             Err(panic) => std::panic::resume_unwind(panic),
         }
     });
-    // the frames not handed over are dropped: the renderer takes the log
-    // from here on
-    e.render.log.clear();
+    // the frames not handed over are dropped (the renderer takes the log
+    // from here on), unless this thread renders the last one itself
+    if !handed_back {
+        e.render.log.clear();
+    }
     r.sync_pool(&e.visuals);
     e.render.back = Some(r);
-    result
+    result.map(|()| handed_back)
 }

@@ -87,6 +87,9 @@ pub struct Thunderstorm {
     strike_progression_delay: i64,
     strike_in_progress: bool,
     strike_branch_chance: f64,
+    /// Branch budget per ray of an audio strike: -1 uncapped (the reference
+    /// behavior), 0 blocks branching, else the remaining branches.
+    strike_branch_budget: i64,
     storm_start_time: f64,
     rain_pool: Option<ParticlePool>,
     spark_pool: Option<ParticlePool>,
@@ -130,6 +133,7 @@ impl Thunderstorm {
             delay: 0,
             strike_progression_delay: 0,
             strike_in_progress: false,
+            strike_branch_budget: -1,
             strike_branch_chance: 0.05,
             storm_start_time: 0.0,
             rain_pool: None,
@@ -234,8 +238,14 @@ impl Thunderstorm {
 
             self.pending.push(strike_char);
             // random() is always drawn (the left operand of `and`)
-            if e.rng.random() < self.strike_branch_chance && branch_neighbor == NONE {
+            if e.rng.random() < self.strike_branch_chance
+                && branch_neighbor == NONE
+                && self.strike_branch_budget != 0
+            {
                 self.strike_branch_chance -= 0.01;
+                if self.strike_branch_budget > 0 {
+                    self.strike_branch_budget -= 1;
+                }
                 self.setup_lightning_strike(e, strike_char);
             }
             branch_neighbor = NONE;
@@ -250,6 +260,12 @@ impl Thunderstorm {
         self.pending.clear();
         self.pending_head = 0;
         self.setup_lightning_strike(e, NONE);
+        self.finish_strike(e);
+    }
+
+    /// The scene setup of a bolt already laid out in `pending`: flash and
+    /// fade scenes per strike character, the shared ease curve, the events.
+    fn finish_strike(&mut self, e: &mut Engine) {
         let flash_ease = Easing::CubicBezier(0.0, 1.6, 1.0, e.rng.uniform(-0.6, 0.4));
         let n = self.names;
         for &strike_char in &self.pending {
@@ -879,6 +895,52 @@ impl Effect for Thunderstorm {
             }
             Phase::Storm => {
                 self.rain(e);
+                let levels = e.audio_levels;
+                // Audio starts no strike once storm_time has passed, so a
+                // timed storm still ends; the strike in flight finishes.
+                let storm_over = e.clock.now_monotonic() - self.storm_start_time
+                    >= self.config.storm_time as f64;
+                if (levels.volume > 0.0 || levels.beat) && !self.strike_in_progress && !storm_over {
+                    // A fresh chance draw per frame while audio drives it;
+                    // silence never enters here, keeping the ambient draw
+                    // sequence byte-identical.
+                    let volume = levels.volume.clamp(0.0, 1.0);
+                    let threshold = if levels.beat { 0.22 } else { 0.42 };
+                    if volume >= threshold {
+                        let chance = if levels.beat {
+                            (volume * 0.65) as f64
+                        } else {
+                            (volume * 0.28) as f64
+                        };
+                        if e.rng.random() < chance {
+                            self.strike_in_progress = true;
+                            let ray_count = if volume > 0.85 {
+                                10
+                            } else if volume > 0.78 {
+                                8
+                            } else if volume > 0.70 {
+                                6
+                            } else if volume > 0.60 {
+                                5
+                            } else if volume > 0.48 {
+                                3
+                            } else if volume > 0.36 {
+                                2
+                            } else {
+                                1
+                            };
+                            let branches = ((volume * 5.0).floor() as i64).clamp(0, 5);
+                            self.pending.clear();
+                            self.pending_head = 0;
+                            for _ in 0..ray_count {
+                                self.strike_branch_budget = branches;
+                                self.setup_lightning_strike(e, NONE);
+                            }
+                            self.strike_branch_budget = -1;
+                            self.finish_strike(e);
+                        }
+                    }
+                }
                 if !self.strike_in_progress && e.rng.random() < 0.008 {
                     self.strike_in_progress = true;
                     self.lightning_strike(e);

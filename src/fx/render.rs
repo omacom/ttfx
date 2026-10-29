@@ -34,8 +34,10 @@ use crate::engine::terminal::Terminal;
 use crate::utils::geometry::Coord;
 use crate::utils::simd::{load, store};
 
-use super::visual::{Span, VisualPool, COPY_BLOCK};
-use super::{At, Engine, Sym, Symbols, Visual, CF_VISIBLE, NONE};
+use super::visual::{Span, VisualInfo, VisualPool, COPY_BLOCK};
+use super::{At, AudioColor, Engine, Sym, Symbols, Visual, CF_VISIBLE, NONE};
+use crate::utils::graphics::Color;
+use crate::utils::hash::FxHasher;
 
 /// Cells per dirty block (one emission step).
 const BLOCK: usize = 4;
@@ -213,7 +215,19 @@ pub struct Render {
     rows: Vec<Row>,
     spare: Row,
     blank: Span,
+    /// Live color transform: the quantized epoch currently applied to
+    /// `spans` (None: every span is the pool's, untouched).
+    applied_epoch: Option<u64>,
+    /// Pool handles already considered by the retarget walk.
+    retarget_upto: usize,
+    /// By pool handle: the visual's transformed variant (NONE until it has
+    /// one), or VARIANT for a variant. A variant is rewritten in place when
+    /// the transform moves, so a visual never has more than one.
+    variant: Vec<u32>,
 }
+
+/// `Render::variant` of a handle that is itself a variant.
+const VARIANT: u32 = NONE - 1;
 
 impl Render {
     fn new(terminal: &Terminal, visuals: &mut VisualPool, symbols: &mut Symbols) -> Self {
@@ -260,6 +274,9 @@ impl Render {
             runs: Vec::new(),
             tier: cpu_tier(),
             blank,
+            applied_epoch: None,
+            retarget_upto: 0,
+            variant: Vec::new(),
         };
         r.sync_pool(visuals);
         r
@@ -336,6 +353,101 @@ impl Render {
             };
         }
         self.late.clear();
+    }
+
+    /// The embedder's live color transform for this frame. With none
+    /// installed this costs one comparison and output stays byte-identical.
+    /// When the quantized epoch moved, or authored visuals arrived since the
+    /// last walk, retarget this renderer's span table at each visual's
+    /// transformed variant: cells re-resolve through the table, so emission
+    /// itself never branches on the transform. The pool's authored visuals
+    /// are never touched, so removing the transform restores them exactly.
+    pub(super) fn apply_audio_color(
+        &mut self,
+        pool: &mut VisualPool,
+        symbols: &Symbols,
+        audio: Option<AudioColor>,
+    ) {
+        // without colors a transform changes no byte
+        let Some(audio) = audio.filter(|_| !pool.no_color()) else {
+            if self.applied_epoch.take().is_some() {
+                let n = self.spans.len().min(pool.spans.len());
+                self.spans[..n].copy_from_slice(&pool.spans[..n]);
+                self.retarget_upto = 0;
+                self.refresh_spans(false);
+            }
+            return;
+        };
+        // the colors follow the quantized parameters the epoch compares
+        let audio = quantized(audio);
+        let epoch = audio_epoch(audio);
+        let authored_now = pool.len();
+        let moved = self.applied_epoch != Some(epoch);
+        if !moved && authored_now <= self.retarget_upto {
+            return;
+        }
+        let start = if moved { 0 } else { self.retarget_upto };
+        self.variant.resize(authored_now, NONE);
+        for handle in start..authored_now {
+            let variant = self.variant[handle];
+            if variant == VARIANT {
+                continue;
+            }
+            let info = pool.info(Visual(handle as u32));
+            let Some(info) = recolor_info(info, audio) else {
+                self.spans[handle] = pool.spans[handle];
+                continue;
+            };
+            let span = if variant == NONE {
+                let variant = pool.add_variant(symbols, info);
+                self.variant[handle] = variant.0;
+                pool.spans[variant.0 as usize]
+            } else {
+                let span = pool.rewrite_variant(symbols, Visual(variant), info);
+                // already synced: the copy is rewritten too
+                if (variant as usize) < self.spans.len() {
+                    let (at, end) = (span.offset as usize, (span.offset + span.len) as usize);
+                    self.bytes[at..end].copy_from_slice(&pool.bytes[at..end]);
+                    self.spans[variant as usize] = span;
+                    self.max_len = self.max_len.max(span.len as usize);
+                }
+                span
+            };
+            self.spans[handle] = span;
+        }
+        // every handle made by the walk is a variant
+        self.variant.resize(pool.len(), VARIANT);
+        self.retarget_upto = authored_now;
+        self.applied_epoch = Some(epoch);
+        // Variants made by the walk come AFTER this frame's sync: their
+        // bytes and spans are still only in the pool. Bring this renderer's
+        // buffers up to date before emission reads through the new spans.
+        if pool.len() > self.spans.len() {
+            let (spans, bytes) =
+                pool_delta(pool, self.spans.len(), self.bytes.len() - COPY_BLOCK);
+            self.fit(pool_room(pool));
+            self.sync(spans, bytes, self.owner.len());
+        }
+        // a variant rewritten in place keeps its span: redraw every cell
+        self.refresh_spans(moved);
+    }
+
+    /// Re-resolve every owned cell's span after a retarget or a restore:
+    /// cells whose visual's span moved become dirty, every owned cell when
+    /// `all` (the bytes behind an unmoved span were rewritten).
+    fn refresh_spans(&mut self, all: bool) {
+        for cell in 0..self.owner.len() {
+            let owner = *self.owner.at(cell);
+            if owner == NONE {
+                continue;
+            }
+            let span = *self.spans.at(*self.visual.at(owner));
+            if all || *self.cell_span.at(cell) != span {
+                *self.cell_span.at_mut(cell) = span;
+                *self.dirty.at_mut(cell) = 1;
+                *self.row_dirty.at_mut(cell >> self.stride_shift) = 1;
+            }
+        }
     }
 
     /// Room for as many visuals as the pool has (`pool_room`): the copies
@@ -694,6 +806,7 @@ impl Engine {
         r.apply(&self.render.log);
         self.render.log.clear();
         r.settle_late();
+        r.apply_audio_color(&mut self.visuals, &self.symbols, self.audio_color);
         r.render_rows();
     }
 
@@ -971,6 +1084,58 @@ fn chunk_blocks_neon(chunk: &mut [u8]) -> u32 {
     let zero = vdupq_n_u8(0);
     store_u8x64(chunk, 0, uint8x16x4_t(zero, zero, zero, zero));
     bits_u8x16(vcombine_u8(vmovn_u16(lo), vmovn_u16(hi)))
+}
+
+/// The parameters in 1/64 steps: audio drives are continuous, and steps
+/// limit how many distinct transforms, and so variants, a drive produces.
+fn quantized(audio: AudioColor) -> AudioColor {
+    let q = |v: f32| (v * 64.0).round() / 64.0;
+    AudioColor {
+        brightness: q(audio.brightness),
+        matrix: audio.matrix.map(q),
+    }
+}
+
+/// A quantized transform folded into one word.
+fn audio_epoch(audio: AudioColor) -> u64 {
+    use std::hash::Hasher;
+    let mut h = FxHasher::default();
+    h.write_u32(audio.brightness.to_bits());
+    for c in audio.matrix {
+        h.write_u32(c.to_bits());
+    }
+    h.finish()
+}
+
+/// `info` with the transform applied to its present colors: None when the
+/// visual has no colors, so the retarget keeps the authored span. A color
+/// comes out as RGB however it was given, so an xterm code and its hex
+/// transform alike (under --xterm-colors the pool picks the nearest code
+/// for both); one the transform leaves unchanged keeps its own form.
+fn recolor_info(info: VisualInfo, audio: AudioColor) -> Option<VisualInfo> {
+    if info.fg.is_none() && info.bg.is_none() {
+        return None;
+    }
+    let m = &audio.matrix;
+    let bright = audio.brightness;
+    let recolor = |color: Color| -> Color {
+        let (r, g, b) = color.rgb_ints();
+        let (r, g, b) = (r as f32, g as f32, b as f32);
+        let rr = ((m[0] * r + m[1] * g + m[2] * b) * bright).clamp(0.0, 255.0) as u8;
+        let gg = ((m[3] * r + m[4] * g + m[5] * b) * bright).clamp(0.0, 255.0) as u8;
+        let bb = ((m[6] * r + m[7] * g + m[8] * b) * bright).clamp(0.0, 255.0) as u8;
+        if (rr, gg, bb) == color.rgb_ints() {
+            color
+        } else {
+            Color::from_rgb(rr, gg, bb)
+        }
+    };
+    Some(VisualInfo {
+        sym: info.sym,
+        fg: info.fg.map(recolor),
+        bg: info.bg.map(recolor),
+        attrs: info.attrs,
+    })
 }
 
 /// The dirty runs of blocks [b, e) of a row's bitmap (with the sentinel at
