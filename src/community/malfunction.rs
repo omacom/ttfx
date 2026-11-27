@@ -1078,14 +1078,17 @@ impl Effect for Malfunction {
             }
         }
 
-        // The last sheet: a crisp proof slip that slides out under the logo
-        // during the post-settle flourish.
+        // The last sheet: a crisp proof slip that could slide out under the
+        // logo during the post-settle flourish. Off: the finished logo reads
+        // better on its own, with only the printer's OK light and the ink-dry
+        // shimmer. Kept so the slip can come back behind an option.
+        const PROOF_SLIP: bool = false;
         let canvas_w = right - left + 1;
         let text_w_i = (canvas.text_right - canvas.text_left + 1).max(1);
         let sheet_w = ((text_w_i as f64 * 0.58).round() as i64)
             .clamp(24, 52)
             .min(canvas_w - 2);
-        if sheet_w >= 16 && canvas.text_bottom - 2 >= bottom {
+        if PROOF_SLIP && sheet_w >= 16 && canvas.text_bottom - 2 >= bottom {
             let three_rows = canvas.text_bottom - 3 >= bottom + 1;
             self.proof_row = if three_rows {
                 canvas.text_bottom - 3
