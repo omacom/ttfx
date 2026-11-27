@@ -20,8 +20,9 @@
 //! Everything is driven by a frame counter, no scenes or paths. Generations
 //! are bit sets; once the field repeats an earlier generation the rest are
 //! read from that cycle instead of being stored. Only cells that are ever
-//! alive get a character, and the grid is redrawn only when the shown
-//! generation changes.
+//! alive get a character. Between two generations the field is blended per
+//! frame (cells being born brighten in, dying ones dim into a fading ghost,
+//! colors drift continuously), so the playback runs smooth at any frame rate.
 
 use std::collections::HashMap;
 
@@ -92,8 +93,14 @@ pub struct ReverselifeConfig {
 const LEVELS: usize = 32;
 /// The backward playback runs generation = steps * (time left)^REWIND_EASE.
 const REWIND_EASE: f64 = 1.6;
-/// Generations a ghost trail looks ahead (or back, at the last generation).
+/// Generations a ghost trail of recently shown cells lingers.
 const TRAIL: usize = 4;
+/// Brightness steps a cell fades in or out with between two generations.
+const FADE_LEVELS: usize = 16;
+/// Hue steps between two neighbouring cell colors.
+const HUES: usize = 8;
+/// Brightness of a fresh ghost "·"; a fading cell turns into one below it.
+const GHOST_MAX: f64 = 0.4;
 /// Frames per Conway phase for the flourish gliders (4 phases = 1 diagonal cell).
 const GLIDER_STEP_FRAMES: i64 = 2;
 /// Duration of a single letter's impact flicker (flash -> off -> snap on -> cool).
@@ -393,7 +400,7 @@ fn text_visual(e: &mut Engine, slot: u32, fg: Option<Color>, bg: Option<Color>) 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Shown {
     Nothing,
-    Generation(usize, bool),
+    Field,
     Pulse(usize),
     Fade(usize),
     Final,
@@ -548,13 +555,15 @@ pub struct Reverselife {
     bottom: i64,
     width: usize,
     height: usize,
-    /// Cells ever alive: (cell index, slot, column).
-    cells: Vec<(usize, u32, usize)>,
+    /// Cells ever alive: (cell index, slot, column, symbol).
+    cells: Vec<(usize, u32, usize, usize)>,
     /// Seed cells (alive in generation 0): (slot, base color index).
     seed_cells: Vec<(u32, usize)>,
-    /// cell_visuals[symbol * colors + color]; the ghost "·".
+    /// cell_visuals[(symbol * hues + hue) * FADE_LEVELS + brightness - 1],
+    /// hues running smoothly around the cell colors.
     cell_visuals: Vec<Visual>,
-    ghost: Visual,
+    /// The ghost "·" by brightness - 1.
+    ghosts: Vec<Visual>,
     text: Vec<u32>,
     text_coords: Vec<(i64, i64)>,
     /// Maps canvas cell -> index in `text`, or `u32::MAX` if empty.
@@ -597,7 +606,7 @@ impl Reverselife {
             cells: Vec::new(),
             seed_cells: Vec::new(),
             cell_visuals: Vec::new(),
-            ghost: Visual(0),
+            ghosts: Vec::new(),
             text: Vec::new(),
             text_coords: Vec::new(),
             text_grid: Vec::new(),
@@ -635,7 +644,7 @@ impl Reverselife {
     }
 
     fn show_grid(&mut self, e: &mut Engine, visible: bool) {
-        for &(_, slot, _) in &self.cells {
+        for &(_, slot, _, _) in &self.cells {
             e.set_visible(slot, visible);
         }
     }
@@ -699,37 +708,83 @@ impl Reverselife {
         self.cluster_cooldown_until[cid] = self.frame + FLICKER_DURATION + max_delay + FLICKER_COOLDOWN;
     }
 
-    /// display_snapshot: the living cells, and a ghost "·" where a cell lives
-    /// in one of the next generations (the previous ones, at the last).
-    fn display_generation(&mut self, e: &mut Engine, generation: usize, rewinding: bool) {
-        if self.shown == Shown::Generation(generation, rewinding) {
-            return;
-        }
-        if !matches!(self.shown, Shown::Generation(..)) {
+    /// Generations the chaos runs through before the rewind, ending at the last.
+    fn chaos_span(&self) -> usize {
+        let c = &self.config;
+        ((c.chaos_hold_time / c.generation_time) as usize).min(self.steps() / 4)
+    }
+
+    /// The field at a fractional generation `position`, between the
+    /// generation just shown and the next one: cells being born brighten in,
+    /// dying cells dim out into a ghost "·", and the ghosts of the last few
+    /// generations shown fade away, so nothing pops between generations.
+    fn display_field(&mut self, e: &mut Engine, position: f64, rewinding: bool) {
+        if self.shown != Shown::Field {
             self.show_text(e, false);
+            self.shown = Shown::Field;
         }
-        self.shown = Shown::Generation(generation, rewinding);
         let steps = self.steps();
-        let history = self.history.as_ref().expect("built");
-        let symbols = self.config.cell_symbols.len();
-        let colors = self.config.cell_colors.len();
-        let width = self.width.max(1);
-        let ghosts = if rewinding {
-            generation + 1..(generation + 1 + TRAIL).min(steps + 1)
+        let first = steps - self.chaos_span();
+        let position = position.clamp(0.0, steps as f64);
+        // from: the generation shown last, to: the next one, t: the way between
+        let (from, to, t) = if rewinding {
+            let from = (position.ceil() as usize).min(steps);
+            (from, from.saturating_sub(1), from as f64 - position)
         } else {
-            generation.saturating_sub(TRAIL)..generation
+            let from = (position.floor() as usize).min(steps);
+            (from, (from + 1).min(steps), position - from as f64)
         };
-        for &(cell, slot, column) in &self.cells {
-            if history.alive(generation, cell) {
-                let symbol = (cell + generation / 3) % symbols;
-                let color = (column * colors / width + generation / 4) % colors;
-                e.set_visual(slot, self.cell_visuals[symbol * colors + color]);
-                e.set_visible(slot, true);
-            } else if ghosts.clone().any(|g| history.alive(g, cell)) {
-                e.set_visual(slot, self.ghost);
-                e.set_visible(slot, true);
+        // the generations shown before, nearest first (the rewind turned at the last)
+        let past: [Option<usize>; TRAIL + 1] = std::array::from_fn(|k| {
+            if rewinding && from + k <= steps {
+                Some(from + k)
             } else {
-                e.set_visible(slot, false);
+                let back = if rewinding { from + k - steps } else { k };
+                let g = if rewinding { steps } else { from }.checked_sub(back)?;
+                (g >= first).then_some(g)
+            }
+        });
+        let history = self.history.as_ref().expect("built");
+        let colors = self.config.cell_colors.len();
+        let hues = colors * HUES;
+        let width = self.width.max(1) as f64;
+        let drift = position / 4.0;
+        let level = |x: f64| ((x * FADE_LEVELS as f64).round() as usize).min(FADE_LEVELS);
+        for &(cell, slot, column, symbol) in &self.cells {
+            let brightness = match (history.alive(from, cell), history.alive(to, cell)) {
+                (true, true) => 1.0,
+                (true, false) => 1.0 - t,
+                (false, true) => t,
+                (false, false) => 0.0,
+            };
+            let ghost = if brightness >= GHOST_MAX {
+                0.0
+            } else {
+                past.iter()
+                    .enumerate()
+                    .find(|&(_, g)| g.is_some_and(|g| history.alive(g, cell)))
+                    .map_or(0.0, |(k, _)| {
+                        let age = k as f64 + t;
+                        GHOST_MAX * ((TRAIL as f64 + 1.0 - age) / TRAIL as f64).clamp(0.0, 1.0)
+                    })
+            };
+            let visual = if brightness >= GHOST_MAX || (ghost <= 0.0 && brightness > 0.0) {
+                let lit = level(brightness);
+                let hue_at = column as f64 * colors as f64 / width + drift;
+                let hue = ((hue_at * HUES as f64).floor() as usize) % hues;
+                (lit > 0).then(|| self.cell_visuals[(symbol * hues + hue) * FADE_LEVELS + lit - 1])
+            } else if ghost > 0.0 {
+                let lit = level(brightness.max(ghost) / GHOST_MAX);
+                (lit > 0).then(|| self.ghosts[lit - 1])
+            } else {
+                None
+            };
+            match visual {
+                Some(visual) => {
+                    e.set_visual(slot, visual);
+                    e.set_visible(slot, true);
+                }
+                None => e.set_visible(slot, false),
             }
         }
     }
@@ -1165,20 +1220,41 @@ impl Effect for Reverselife {
                 let coord = Coord::new(left + column as i64, bottom + row as i64);
                 let slot = e.add_character(&first_symbol, coord);
                 e.set_layer(slot, 3);
-                self.cells.push((cell, slot, column));
+                // a symbol per cell, kept for its whole life (scrambled so it
+                // does not run in stripes)
+                let symbol = (cell.wrapping_mul(0x9E37_79B9) >> 7) % self.config.cell_symbols.len();
+                self.cells.push((cell, slot, column, symbol));
                 if history.alive(0, cell) {
                     let base = (column * colors / width.max(1)).min(colors - 1);
                     self.seed_cells.push((slot, base));
                 }
             }
         }
+        let black = Color::from_rgb(0, 0, 0);
+        let dim = |color: &Color, lit: usize| {
+            shift_color_towards(color, &black, 1.0 - lit as f64 / FADE_LEVELS as f64)
+                .unwrap_or(*color)
+        };
+        let palette = self.config.cell_colors.clone();
         for symbol in self.config.cell_symbols.clone() {
-            for color in self.config.cell_colors.clone() {
-                let visual = plain(e, &symbol, color);
-                self.cell_visuals.push(visual);
+            for hue in 0..colors * HUES {
+                let (stop, step) = (hue / HUES, hue % HUES);
+                let base = shift_color_towards(
+                    &palette[stop],
+                    &palette[(stop + 1) % colors],
+                    step as f64 / HUES as f64,
+                )
+                .unwrap_or(palette[stop]);
+                for lit in 1..=FADE_LEVELS {
+                    let visual = plain(e, &symbol, dim(&base, lit));
+                    self.cell_visuals.push(visual);
+                }
             }
         }
-        self.ghost = plain(e, "·", self.config.cell_colors[0]);
+        for lit in 1..=FADE_LEVELS {
+            let visual = plain(e, "·", dim(&palette[0], lit));
+            self.ghosts.push(visual);
+        }
         self.history = Some(history);
 
         // Pre-build glider visuals using crisp block elements matching reverselife's palette.
@@ -1339,16 +1415,16 @@ impl Effect for Reverselife {
         let steps = self.steps();
         if self.frame < c.chaos_hold_time {
             // the chaos runs on into its most evolved generation
-            let span = ((c.chaos_hold_time / c.generation_time) as usize).min(steps / 4);
-            let generation = steps - span + span * self.frame as usize / c.chaos_hold_time as usize;
-            self.display_generation(e, generation, false);
+            let span = self.chaos_span();
+            let position = (steps - span) as f64
+                + span as f64 * self.frame as f64 / c.chaos_hold_time as f64;
+            self.display_field(e, position, false);
         } else if self.frame < self.reverse_end {
             // played backward, quick through the chaos and slowing down as
             // the field draws together into the silhouette
             let length = (self.reverse_end - c.chaos_hold_time) as f64;
             let left = 1.0 - (self.frame - c.chaos_hold_time) as f64 / length;
-            let generation = (steps as f64 * left.powf(REWIND_EASE)).round() as usize;
-            self.display_generation(e, generation.min(steps), true);
+            self.display_field(e, steps as f64 * left.powf(REWIND_EASE), true);
         } else if self.frame < self.resolve_end {
             let elapsed = self.frame - self.reverse_end;
             let pulse_duration = (c.resolve_duration / 5).max(1);
