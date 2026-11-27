@@ -120,6 +120,33 @@ pub enum EffectCommand {
     Waves(waves::WavesConfig),
     /// Wipes the text across the terminal to reveal characters.
     Wipe(wipe::WipeConfig),
+    // ---- community effects (fx engine only) ----
+    /// ASCII planes dive into the text through fire and debris.
+    Airstrike(crate::community::airstrike::AirstrikeConfig),
+    /// A cellular automaton resolves into the text.
+    Automata(crate::community::automata::AutomataConfig),
+    /// Rainbow bubbles rise, pop, and reveal the text.
+    Bubblepop(crate::community::bubblepop::BubblePopConfig),
+    /// An elephant sprays water that splashes the text into place.
+    Elephantsplash(crate::community::elephantsplash::ElephantSplashConfig),
+    /// A factory builds the text with belts, inserters and rails.
+    Factorio(crate::community::factorio::FactorioConfig),
+    /// Fireflies drift and glow, settling into the text.
+    Fireflies(crate::community::fireflies::FirefliesConfig),
+    /// A fisher reels the characters of the text in.
+    Fishing(crate::community::fishing::FishingConfig),
+    /// A printer spits nonsense before printing the text.
+    Malfunction(crate::community::malfunction::MalfunctionConfig),
+    /// Conway's Game of Life runs backward from chaos into the text.
+    Reverselife(crate::community::reverselife::ReverselifeConfig),
+    /// Vines, roses and falling petals grow over the text.
+    Roses(crate::community::roses::RosesConfig),
+    /// A snake slithers across the canvas, leaving the text behind.
+    Snake(crate::community::snake::SnakeConfig),
+    /// Rain, clouds, a rising sun and a rainbow reveal the text.
+    Sunshower(crate::community::sunshower::SunshowerConfig),
+    /// Crystals grow into a Voronoi mosaic of the text.
+    Voronoi(crate::community::voronoi::VoronoiConfig),
 }
 
 impl EffectCommand {
@@ -162,6 +189,19 @@ impl EffectCommand {
             EffectCommand::Vhstape(config) => Box::new(vhstape::VhsTape::new(config.clone())),
             EffectCommand::Waves(config) => Box::new(waves::Waves::new(config.clone())),
             EffectCommand::Wipe(config) => Box::new(wipe::Wipe::new(config.clone())),
+            EffectCommand::Airstrike(_) => Box::new(crate::community::fxonly::FxOnly("airstrike")),
+            EffectCommand::Automata(_) => Box::new(crate::community::fxonly::FxOnly("automata")),
+            EffectCommand::Bubblepop(_) => Box::new(crate::community::fxonly::FxOnly("bubblepop")),
+            EffectCommand::Elephantsplash(_) => Box::new(crate::community::fxonly::FxOnly("elephantsplash")),
+            EffectCommand::Factorio(_) => Box::new(crate::community::fxonly::FxOnly("factorio")),
+            EffectCommand::Fireflies(_) => Box::new(crate::community::fxonly::FxOnly("fireflies")),
+            EffectCommand::Fishing(_) => Box::new(crate::community::fxonly::FxOnly("fishing")),
+            EffectCommand::Malfunction(_) => Box::new(crate::community::fxonly::FxOnly("malfunction")),
+            EffectCommand::Reverselife(_) => Box::new(crate::community::fxonly::FxOnly("reverselife")),
+            EffectCommand::Roses(_) => Box::new(crate::community::fxonly::FxOnly("roses")),
+            EffectCommand::Snake(_) => Box::new(crate::community::fxonly::FxOnly("snake")),
+            EffectCommand::Sunshower(_) => Box::new(crate::community::fxonly::FxOnly("sunshower")),
+            EffectCommand::Voronoi(_) => Box::new(crate::community::fxonly::FxOnly("voronoi")),
         }
     }
 
@@ -204,6 +244,19 @@ impl EffectCommand {
             EffectCommand::Vhstape(_) => "vhstape",
             EffectCommand::Waves(_) => "waves",
             EffectCommand::Wipe(_) => "wipe",
+            EffectCommand::Airstrike(_) => "airstrike",
+            EffectCommand::Automata(_) => "automata",
+            EffectCommand::Bubblepop(_) => "bubblepop",
+            EffectCommand::Elephantsplash(_) => "elephantsplash",
+            EffectCommand::Factorio(_) => "factorio",
+            EffectCommand::Fireflies(_) => "fireflies",
+            EffectCommand::Fishing(_) => "fishing",
+            EffectCommand::Malfunction(_) => "malfunction",
+            EffectCommand::Reverselife(_) => "reverselife",
+            EffectCommand::Roses(_) => "roses",
+            EffectCommand::Snake(_) => "snake",
+            EffectCommand::Sunshower(_) => "sunshower",
+            EffectCommand::Voronoi(_) => "voronoi",
         }
     }
 }

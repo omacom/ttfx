@@ -1,4 +1,5 @@
 pub mod cli;
+pub mod community;
 pub mod effects;
 pub mod engine;
 pub mod fx;
