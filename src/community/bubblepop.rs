@@ -1337,7 +1337,7 @@ mod tests {
 
     #[test]
     fn every_pop_paints_letters() {
-        let logo = std::fs::read_to_string("/usr/share/omarchy/logo.txt")
+        let logo = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/omarchy-logo.txt"))
             .unwrap_or_else(|_| "OMARCHY OMARCHY OMARCHY\n".repeat(9));
         let config = TerminalConfig {
             canvas_width: 96,

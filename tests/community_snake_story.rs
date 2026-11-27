@@ -75,27 +75,3 @@ fn huge_text_stays_quick() {
     eprintln!("300x90 full: {n} frames in {:?}", start.elapsed());
     assert!(n < 6000, "{n} frames");
 }
-
-#[test]
-fn own_screensaver_text_if_present() {
-    let Ok(text) = std::fs::read_to_string(
-        std::env::var("HOME").unwrap_or_default() + "/.config/omarchy/branding/screensaver.txt",
-    ) else {
-        return;
-    };
-    let n = frames(
-        &text,
-        &[
-            "--canvas-width",
-            "96",
-            "--canvas-height",
-            "24",
-            "--anchor-canvas",
-            "c",
-            "--anchor-text",
-            "c",
-        ],
-    );
-    eprintln!("screensaver.txt 96x24: {n} frames");
-    assert!((960..=3000).contains(&n), "{n} frames");
-}

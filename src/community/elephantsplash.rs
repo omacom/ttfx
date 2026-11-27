@@ -2398,7 +2398,7 @@ mod tests {
 
     #[test]
     fn logo_run_length_and_opening() {
-        let logo = std::fs::read_to_string("/usr/share/omarchy/logo.txt")
+        let logo = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/omarchy-logo.txt"))
             .unwrap_or_else(|_| "OMARCHY OMARCHY OMARCHY\n".repeat(8));
         let ignore = ExistingColorHandling::Ignore;
         for (w, h) in [(96, 24), (200, 55), (300, 90)] {
