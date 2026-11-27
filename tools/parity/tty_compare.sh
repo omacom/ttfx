@@ -33,8 +33,10 @@ run_case() {
   fi
 }
 
-# effect subcommands present in both implementations
-mapfile -t effects < <($RUST --help 2>/dev/null | sed -n '/Commands:/,/Options:/p' | awk '/^  [a-z]/ {print $1}' | grep -v help)
+# effect subcommands present in both implementations: the community effects
+# (src/community/) are ttfx-only, with no Python reference to compare against
+community=$(sed -n 's/^pub mod \([a-z]*\);$/\1/p' src/community/mod.rs | grep -vx fxonly | paste -sd'|')
+mapfile -t effects < <($RUST --help 2>/dev/null | sed -n '/Commands:/,/Options:/p' | awk '/^  [a-z]/ {print $1}' | grep -vE "^(help|$community)$")
 for effect in "${effects[@]}"; do
   run_case "tty-$effect" basic.txt "$effect"
 done

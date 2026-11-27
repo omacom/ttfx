@@ -29,6 +29,24 @@ pub trait Effect: Hooks {
     fn next_frame(&mut self, e: &mut Engine) -> bool;
 }
 
+/// Advance `effect` one frame and append that frame (the bytes `--parity-dump`
+/// writes: the canvas rows, top first) to `out`. False when the effect is
+/// done. For hosts that draw frames themselves, such as the native
+/// omarchy-screensaver, instead of writing to a terminal.
+pub fn step_frame(effect: &mut dyn Effect, e: &mut Engine, out: &mut Vec<u8>) -> bool {
+    if !effect.next_frame(e) {
+        return false;
+    }
+    e.frame();
+    e.render_here();
+    let mut parts = Vec::new();
+    e.renderer().frame_parts(b"", b"", &mut parts);
+    for part in &parts {
+        out.extend_from_slice(part);
+    }
+    true
+}
+
 impl Engine {
     /// BaseEffectIterator.frame: enforce the frame rate (real clock only) and
     /// advance the virtual clock.

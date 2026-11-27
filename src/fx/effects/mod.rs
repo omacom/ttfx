@@ -117,6 +117,19 @@ pub fn build(command: &EffectCommand) -> Option<Box<dyn Effect>> {
         )),
         EffectCommand::Slice(config) => Some(Box::new(slice::Slice::new(config.clone()))),
         EffectCommand::Sweep(config) => Some(Box::new(sweep::Sweep::new(config.clone()))),
+        EffectCommand::Airstrike(config) => Some(Box::new(crate::community::airstrike::Airstrike::new(config.clone()))),
+        EffectCommand::Automata(config) => Some(Box::new(crate::community::automata::Automata::new(config.clone()))),
+        EffectCommand::Bubblepop(config) => Some(Box::new(crate::community::bubblepop::BubblePop::new(config.clone()))),
+        EffectCommand::Elephantsplash(config) => Some(Box::new(crate::community::elephantsplash::ElephantSplash::new(config.clone()))),
+        EffectCommand::Factorio(config) => Some(Box::new(crate::community::factorio::Factorio::new(config.clone()))),
+        EffectCommand::Fireflies(config) => Some(Box::new(crate::community::fireflies::Fireflies::new(config.clone()))),
+        EffectCommand::Fishing(config) => Some(Box::new(crate::community::fishing::Fishing::new(config.clone()))),
+        EffectCommand::Malfunction(config) => Some(Box::new(crate::community::malfunction::Malfunction::new(config.clone()))),
+        EffectCommand::Reverselife(config) => Some(Box::new(crate::community::reverselife::Reverselife::new(config.clone()))),
+        EffectCommand::Roses(config) => Some(Box::new(crate::community::roses::Roses::new(config.clone()))),
+        EffectCommand::Snake(config) => Some(Box::new(crate::community::snake::Snake::new(config.clone()))),
+        EffectCommand::Sunshower(config) => Some(Box::new(crate::community::sunshower::Sunshower::new(config.clone()))),
+        EffectCommand::Voronoi(config) => Some(Box::new(crate::community::voronoi::Voronoi::new(config.clone()))),
     }
 }
 
